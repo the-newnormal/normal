@@ -39,14 +39,10 @@ Edit `events.js`. Every event shows up on `events.html`. Put photos in `assets/e
 
 ## Fonts
 
-The site uses one font, Bookmania. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
+The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
 
-Bookmania is licensed through Adobe Fonts, so it has to be connected before it shows:
-
-1. In Adobe Fonts, add Bookmania to a web project.
-2. Paste the project's `<link>` where the `TODO` is in the `<head>` of `index.html` and `events.html`.
-
-Until then the site falls back to Bookman Old Style, then Georgia.
+- **The font files are not in git.** Bookmania is licensed and this repo is public, so `assets/fonts/` is in `.gitignore`. Copy `bookmania-regular.woff2` and `bookmania-regular.woff` into `assets/fonts/` wherever you deploy from.
+- **Only Regular is supplied,** so bold and italic text also shows as Regular. For real bold, add Bookmania Bold files and a second `@font-face` with `font-weight: 700`.
 
 ## Files
 
@@ -64,7 +60,7 @@ To add a part of the house:
 
 ## To do
 
-- [ ] Connect Bookmania through Adobe Fonts (see "Fonts")
+- [ ] Check the Bookmania licence covers web use, and decide how the font files get to the live site (see "Fonts")
 - [ ] Design assets from the reviewer
 - [ ] Fill in `events.js`
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)

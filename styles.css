@@ -3,6 +3,17 @@
    Paper, brown crayon, black marker, a yellow highlighter.
    ───────────────────────────────────────────────────────────── */
 
+/* Bookmania (licensed; files live in assets/fonts/, kept out of git). Only Regular is supplied,
+   so bold and italic text also uses Regular: font-synthesis stops the browser faking them. */
+@font-face {
+  font-family: "bookmania";
+  src: url("assets/fonts/bookmania-regular.woff2") format("woff2"),
+       url("assets/fonts/bookmania-regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #fbf7ee;
   --paper-2: #f5efe1;
@@ -17,8 +28,7 @@
   --grid-2: rgba(66, 112, 160, .20);
   --rule: rgba(66, 112, 160, .13);
 
-  /* Bookmania loads from Adobe Fonts (see the TODO in each page's <head>).
-     Tracking -80 = -0.08em, used on headings and other display text. */
+  /* Tracking -80 = -0.08em, used on headings and other display text. */
   --font: "bookmania", "Bookman Old Style", "URW Bookman", "Bookman", Georgia, serif;
   --tracking: -0.08em;
   --tracking-body: -0.02em;
@@ -34,7 +44,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 76px; }
+html { font-synthesis: none; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 76px; }
 body {
   margin: 0;
   color: var(--ink);
