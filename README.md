@@ -1,12 +1,12 @@
 # Normal: website
 
-A home built for us to be human. It's a scrolling page with a hand-drawn floor plan in the middle, tilted into 3D. Hover over a room (or tap it on a phone) to see a short description. Click it to jump to its full section below.
+A home built for us to be human. The home page has three parts: a hero, a hand-drawn floor plan tilted into 3D, and a "Come in" footer with contact links. Hover over a room (or tap it on a phone) to see a short card about it. The front door leads to "Come in", and the library leads to the events page.
 
 Pages: `index.html` (home) and `events.html` (all events).
 
-| Part of the plan | What's in it |
+| Part of the plan | What its card says |
 |---|---|
-| Front door | Who we stand for, plus Instagram and email links |
+| Front door | Who we stand for |
 | 1 Kitchen | A laboratory · *Adventure, not fear* · Courage to explore |
 | 2 Living room | A seat at the table · *Considered, not dismissed* · Authenticity & intention |
 | 3 Bedroom | A shelter · *Dwelling, not rushing* |
@@ -28,7 +28,7 @@ Deploy it to any static host (Vercel, Netlify, GitHub Pages).
 
 ## Add an event
 
-Edit `events.js`. Every event shows up on `events.html`. The next three upcoming ones also show on the home page's Library shelves. Put photos in `assets/events/`.
+Edit `events.js`. Every event shows up on `events.html`. Put photos in `assets/events/`.
 
 ```js
 { title: "Youth Day", date: "2026-12-12", time: "2pm – 8pm", place: "…", blurb: "…",
@@ -43,18 +43,17 @@ There are two variables at the top of `styles.css`: `--hand` (headings and label
 
 ## Files
 
-- `index.html`: hero, the plan (inline SVG), then one `<section>` per room (`#door`, `#kitchen`…)
+- `index.html`: hero, the plan (inline SVG) with each room's card text in a `<template>`, and the "Come in" footer
 - `styles.css`: paper, ink and layout
-- `main.js`: builds the 3D house (stacks the walls, places the room pins, runs the hover card), copies the plan into each room's "detail" crop, and renders events
+- `main.js`: builds the 3D house (stacks the walls, places the room pins, runs the hover card) and renders events
 - `events.html`: the events page
 - `assets/`: wordmark and door mark (traced to SVG from the hand-drawn originals), house sketch
 
 To add a part of the house:
 
 1. Draw it inside `#floor-art` (walls go in `#wall-art`).
-2. Add an `<a class="spot" data-room="id">` hover area, an `<i class="anchor" data-room="id">` and an `<a class="pin" data-room="id">`.
-3. Add a `<template id="tip-id">` for its hover card.
-4. Add a `<section class="room" id="id">`. Its detail is an `<svg data-crop viewBox="…">` framing that part of the plan.
+2. Add a `<g class="spot" data-room="id">` hover area, an `<i class="anchor" data-room="id">` and a `<button class="pin" data-room="id">`. Use `<a>` instead for both if the room should lead somewhere.
+3. Add a `<template id="tip-id">` for its card.
 
 ## To do
 

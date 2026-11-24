@@ -224,6 +224,7 @@ p { margin: 0 0 1em; }
 .plan-art .scrawl-line { fill: none; stroke: var(--brown-2); stroke-width: 1.6; stroke-linecap: round; }
 
 .spot { cursor: pointer; outline: none; }
+g.spot { cursor: default; }
 .spot__area { fill: transparent; mix-blend-mode: multiply; transition: fill .25s ease; }
 .spot:hover .spot__area, .spot.is-active .spot__area { fill: rgba(246, 201, 69, .4); }
 .spot:focus-visible .spot__area { fill: rgba(246, 201, 69, .32); stroke: var(--ink); stroke-width: 3; stroke-dasharray: 9 7; }
@@ -240,27 +241,6 @@ p { margin: 0 0 1em; }
 @keyframes here {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.45); }
-}
-
-.titleblock {
-  display: grid;
-  grid-template-columns: 1fr 5rem;
-  max-width: 740px;
-  margin: clamp(1.5rem, 4vw, 2.5rem) auto 0;
-  border: 2px solid var(--brown);
-  border-radius: 3px;
-  background: var(--sheet);
-}
-.titleblock dl { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
-.titleblock dl div { padding: .5rem .7rem; border-right: 1.5px solid rgba(76, 35, 22, .35); }
-.titleblock dl div:nth-child(-n+2) { border-bottom: 1.5px solid rgba(76, 35, 22, .35); }
-.titleblock dt { font: 600 .66rem/1.2 var(--hand); text-transform: uppercase; letter-spacing: .14em; color: var(--brown-2); }
-.titleblock dd { margin: .15rem 0 0; font: 500 .95rem/1.3 var(--serif); }
-.titleblock__house { width: 100%; height: auto; align-self: center; padding: .45rem; }
-@media (min-width: 680px) {
-  .titleblock { grid-template-columns: 1fr 4.4rem; }
-  .titleblock dl { grid-template-columns: repeat(4, auto); }
-  .titleblock dl div:nth-child(-n+2) { border-bottom: 0; }
 }
 
 /* ─────────────────────────── The house in 3D ───────────────────────────
@@ -384,6 +364,7 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
 }
 .tip:not(:has(.tip__cue)) .tip__more { pointer-events: auto; }
 .tip:has(.tip__cue) .tip__more { display: none; }
+.tip__value { margin-top: -.15rem !important; font: 600 .82rem/1.3 var(--hand) !important; color: var(--brown-2); }
 .tip__cue { margin: .2rem 0 0 !important; font: 600 .85rem var(--hand) !important; color: var(--brown-2); }
 .tip.is-open { opacity: 1; visibility: visible; transform: none; }
 .tip p { margin: 0 0 .5rem; font-size: .98rem; line-height: 1.45; }
@@ -418,78 +399,8 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
   .house.is-ready .pin::before { content: ""; position: absolute; inset: -9px; }
 }
 
-/* ─────────────────────────── Rooms ─────────────────────────── */
-
-.room { padding: clamp(4rem, 10vw, 7.5rem) 0; }
-.room + .room { border-top: 2px dashed rgba(76, 35, 22, .16); }
-.room__grid { display: grid; gap: 2.2rem; align-items: start; }
-.room__text { max-width: 36rem; }
-
-.detail { margin: 0; }
-.detail__frame {
-  position: relative;
-  padding: 10px;
-  background: var(--graph), var(--paper);
-  border: 2px solid var(--brown);
-  border-radius: 4px;
-  box-shadow: 0 24px 40px -30px rgba(76, 35, 22, .55);
-  transform: rotate(-1deg);
-}
-.room--flip .detail__frame { transform: rotate(1deg); }
-.detail__frame::before {
-  content: "";
-  position: absolute;
-  top: -13px; left: 50%;
-  width: 92px; height: 26px;
-  translate: -50% 0;
-  background: rgba(232, 218, 186, .85);
-  transform: rotate(-3deg);
-}
-.detail__art { width: 100%; height: auto; overflow: hidden; }
-.detail__hl { fill: rgba(246, 201, 69, .26); }
-.detail__caption {
-  margin: 1rem 0 0;
-  text-align: center;
-  font: 600 .95rem var(--hand);
-  font-variation-settings: "INFM" 100;
-  color: var(--brown-2);
-}
-.detail--door { display: grid; justify-items: center; padding: 1rem 0; }
-
-@media (min-width: 880px) {
-  .room__grid { grid-template-columns: 1fr 1.05fr; gap: clamp(3rem, 6vw, 5.5rem); }
-  .room--flip .detail { order: 2; }
-  .detail { position: sticky; top: 104px; }
-  .room--wide .room__grid { grid-template-columns: 1fr; }
-  .room--wide .detail { position: static; max-width: 880px; width: 100%; justify-self: center; }
-  .room--wide .room__text { max-width: none; }
-  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; align-items: start; }
-  .cards .principle { margin-top: 0; }
-}
-
-.to-plan {
-  display: inline-block;
-  margin-top: 1.8rem;
-  font: 600 .95rem var(--hand);
-  color: var(--brown-2);
-  text-decoration: none;
-}
-.to-plan:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-/* principles & values */
-.principle, .value, .shelf {
-  margin: 1.6rem 0 0;
-  padding: 1.1rem 1.2rem .35rem;
-  background: var(--sheet);
-  border: 2px solid rgba(76, 35, 22, .85);
-  border-radius: 14px 4px 16px 5px / 5px 16px 4px 14px;
-  box-shadow: 3px 4px 0 rgba(76, 35, 22, .12);
-}
-.value { background: transparent; border-style: dashed; box-shadow: none; }
-.shelf { background: transparent; border: 0; box-shadow: none; padding: 0; }
-.principle--sun { background: linear-gradient(160deg, #fff3c4, var(--sheet) 70%); }
-
-.principle__name, .value__name {
+/* principle names in the hover cards: the word, and its opposite crossed out */
+.principle__name {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -498,7 +409,6 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
   font: 760 1.6rem/1.15 var(--hand);
   font-variation-settings: "INFM" 60;
 }
-.value__name { font-size: 1.3rem; }
 .principle__name small { font: italic 400 1rem var(--serif); color: var(--muted); }
 .principle__name s {
   position: relative;
@@ -611,29 +521,13 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
 }
 .door:hover::after, .door[aria-pressed="true"]::after { opacity: 1; }
 
-/* north star */
-.north {
-  padding: clamp(4rem, 10vw, 7.5rem) 0;
-  text-align: center;
-  border-top: 2px dashed rgba(76, 35, 22, .16);
-}
-.north .kicker { justify-content: center; }
-.sticky {
-  display: inline-block;
-  max-width: 34rem;
-  margin: 1.2rem auto 1.6rem;
-  padding: 1.6rem 1.8rem 1.9rem;
-  font-size: clamp(1.8rem, 4.4vw, 2.8rem);
-  line-height: 1.15;
-  background: #fbe38a;
-  border-radius: 2px 2px 22px 2px;
-  box-shadow: 0 18px 28px -18px rgba(76, 35, 22, .5);
-  transform: rotate(-1.5deg);
-}
-
-/* footer */
-.footer { padding: 3rem 0 3.5rem; border-top: 1.5px solid rgba(76, 35, 22, .18); background: var(--paper-2); }
+/* footer: come in */
+.footer { padding: clamp(3.5rem, 9vw, 6rem) 0 3rem; border-top: 1.5px solid rgba(76, 35, 22, .18); background: var(--paper-2); }
 .footer__inner { display: grid; justify-items: center; gap: .3rem; text-align: center; }
+.footer .door { margin-bottom: 1rem; }
+.footer h2 { margin: 0 0 .3em; }
+.footer__lede { max-width: 30rem; margin: 0 0 .4rem !important; font: 400 1.15rem/1.5 var(--serif) !important; color: var(--ink) !important; }
+.footer .actions { justify-content: center; margin-bottom: 2.5rem; }
 .footer__mark { width: 150px; height: auto; margin-bottom: .6rem; }
 .footer p { margin: 0; font: 500 1rem var(--hand); color: var(--muted); }
 .footer__small { font-size: .85rem !important; }
@@ -641,7 +535,6 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
 /* scroll-in (only once main.js has run) */
 .reveal-ready .reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s var(--ease); }
 .reveal-ready .reveal.is-in { opacity: 1; transform: none; }
-.reveal-ready .sticky.reveal.is-in { transform: rotate(-1.5deg); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

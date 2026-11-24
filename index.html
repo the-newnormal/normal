@@ -25,7 +25,7 @@
       <ul class="nav__links">
         <li><a href="#plan">The plan</a></li>
         <li class="nav__hide"><a href="events.html">Events</a></li>
-        <li><a class="btn btn--sm" href="#door">Come in</a></li>
+        <li><a class="btn btn--sm" href="#come-in">Come in</a></li>
       </ul>
     </nav>
   </div>
@@ -44,7 +44,7 @@
           they can imagine it to be.</p>
         <p class="hero__actions reveal">
           <a class="btn" href="#plan">See the plan ↓</a>
-          <a class="link" href="#door">Come in →</a>
+          <a class="link" href="#come-in">Come in →</a>
         </p>
       </div>
       <figure class="hero__house reveal">
@@ -182,14 +182,14 @@
                 </g>
               </g>
 
-              <!-- hover areas (the pins below are the keyboard targets) -->
-              <a class="spot" href="#library" data-room="library" tabindex="-1"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
-              <a class="spot" href="#bedroom" data-room="bedroom" tabindex="-1"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></a>
-              <a class="spot" href="#living" data-room="living" tabindex="-1"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></a>
-              <a class="spot" href="#kitchen" data-room="kitchen" tabindex="-1"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></a>
-              <a class="spot" href="#garden" data-room="garden" tabindex="-1"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></a>
-              <a class="spot" href="#door" data-room="door" tabindex="-1"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
-              <a class="spot" href="#north" data-room="north" tabindex="-1"><rect class="spot__area" x="30" y="4" width="100" height="88" rx="4"/></a>
+              <!-- hover areas (the pins are the keyboard targets) -->
+              <a class="spot" href="events.html" data-room="library" tabindex="-1"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
+              <g class="spot" data-room="bedroom"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></g>
+              <g class="spot" data-room="living"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></g>
+              <g class="spot" data-room="kitchen"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></g>
+              <g class="spot" data-room="garden"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></g>
+              <a class="spot" href="#come-in" data-room="door" tabindex="-1"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
+              <g class="spot" data-room="north"><rect class="spot__area" x="30" y="4" width="100" height="88" rx="4"/></g>
 
               <circle class="here" cx="248" cy="575" r="7"/>
             </svg>
@@ -233,27 +233,17 @@
           </div>
 
           <nav class="pins" aria-label="Rooms">
-            <a class="pin" href="#door" data-room="door"><img class="pin__icon" src="assets/mark.svg" alt=""><span class="pin__label">Front door</span></a>
-            <a class="pin" href="#kitchen" data-room="kitchen"><span class="badge">1</span><span class="pin__label">Kitchen</span></a>
-            <a class="pin" href="#living" data-room="living"><span class="badge">2</span><span class="pin__label">Living room</span></a>
-            <a class="pin" href="#bedroom" data-room="bedroom"><span class="badge">3</span><span class="pin__label">Bedroom</span></a>
-            <a class="pin" href="#library" data-room="library"><span class="badge">4</span><span class="pin__label">Library</span></a>
-            <a class="pin" href="#garden" data-room="garden"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V10 M12,14 q-6,-1 -8,-8 q7,0 8,8 M12,12 q5,-1 7,-7 q-6,0 -7,7"/></svg><span class="pin__label">Garden</span></a>
-            <a class="pin" href="#north" data-room="north"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V4 M6,10 L12,3 L18,10"/></svg><span class="pin__label">North star</span></a>
+            <a class="pin" href="#come-in" data-room="door"><img class="pin__icon" src="assets/mark.svg" alt=""><span class="pin__label">Front door</span></a>
+            <button class="pin" type="button" data-room="kitchen"><span class="badge">1</span><span class="pin__label">Kitchen</span></button>
+            <button class="pin" type="button" data-room="living"><span class="badge">2</span><span class="pin__label">Living room</span></button>
+            <button class="pin" type="button" data-room="bedroom"><span class="badge">3</span><span class="pin__label">Bedroom</span></button>
+            <a class="pin" href="events.html" data-room="library"><span class="badge">4</span><span class="pin__label">Library</span></a>
+            <button class="pin" type="button" data-room="garden"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V10 M12,14 q-6,-1 -8,-8 q7,0 8,8 M12,12 q5,-1 7,-7 q-6,0 -7,7"/></svg><span class="pin__label">Garden</span></button>
+            <button class="pin" type="button" data-room="north"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V4 M6,10 L12,3 L18,10"/></svg><span class="pin__label">North star</span></button>
           </nav>
         </div>
 
         <div class="tip" id="tip" aria-live="polite"></div>
-      </div>
-
-      <div class="titleblock reveal">
-        <dl>
-          <div><dt>Project</dt><dd>Normal</dd></div>
-          <div><dt>Drawing</dt><dd>A home built for us to be human</dd></div>
-          <div><dt>Drawn by</dt><dd>The youth of Singapore</dd></div>
-          <div><dt>Scale</dt><dd>1 : 1 human</dd></div>
-        </dl>
-        <img class="titleblock__house" src="assets/house.png" alt="" width="370" height="356">
       </div>
 
       <!-- what each room says when you hover it -->
@@ -263,220 +253,67 @@
       <template id="tip-door">
         <p class="tip__kicker">front door</p>
         <p class="tip__title">Come in.</p>
-        <p>For the quiet majority who feel paralysed, or uninvited. Consider this your invitation.</p>
-        <a class="tip__more" href="#door">Read more ↓</a>
+        <p>For the quiet majority of us who feel paralysed, or uninvited. Consider this your invitation.</p>
+        <a class="tip__more" href="#come-in" data-cue="click to come in ↓">Come in ↓</a>
       </template>
       <template id="tip-kitchen">
         <p class="tip__kicker"><span class="badge">1</span>a laboratory</p>
         <p class="tip__title">Kitchen</p>
-        <p>Where trying is celebrated and failure isn't feared.</p>
+        <p>A place to experiment and challenge the status quo, where trying is celebrated and failure isn't feared.</p>
         <p class="principle__name"><span>Adventure</span> <s>Fear</s></p>
-        <a class="tip__more" href="#kitchen">Read more ↓</a>
+        <p class="tip__value">how we build: courage to explore</p>
       </template>
       <template id="tip-living">
         <p class="tip__kicker"><span class="badge">2</span>a seat at the table</p>
         <p class="tip__title">Living room</p>
         <p>Everyone recognised for who they are, and heard even in a room full of noise.</p>
         <p class="principle__name"><span>Considered</span> <s>Dismissed</s></p>
-        <a class="tip__more" href="#living">Read more ↓</a>
+        <p class="tip__value">how we build: authenticity &amp; intention</p>
       </template>
       <template id="tip-bedroom">
         <p class="tip__kicker"><span class="badge">3</span>a shelter</p>
         <p class="tip__title">Bedroom</p>
-        <p>Space held for real rest, and time to reconnect with ourselves.</p>
+        <p>Space held for real rest. Time to reconnect with ourselves, away from the constant rush.</p>
         <p class="principle__name"><span>Dwelling</span> <s>Rushing</s></p>
-        <a class="tip__more" href="#bedroom">Read more ↓</a>
       </template>
       <template id="tip-library">
         <p class="tip__kicker"><span class="badge">4</span>a living library</p>
         <p class="tip__title">Library</p>
-        <p>Pieces of a better society, demonstrated rather than merely described. Our gatherings live here.</p>
-        <a class="tip__more" href="#library">Read more ↓</a>
+        <p>Pieces of a better society, demonstrated rather than merely described, through our activations, cultural works and gatherings.</p>
+        <p class="tip__value">how we build: staying curious</p>
+        <a class="tip__more" href="events.html" data-cue="click to see what's on →">See what's on →</a>
       </template>
       <template id="tip-garden">
         <p class="tip__kicker">garden</p>
         <p class="tip__title">Room to flourish</p>
-        <p>The space, time and stability to be whole.</p>
+        <p>The space, time and stability to be whole, and a warmth you come back to again and again.</p>
         <p class="principle__name"><span>Flourish</span> <s>Bare survival</s></p>
-        <a class="tip__more" href="#garden">Read more ↓</a>
+        <p class="principle__name"><span>Fulfilled</span> <small>in pursuit of purpose</small></p>
       </template>
       <template id="tip-north">
         <p class="tip__kicker">north star</p>
         <p class="tip__title">To make people happier, and to see people loved.</p>
-        <a class="tip__more" href="#north">Read more ↓</a>
+        <p>Every room in this house points here.</p>
       </template>
     </div>
   </section>
 
-  <!-- ═════════════════════════ Front door ═════════════════════════ -->
-  <section class="room" id="door" aria-labelledby="door-title">
-    <div class="wrap room__grid">
-      <div class="detail detail--door reveal">
-        <button class="door" type="button" aria-pressed="false" aria-label="Open the door">
-          <span class="door__light" aria-hidden="true"></span>
-          <span class="door__leaf" aria-hidden="true"><span class="door__knob"></span></span>
-          <img class="door__frame" src="assets/mark-frame.svg" alt="" width="275" height="292">
-        </button>
-        <p class="detail__caption">go on, open it</p>
-      </div>
-      <div class="room__text reveal">
-        <p class="kicker">front door</p>
-        <h2 id="door-title">Come in.</h2>
-        <p class="lede">Normal stands for the quiet majority of our society: the many currently disengaged from the greater community, who feel paralysed, or uninvited.</p>
-        <p>Consider this your invitation.</p>
-        <p>We believe progress itself demands that humans find better ways to love and serve one another. This house is where we're trying.</p>
-        <p class="actions">
-          <!-- TODO: swap in Normal's real Instagram handle and email -->
-          <a class="btn" href="https://instagram.com/" rel="noopener">Follow on Instagram</a>
-          <a class="btn btn--ghost" href="mailto:hello@example.com">Email us</a>
-        </p>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ 1. Kitchen ═════════════════════════ -->
-  <section class="room room--flip" id="kitchen" aria-labelledby="kitchen-title">
-    <div class="wrap room__grid">
-      <figure class="detail reveal">
-        <div class="detail__frame"><svg class="detail__art" viewBox="312 327 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="320" y="335" width="280" height="225"/></svg></div>
-        <figcaption class="detail__caption">detail 1 · kitchen</figcaption>
-      </figure>
-      <div class="room__text reveal">
-        <p class="kicker"><span class="badge">1</span> a laboratory</p>
-        <h2 id="kitchen-title">Kitchen</h2>
-        <p class="lede">A place for experimentation and adventure. A place to challenge the status quo with unabashed authenticity, boldness and openness to being <em>different</em>, where <em>trying</em> is celebrated and <em>failure</em> isn't feared.</p>
-        <p>Because seeking a better future should feel less like a dream and more like an exploration in motion.</p>
-        <div class="principle">
-          <h3 class="label">Principle</h3>
-          <p class="principle__name"><span>Adventure</span> <s>Fear</s></p>
-          <p>We explore ordinary life with fun, risk, boldness and <mark>openness to the unexpected</mark>, and keep a safe place for experimentation, failure and unabashed authenticity.</p>
-        </div>
-        <div class="value">
-          <h3 class="label">How we build</h3>
-          <p class="value__name">Courage to explore</p>
-          <p>Offering different perspectives and challenging the status quo. Trying new things, even into uncharted territory. We don't have to solve everything at once; we create something different and make whatever impact we can.</p>
-        </div>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ 2. Living room ═════════════════════════ -->
-  <section class="room" id="living" aria-labelledby="living-title">
-    <div class="wrap room__grid">
-      <figure class="detail reveal">
-        <div class="detail__frame"><svg class="detail__art" viewBox="32 327 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="40" y="335" width="280" height="225"/></svg></div>
-        <figcaption class="detail__caption">detail 2 · living room</figcaption>
-      </figure>
-      <div class="room__text reveal">
-        <p class="kicker"><span class="badge">2</span> a seat at the table</p>
-        <h2 id="living-title">Living room</h2>
-        <p class="lede">A space where every individual is considered and has a seat at the table. Where every person feels recognised for who they are, and heard even in a room full of noise.</p>
-        <div class="principle">
-          <h3 class="label">Principle</h3>
-          <p class="principle__name"><span>Considered</span> <s>Dismissed</s></p>
-          <p>We champion a culture of care for our fellow humans, where every individual is <mark>considered</mark> and left a seat at the table.</p>
-        </div>
-        <div class="value">
-          <h3 class="label">How we build</h3>
-          <p class="value__name">Authenticity &amp; intention</p>
-          <p>Care, intention and precision in everything we do. Beyond novelty and hype, value is what keeps people coming back. We build for depth, centred on each individual we serve, not just "the audience".</p>
-        </div>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ 3. Bedroom ═════════════════════════ -->
-  <section class="room room--flip" id="bedroom" aria-labelledby="bedroom-title">
-    <div class="wrap room__grid">
-      <figure class="detail reveal">
-        <div class="detail__frame"><svg class="detail__art" viewBox="312 102 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="320" y="110" width="280" height="225"/></svg></div>
-        <figcaption class="detail__caption">detail 3 · bedroom</figcaption>
-      </figure>
-      <div class="room__text reveal">
-        <p class="kicker"><span class="badge">3</span> a shelter</p>
-        <h2 id="bedroom-title">Bedroom</h2>
-        <p class="lede">Where space is held for <mark>real rest</mark>. Not just your recommended eight hours of sleep, but time to reconnect with ourselves, away from the constant rush and structure of everyday life.</p>
-        <p>A place where you feel happy, and in touch with the things you love.</p>
-        <div class="principle">
-          <h3 class="label">Principle</h3>
-          <p class="principle__name"><span>Dwelling</span> <s>Rushing</s></p>
-          <p>Within the constant momentum of school, work and structure, we hold space to disconnect, and to reconnect with ourselves.</p>
-        </div>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ 4. Library ═════════════════════════ -->
-  <section class="room" id="library" aria-labelledby="library-title">
-    <div class="wrap room__grid">
-      <figure class="detail reveal">
-        <div class="detail__frame"><svg class="detail__art" viewBox="32 102 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="40" y="110" width="280" height="225"/></svg></div>
-        <figcaption class="detail__caption">detail 4 · library</figcaption>
-      </figure>
-      <div class="room__text reveal">
-        <p class="kicker"><span class="badge">4</span> a living library</p>
-        <h2 id="library-title">Library</h2>
-        <p class="lede">In the end, Normal hopes to be a living library filled with pieces of a better society, each one individually curated, and demonstrated rather than merely described.</p>
-        <p>A tangible glimpse of what could be <em>normal</em>, through our activations, cultural works and gatherings.</p>
-        <div class="shelf">
-          <h3 class="label">On the shelves</h3>
-          <div class="events" id="events" data-limit="3"></div>
-          <p><a class="link" href="events.html">All events →</a></p>
-        </div>
-        <div class="value">
-          <h3 class="label">How we build</h3>
-          <p class="value__name">Staying curious</p>
-          <p>Our drive and sense of ownership come from a never-ceasing excitement and passion.</p>
-        </div>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ Garden ═════════════════════════ -->
-  <section class="room room--wide" id="garden" aria-labelledby="garden-title">
-    <div class="wrap room__grid">
-      <figure class="detail reveal">
-        <div class="detail__frame"><svg class="detail__art" viewBox="16 588 608 126" style="aspect-ratio: 608 / 126" data-crop aria-hidden="true"><rect class="detail__hl" x="22" y="590" width="596" height="118"/></svg></div>
-        <figcaption class="detail__caption">detail 5 · garden</figcaption>
-      </figure>
-      <div class="room__text reveal">
-        <p class="kicker">garden</p>
-        <h2 id="garden-title">Room to flourish</h2>
-        <div class="cards">
-          <div class="principle">
-            <h3 class="label">Principle</h3>
-            <p class="principle__name"><span>Flourish</span> <s>Bare survival</s></p>
-            <p>We want people to have the space, time and stability to be whole, and to reach a <mark>fullness</mark> where they feel in touch with themselves. It's the foundation that future growth is built on.</p>
-          </div>
-          <div class="principle principle--sun">
-            <h3 class="label">Principle</h3>
-            <p class="principle__name"><span>Fulfilled</span> <small>in pursuit of purpose</small></p>
-            <p>We want Normal to feel like a warm ray of sunshine after a cold day of thunderstorms. A quiet warmth you can't get enough of, that you come back to again and again, and that helps you find your purpose.</p>
-          </div>
-        </div>
-        <a class="to-plan" href="#plan">↑ back to the plan</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═════════════════════════ North star ═════════════════════════ -->
-  <section class="north" id="north" aria-labelledby="north-title">
-    <div class="wrap">
-      <p class="kicker reveal">our north star</p>
-      <h2 id="north-title" class="sticky reveal">To make people happier, and to see people loved.</h2>
-      <p class="reveal">Every room in this house points here.</p>
-      <a class="to-plan reveal" href="#plan">↑ back to the plan</a>
-    </div>
-  </section>
 </main>
 
-<footer class="footer">
+<footer class="footer" id="come-in">
   <div class="wrap footer__inner">
+    <button class="door reveal" type="button" aria-pressed="false" aria-label="Open the door">
+      <span class="door__light" aria-hidden="true"></span>
+      <span class="door__leaf" aria-hidden="true"><span class="door__knob"></span></span>
+      <img class="door__frame" src="assets/mark-frame.svg" alt="" width="275" height="292">
+    </button>
+    <h2 class="reveal">Come in.</h2>
+    <p class="footer__lede reveal">Normal stands for the quiet majority who feel paralysed, or uninvited. Consider this your invitation.</p>
+    <p class="actions reveal">
+      <!-- TODO: swap in Normal's real Instagram handle and email -->
+      <a class="btn" href="https://instagram.com/" rel="noopener">Follow on Instagram</a>
+      <a class="btn btn--ghost" href="mailto:hello@example.com">Email us</a>
+    </p>
     <img class="footer__mark" src="assets/wordmark.svg" alt="Normal" width="1979" height="582">
     <p>A ground-up youth movement in Singapore.</p>
     <p class="footer__small">© <span id="year">2026</span> Normal</p>

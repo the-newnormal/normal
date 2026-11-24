@@ -8,15 +8,6 @@
     return node;
   };
 
-  /* ───────────── room details: the plan's drawing, cropped to each room ───────────── */
-  const floorArt = $("#floor-art");
-  const wallArt = $("#wall-art");
-  if (floorArt && wallArt) {
-    $$("[data-crop]").forEach((svg) => {
-      svg.append(stripIds(floorArt.cloneNode(true)), stripIds(wallArt.cloneNode(true)));
-    });
-  }
-
   /* ───────────── the 3D house ───────────── */
   const house = $("#house");
   if (house) {
@@ -78,8 +69,10 @@
       const t = document.getElementById(`tip-${id}`);
       if (!t) return;
       tip.replaceChildren(t.content.cloneNode(true));
-      // floating card can't be clicked (so it never blocks the rooms behind it): clicking the room reads more
-      if (id !== "default" && !docked()) tip.append(Object.assign(document.createElement("p"), { className: "tip__cue", textContent: "click to read more ↓" }));
+      // the floating card can't be clicked (so it never blocks the rooms behind it):
+      // rooms that lead somewhere say "click" instead of showing a link
+      const more = $(".tip__more", tip);
+      if (more && !docked()) tip.append(Object.assign(document.createElement("p"), { className: "tip__cue", textContent: more.dataset.cue }));
     }
 
     function placeTip() {
@@ -121,7 +114,7 @@
       if (docked()) fill("default");
     }
 
-    // hover to peek; on touch, the first tap peeks and a second tap goes to the room
+    // hover (or focus, or tap) to peek
     house.addEventListener("pointerdown", (e) => {
       lastPointer = e.pointerType;
       activeAtDown = active;
@@ -131,10 +124,9 @@
       el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") show(id); });
       el.addEventListener("focus", () => show(id));
       el.addEventListener("click", (e) => {
-        if (lastPointer !== "mouse" && e.detail !== 0 && activeAtDown !== id) {
-          e.preventDefault();
-          show(id);
-        }
+        // links (front door, library): on touch, the first tap peeks and a second tap follows
+        if (el.matches("a") && lastPointer !== "mouse" && e.detail !== 0 && activeAtDown !== id) e.preventDefault();
+        show(id);
       });
     });
     wrap.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hide(); });
@@ -225,8 +217,6 @@
       box.replaceChildren(...(items.length ? items.map((e) => eventCard(e, isPast)) : [el("p", "events__empty", empty)]));
     };
 
-    const shelf = $("#events");
-    if (shelf) fillBox(shelf, upcoming.slice(0, Number(shelf.dataset.limit) || 3), false, "Nothing on the shelves yet. The next gathering lands here first.");
     fillBox($("#events-upcoming"), upcoming, false, "Nothing coming up just yet. The next gathering lands here first.");
     fillBox($("#events-past"), past, true, "Past gatherings will be collected here.");
   }
