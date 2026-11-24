@@ -44,8 +44,8 @@ Everything on the "what's on" page (`events.html`) comes from `events.js`.
 
 The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
 
-- **The font files are not in git.** Bookmania is licensed and this repo is public, so `assets/fonts/` is in `.gitignore`. Copy `bookmania-regular.woff2` and `bookmania-regular.woff` into `assets/fonts/` wherever you deploy from.
-- **Only Regular is supplied,** so bold and italic text also shows as Regular. For real bold, add Bookmania Bold files and a second `@font-face` with `font-weight: 700`.
+- **The font files are not in git.** Bookmania is licensed and this repo is public, so `assets/fonts/` is in `.gitignore`. Copy `bookmania-regular.woff2`, `bookmania-regular.woff` and `bookmania-bold.woff2` into `assets/fonts/` wherever you deploy from.
+- **Regular is used across the site; Bold only on the Youth Day card.** Bold is set up as its own family (`bookmania-bold`) so it doesn't turn every heading bold. `bookmania-bold.woff2` was converted from the desktop `.otf`, so check the licence covers web use.
 
 ## Files
 
