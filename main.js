@@ -128,9 +128,21 @@
       lastPointer = e.pointerType;
       activeAtDown = active;
     }, true);
+    // the card goes as soon as the mouse leaves the room or its pin. The short delay only
+    // stops a flicker when the mouse crosses from a room onto its own pin (or the next room).
+    let hideTimer;
     [...spots, ...pins.values()].forEach((el) => {
       const id = el.dataset.room;
-      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") show(id); });
+      el.addEventListener("pointerenter", (e) => {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(hideTimer);
+        show(id);
+      });
+      el.addEventListener("pointerleave", (e) => {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(hide, 40);
+      });
       el.addEventListener("focus", () => show(id));
       el.addEventListener("click", (e) => {
         // links (front door, library): on touch, the first tap peeks and a second tap follows

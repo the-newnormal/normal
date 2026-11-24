@@ -382,13 +382,13 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
   visibility: hidden;
   pointer-events: none;
   transform: translateY(6px);
-  transition: opacity .2s ease, transform .2s ease, visibility .2s;
+  transition: opacity .1s ease, transform .1s ease, visibility .1s;
 }
 .tip:not(:has(.tip__cue)) .tip__more { pointer-events: auto; }
 .tip:has(.tip__cue) .tip__more { display: none; }
 .tip__value { margin-top: -.15rem !important; font: 600 .82rem/1.3 var(--font) !important; color: var(--brown-2); }
 .tip__cue { margin: .2rem 0 0 !important; font: 600 .85rem var(--font) !important; color: var(--brown-2); }
-.tip.is-open { opacity: 1; visibility: visible; transform: none; }
+.tip.is-open { opacity: 1; visibility: visible; transform: none; transition-duration: .2s; }
 .tip p { margin: 0 0 .5rem; font-size: .98rem; line-height: 1.45; }
 .tip__kicker { display: flex; align-items: center; gap: .45em; font: 600 .85rem/1.2 var(--font) !important; color: var(--brown); }
 .tip__kicker .badge { width: 1.55em; height: 1.55em; font-size: .72rem; }
