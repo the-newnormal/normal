@@ -569,7 +569,7 @@ a.ip--backyard:hover { background: repeating-linear-gradient(-45deg, rgba(178, 2
   box-shadow: 0 3px 0 #1d2a20;
 }
 
-/* youthday.sg: pale lavender with soft glows, navy + sky blue + lavender; Fraunces + Archivo caps */
+/* youthday.sg: pale lavender with soft glows, navy + sky blue + lavender; Bookmania + Archivo caps */
 .ip--youthday {
   color: #2b3652;
   background:
@@ -586,9 +586,8 @@ a.ip--backyard:hover { background: repeating-linear-gradient(-45deg, rgba(178, 2
 }
 .ip--youthday .ip__name {
   margin-top: .35rem;
-  font: 900 clamp(2.6rem, 5.4vw, 3.6rem)/.95 "Fraunces", Georgia, serif;
-  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
-  letter-spacing: -.02em;
+  font: 400 clamp(2.6rem, 5.4vw, 3.6rem)/.95 var(--font);
+  letter-spacing: -.03em;
   color: #3e4e72;
 }
 .ip--youthday .ip__blurb {

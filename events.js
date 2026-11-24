@@ -14,7 +14,7 @@
 */
 window.NORMAL_IPS = [
   { name: "Backyard", theme: "backyard", kicker: "we invite you to our", blurb: "community bbq", link: "https://backyard.sg" },
-  { name: "Youth Day", theme: "youthday", kicker: "archive · 5 & 6 July 2026", blurb: "will return in 2027", link: "https://youthday.sg" },
+  { name: "Youth Day", theme: "youthday", kicker: "5 & 6 July 2026", blurb: "will return in 2027", link: "https://youthday.sg" },
 ];
 
 /*
