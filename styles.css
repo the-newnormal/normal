@@ -114,6 +114,10 @@ p { margin: 0 0 1em; }
   border: 2px solid var(--brown);
   border-radius: 50% 48% 52% 50%;
   font: 700 .85rem/1 var(--font);
+  /* Bookmania's digits sit high in their line box, and the -80 tracking pushes them right: nudge them to the true centre */
+  letter-spacing: 0;
+  padding-top: .14em;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--brown);
   background: var(--paper);
 }
@@ -292,20 +296,40 @@ g.spot { cursor: default; }
 .plan-art .floor--kitchen { fill: #eaefe0; }
 .plan-art .floor--garden  { fill: #e5ecd3; }
 
+/* people: a dot for a head (like the knob in the n), a coloured body, a shadow on the floor */
 .person {
   position: absolute;
   left: var(--x); top: var(--y);
-  width: 16px; height: 30px;
-  margin: -30px 0 0 -8px;
-  transform-origin: 50% 100%;
-  transform: rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx)));
+  width: 0; height: 0;
+  transform-style: preserve-3d;
   pointer-events: none;
 }
-.person::before, .person::after { content: ""; position: absolute; background: var(--ink); }
-.person::before { left: 2px; top: 0; width: 12px; height: 12px; border-radius: 50%; }
-.person::after { left: 0; bottom: 0; width: 16px; height: 16px; border-radius: 8px 8px 3px 3px; }
-.person.is-hopping { animation: hop .5s ease-in-out infinite alternate; }
-@keyframes hop { to { translate: 0 0 9px; } }
+.person::before {
+  content: "";
+  position: absolute;
+  left: -14px; top: -7px;
+  width: 28px; height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(58, 24, 13, .42), rgba(58, 24, 13, 0));
+}
+.person__fig {
+  position: absolute;
+  left: -11px; bottom: 0;
+  width: 22px; height: 38px;
+  max-width: none;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  transform: rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx)));
+}
+.person__body { fill: var(--c, var(--brown-2)); }
+.person__shade { fill: rgba(40, 16, 8, .18); }
+.person__line { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
+.person__head { fill: var(--ink); }
+.person__shine { fill: rgba(255, 255, 255, .4); }
+.person.is-hopping .person__fig { animation: hop .45s ease-in-out infinite alternate; }
+.person.is-hopping::before { animation: hop-shadow .45s ease-in-out infinite alternate; }
+@keyframes hop { to { translate: 0 0 10px; } }
+@keyframes hop-shadow { to { scale: .7; opacity: .55; } }
 
 .anchor { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; transform: translateZ(var(--z)); }
 

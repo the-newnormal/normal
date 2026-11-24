@@ -30,6 +30,21 @@
     const pins = new Map($$(".pin", house).map((p) => [p.dataset.room, p]));
     const spots = $$(".spot", scene);
     const people = $$(".person", scene);
+
+    // dress the people: same figure, different colours
+    const PALETTE = ["#f6c945", "#9fb58a", "#e8a597", "#8fa7c4", "#fffdf8", "#c98b5e"];
+    const BODY = "M3,37 C3,27 5.5,21 11,21 C16.5,21 19,27 19,37 Z";
+    const FIG = `<svg class="person__fig" viewBox="0 0 22 38" aria-hidden="true">
+      <path class="person__body" d="${BODY}"/>
+      <path class="person__shade" d="M11,21 C16.5,21 19,27 19,37 L14.5,37 C14.5,29 13.5,24 11,21 Z"/>
+      <path class="person__line" d="${BODY}"/>
+      <circle class="person__head" cx="11" cy="13.5" r="6.5"/>
+      <circle class="person__shine" cx="8.7" cy="11.1" r="1.7"/>
+    </svg>`;
+    people.forEach((p, i) => {
+      p.style.setProperty("--c", PALETTE[(i * 5) % PALETTE.length]);
+      p.innerHTML = FIG;
+    });
     let active = null;
     let activeAtDown = null;
     let lastPointer = "mouse";
