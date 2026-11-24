@@ -60,6 +60,8 @@
     bad_parent: "Pick where this sits on the org chart.",
     bad_overseer: "Only Founders, Chiefs of Staff and Directors can oversee a domain.",
     unit_not_empty: "Move its people and teams out first.",
+    bad_seats: "A person can hold up to 10 seats.",
+    bad_import: "That file couldn't be imported. Nothing was changed.",
   };
   const errText = (r, fallback) => ERRORS[r && r.data && r.data.error] || fallback || "Couldn't save that. Try again.";
 
@@ -386,13 +388,15 @@
   /* ───────────── members ───────────── */
   // the org chart's shape (matches lib/org.js)
   const ORG_ROLES = ["Founder", "Chief of Staff", "Director", "Team Lead", "Member", "Fellow", "Volunteer"];
-  const LEADERSHIP = ["Founder", "Chief of Staff"];
   const OVERSEER_ROLES = ["Founder", "Chief of Staff", "Director"];
   const PARENT_KINDS = { division: [null], domain: ["division"], team: ["division", "domain"] };
+  const MEMBER_STATUSES = ["active", "leaning in", "leaning no", "on break", "alumni"];
   const roleKey = (r) => ({ "Founder": "founder", "Chief of Staff": "cos", "Director": "director", "Team Lead": "lead", "Fellow": "fellow", "Volunteer": "volunteer" }[r] || "member");
   const roleRank = (r) => { const i = ORG_ROLES.indexOf(r); return i < 0 ? 99 : i; };
+  const statusKey = (s) => String(s || "").replace(/\s+/g, "-");
   const unitLabel = (u) => [u.code, u.name].filter(Boolean).join(" ");
-  const seatOf = (m) => (m.unit_id ? [m.unit_code, m.unit_name].filter(Boolean).join(" ") : "");
+  const seatLabel = (s) => (s.unit_id ? [s.unit_code, s.unit_name].filter(Boolean).join(" ") : "Normal");
+  const roleTag = (r) => r && el("span", `org-role org-role--${roleKey(r)}`, r);
 
   const getOrg = async () => {
     const r = await get("/api/admin/org");
@@ -413,20 +417,24 @@
   }
   const unitOptions = (units, filter = () => true) =>
     unitTree(units).filter(filter).map((u) => [String(u.id), `${" ".repeat(u.depth)}${unitLabel(u)}`]);
+  function unitPath(units, id) {
+    const parts = [];
+    for (let u = units.find((x) => x.id === id); u; u = units.find((x) => x.id === u.parent_id)) parts.unshift(u.name);
+    return parts.join(" › ");
+  }
 
-  function memberFields(org) {
+  function memberFields() {
     return [
       { key: "name", label: "Full name", required: true },
       { key: "title", label: "Title", hint: "e.g. head of events" },
-      { key: "org_role", label: "Role in Normal", type: "select", options: [["", "No role yet"], ...ORG_ROLES] },
-      { key: "unit_id", label: "Seat on the org chart", type: "select", options: [["", "Not on the chart"], ...unitOptions(org ? org.units : [])], hint: "The division, domain or team they sit in." },
       { key: "telegram", label: "Telegram" },
       { key: "phone", label: "Phone (WhatsApp)", type: "tel" },
       { key: "email", label: "Email", type: "email" },
       { key: "dob", label: "Birthday", type: "date" },
       { key: "school", label: "School / organisation" },
       { key: "joined_on", label: "Joined Normal", type: "date" },
-      { key: "status", label: "Status", type: "select", options: ["active", "on break", "alumni"] },
+      { key: "round", label: "Recruitment round", hint: "e.g. August round" },
+      { key: "status", label: "Status", type: "select", options: MEMBER_STATUSES, hint: "Leaning in / leaning no: recruits who haven't confirmed. Members see \"joining\"." },
       { key: "notes", label: "Notes", hint: "Only admins see these.", type: "textarea", wide: true },
     ];
   }
@@ -452,7 +460,8 @@
       q.id = "f-q";
       const unit = select("Division, domain or team", [["", "Whole org"]]);
       unit.id = "f-unit";
-      const status = select("Status", [["", "All statuses"], "active", "on break", "alumni"]);
+      const status = select("Status", [["", "All statuses"], ...(isAdmin() ? MEMBER_STATUSES : ["active", "joining", "on break", "alumni"])]);
+      status.id = "f-status";
       filterInputs([q, unit, status]);
       // the chart can change between visits, so its menu is refreshed with every load
       const refreshUnits = () => getOrg().then((org) => {
@@ -471,15 +480,15 @@
       const columns = [
         { label: "ID", cls: "is-id", cell: (m) => rid("M", m.id) },
         { label: "Name", cls: "is-name", link: true, cell: (m) => m.name },
-        { label: "Role", cell: (m) => m.org_role && el("span", `org-role org-role--${roleKey(m.org_role)}`, m.org_role) },
-        { label: "Seat", cell: (m) => seatOf(m) },
-        { label: "Title", cell: (m) => m.title },
+        { label: "Role", cell: (m) => roleTag(m.org_role) },
+        { label: "Seats", cell: (m) => m.seats.map(seatLabel).join(", ") },
         { label: "Telegram", cell: (m) => m.telegram && "@" + handleOf(m.telegram) },
         ...(isAdmin() ? [
           { label: "Phone", cell: (m) => m.phone },
+          { label: "Round", cls: "is-muted", cell: (m) => m.round },
           { label: "Login", cell: (m) => m.login_role && pill(ROLE_NAMES[m.login_role], m.login_role) },
         ] : []),
-        { label: "Status", cell: (m) => nodes(pill(m.status, m.status), Number(m.id) === me.memberId && pill("you", "you")) },
+        { label: "Status", cell: (m) => nodes(pill(m.status, statusKey(m.status)), Number(m.id) === me.memberId && pill("you", "you")) },
       ];
       loadRows = async () => {
         fail("");
@@ -487,25 +496,70 @@
         if (!r) return;
         if (!r.ok) return fail(errText(r, "Couldn't load members."));
         fillList(columns, r.data.members, (m) => `#/m/${m.id}`, r.data.total,
-          isAdmin() ? "No members yet. Add people, or accept them from applications." : "No members yet.",
+          isAdmin() ? "No members yet. Add people, import the Team Map (Org chart → Import), or accept them from applications." : "No members yet.",
           "No members match those filters.",
           isAdmin() ? "" : "Contact details are visible to admins only.");
       };
     });
   }
 
+  // where someone sits; admins can change it
+  function seatsPanel(m, org, editable) {
+    const list = el("ul", "db-seat-list");
+    for (const s of m.seats) {
+      const li = el("li");
+      li.append(roleTag(s.role), el("span", "", s.unit_id ? unitPath(org.units, s.unit_id) : "Normal (the top)"));
+      if (s.unit_code) li.append(el("span", "org-code", s.unit_code));
+      if (s.note) li.append(el("span", "db-seat-note", s.note));
+      list.append(li);
+    }
+    if (!m.seats.length) list.append(el("li", "db-note", "Not on the org chart."));
+    if (!editable) return panel("seats", list);
+
+    const rows = el("div", "db-seat-rows");
+    const unitOpts = [["", "Normal (the top)"], ...unitOptions(org.units)];
+    const addRow = (s = { unit_id: null, role: "Member", note: "" }) => {
+      const row = el("div", "db-seat");
+      const unit = select("Seat", unitOpts, s.unit_id ? String(s.unit_id) : "", "db-input seat-unit");
+      const role = select("Role", ORG_ROLES, s.role || "Member", "db-input seat-role");
+      const note = el("input", "db-input seat-note");
+      note.type = "text";
+      note.placeholder = "Seat note (admins only)";
+      note.setAttribute("aria-label", "Seat note");
+      note.value = s.note || "";
+      const rm = button("Remove", "", () => row.remove());
+      rm.classList.add("db-btn--sm");
+      row.append(unit, role, note, rm);
+      rows.append(row);
+    };
+    m.seats.forEach(addRow);
+    const status = el("p", "db-error");
+    const bar = el("div", "db-formbar");
+    bar.append(
+      button("Save seats", "primary", async () => {
+        status.textContent = "";
+        const seats = $$(".db-seat", rows).map((row) => ({ unit_id: $(".seat-unit", row).value || null, role: $(".seat-role", row).value, note: $(".seat-note", row).value }));
+        const s = await api("/api/admin/members", { method: "PATCH", json: { id: m.id, seats } }).catch(() => null);
+        if (!s || !s.ok) { status.textContent = errText(s); return; }
+        toast("Seats saved.");
+        memberProfile(String(m.id));
+      }, "save-seats"),
+      button("+ add seat", "", () => addRow(), "add-seat"),
+    );
+    return panel("seats", [list, el("p", "db-label db-seat-edit", "Change seats"), rows, status, bar]);
+  }
+
   async function memberProfile(id) {
     fail("");
     if (id === "new") {
-      const org = await getOrg();
       const body = detail("#/members", "members", "new", "add member");
-      const { form: f } = buildForm(memberFields(org), { status: "active", joined_on: new Date().toISOString().slice(0, 10) }, {
+      const { form: f } = buildForm(memberFields(), { status: "active", joined_on: new Date().toISOString().slice(0, 10) }, {
         submit: "Save record",
         extra: [linkButton("Cancel", "#/members")],
         onSubmit: async (vals, status) => {
           const r = await api("/api/admin/members", { method: "POST", json: vals }).catch(() => null);
           if (!r || !r.ok) { status.textContent = errText(r); return; }
-          toast("Member added.");
+          toast("Member added. Give them a seat below.");
           location.hash = `#/m/${r.data.id}`;
         },
       });
@@ -513,26 +567,25 @@
       return;
     }
 
-    const [r, org] = await Promise.all([get(`/api/admin/members?id=${encodeURIComponent(id)}`), isAdmin() ? getOrg() : null]);
+    const [r, org] = await Promise.all([get(`/api/admin/members?id=${encodeURIComponent(id)}`), getOrg()]);
     if (!r) return;
     if (!r.ok) {
       detail("#/members", "members", rid("M", id), "not found");
       return fail(r.status === 404 ? "That person isn't in the directory." : errText(r, "Couldn't load that profile."));
     }
-    const { member: m, canEdit } = r.data;
+    const { member: m, canEdit, canSeat } = r.data;
     const mine = Number(m.id) === me.memberId;
     const body = detail("#/members", "members", rid("M", m.id), m.name, [
-      m.org_role && el("span", `org-role org-role--${roleKey(m.org_role)}`, m.org_role),
-      [m.title, seatOf(m)].filter(Boolean).join(" · "),
-      pill(m.status, m.status),
+      roleTag(m.org_role),
+      m.title,
+      pill(m.status, statusKey(m.status)),
       mine && pill("you", "you"),
     ]);
     const { main, aside } = recordLayout(body);
 
+    main.append(seatsPanel(m, org || { units: [] }, canSeat));
     const tg = handleOf(m.telegram);
     main.append(panel("details", fields([
-      ["Role in Normal", m.org_role || ""],
-      ["Seat", seatOf(m), m.unit_id ? (isAdmin() ? `#/org/${m.unit_id}` : "#/members/chart") : null],
       ["Title", m.title || ""],
       ["Telegram", m.telegram ? "@" + tg : "", /^\w{3,}$/.test(tg) ? `https://t.me/${tg}` : null],
       ["WhatsApp", "phone" in m ? m.phone || "" : undefined, waOf(m.phone)],
@@ -540,11 +593,12 @@
       ["Birthday", "dob" in m ? day(m.dob) : undefined],
       ["School / org", "school" in m ? m.school || "" : undefined],
       ["Joined", "joined_on" in m ? day(m.joined_on) : undefined],
+      ["Recruitment round", "round" in m ? m.round || "" : undefined],
     ])));
     if (isAdmin()) main.append(panel("notes", m.notes ? el("p", "db-notes", m.notes) : el("p", "db-note", "No notes.")));
 
     if (canEdit.length) {
-      const { form: f } = buildForm(memberFields(org).filter((d) => canEdit.includes(d.key)), m, {
+      const { form: f } = buildForm(memberFields().filter((d) => canEdit.includes(d.key)), m, {
         submit: "Save changes",
         onSubmit: async (vals, status) => {
           const s = await api("/api/admin/members", { method: "PATCH", json: { id: m.id, ...vals } }).catch(() => null);
@@ -554,7 +608,7 @@
         },
       });
       const editPanel = panel(mine && !isAdmin() ? "update your details" : "edit record", nodes(
-        mine && !isAdmin() && el("p", "db-note", "Other members see your name, title, role, seat and Telegram. Only admins see the rest."),
+        mine && !isAdmin() && el("p", "db-note", "Other members see your name, title, seats and Telegram. Only admins see the rest."),
         f,
       ));
       if (mine && !isAdmin()) f.style.marginTop = "12px";
@@ -582,18 +636,19 @@
   }
 
   /* ───────────── the org chart ───────────── */
-  function personChip(p) {
-    const a = el("a", `org-person org-person--${roleKey(p.org_role)}`);
+  function personChip(p, seat) {
+    const role = seat ? seat.role : null;
+    const a = el("a", `org-person org-person--${roleKey(role)} is-${statusKey(p.status)}${seat && seat.note ? " has-note" : ""}`);
     a.href = `#/m/${p.id}`;
     a.dataset.person = p.id;
-    a.title = [p.org_role, p.title].filter(Boolean).join(" · ") || p.name;
+    a.title = [p.name, role, p.status !== "active" ? p.status : "", seat && seat.note].filter(Boolean).join(" · ");
     a.append(el("span", "org-av", p.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()), el("span", "org-nm", p.name));
-    if (p.org_role) a.append(el("span", "org-rl", p.org_role));
+    if (role) a.append(el("span", "org-rl", role));
     return a;
   }
   function chips(list, empty) {
     const box = el("div", "org-chips");
-    if (list.length) box.append(...list.map(personChip));
+    if (list.length) box.append(...list.map(([p, s]) => personChip(p, s)));
     else if (empty) box.append(el("span", "org-empty", empty));
     return box;
   }
@@ -601,32 +656,51 @@
   async function orgChart() {
     fail("");
     show("org");
-    $("#org-actions").replaceChildren(memberViews("chart"), ...(isAdmin() ? [linkButton("+ add division", "#/org/new/division", "primary")] : []));
-    $("#org-legend").replaceChildren(...ORG_ROLES.map((r) => {
+    $("#org-actions").replaceChildren(memberViews("chart"), ...(isAdmin() ? [linkButton("Import from Team Map", "#/org/import"), linkButton("+ add division", "#/org/new/division", "primary")] : []));
+    const legend = ORG_ROLES.map((r) => {
       const s = el("span", `org-person org-person--${roleKey(r)} is-key`);
       s.append(el("span", "org-av"), el("span", "org-nm", r));
       return s;
-    }));
+    });
+    const keyFor = (status, text) => {
+      const s = el("span", `org-person org-person--member is-key is-${status}`);
+      s.append(el("span", "org-av"), el("span", "org-nm", text));
+      return s;
+    };
+    legend.push(el("span", "org-legend__gap"), ...(isAdmin() ? [keyFor("leaning-in", "leaning in"), keyFor("leaning-no", "leaning no")] : [keyFor("joining", "joining")]));
+    if (isAdmin()) {
+      const lab = el("label", "db-check org-legend__toggle");
+      const box = el("input");
+      box.type = "checkbox";
+      box.id = "hide-leaning-no";
+      box.addEventListener("change", () => $("#org-chart").classList.toggle("hide-leaning-no", box.checked));
+      lab.append(box, "Hide leaning no");
+      legend.push(lab);
+    }
+    $("#org-legend").replaceChildren(...legend);
+
     const org = await getOrg();
     if (!org) return fail("Couldn't load the org chart.");
-    const { units, people } = org;
+    const { units, people, seats } = org;
+    const person = new Map(people.map((p) => [p.id, p]));
     const kids = new Map();
     for (const u of units) {
       const k = u.parent_id ?? null;
       if (!kids.has(k)) kids.set(k, []);
       kids.get(k).push(u);
     }
-    const seated = new Map();
-    for (const p of people) {
-      if (p.unit_id === null) continue;
-      if (!seated.has(p.unit_id)) seated.set(p.unit_id, []);
-      seated.get(p.unit_id).push(p);
+    const seated = new Map(); // unit id (or null for the top) → [[person, seat]]
+    for (const s of seats) {
+      const p = person.get(s.member_id);
+      if (!p) continue;
+      if (!seated.has(s.unit_id)) seated.set(s.unit_id, []);
+      seated.get(s.unit_id).push([p, s]);
     }
-    const byRole = (a, b) => roleRank(a.org_role) - roleRank(b.org_role) || a.name.localeCompare(b.name);
+    const byRole = (a, b) => roleRank(a[1].role) - roleRank(b[1].role) || a[0].name.localeCompare(b[0].name);
     seated.forEach((l) => l.sort(byRole));
     const names = new Map(people.map((p) => [p.id, p.name]));
 
-    const head = (u) => {
+    const head = (u, label = u.kind) => {
       const h = el("div", "org-unit__head");
       if (u.code) h.append(el("span", "org-code", u.code));
       if (isAdmin()) {
@@ -636,7 +710,7 @@
       } else {
         h.append(el("span", "org-name", u.name));
       }
-      h.append(el("span", "org-kind", u.kind));
+      h.append(el("span", "org-kind", label));
       return h;
     };
     const addLink = (text, href) => {
@@ -645,40 +719,53 @@
       return a;
     };
     function unitNode(u) {
-      const box = el("div", `org-unit org-unit--${u.kind}`);
+      let children = kids.get(u.id) || [];
+      let here = seated.get(u.id) || [];
+      let shown = u;
+      // a domain that is just one team of the same name shows as one card
+      const only = children.length === 1 ? children[0] : null;
+      const merged = u.kind === "domain" && only && only.kind === "team" && !here.length && !(kids.get(only.id) || []).length
+        && only.name.toLowerCase() === u.name.toLowerCase();
+      if (merged) {
+        shown = { ...only, code: only.code || u.code };
+        here = seated.get(only.id) || [];
+        children = [];
+      }
+      const box = el("div", `org-unit org-unit--${merged ? "team" : u.kind}${merged ? " is-merged" : ""}`);
       box.dataset.unit = u.id;
       if (u.overseers.length) box.dataset.overseers = u.overseers.join(" ");
       const bodyEl = el("div", "org-unit__body");
       if (u.kind === "domain" && u.overseers.length) {
         bodyEl.append(el("p", "org-over", `Overseen by ${u.overseers.map((id) => names.get(id)).filter(Boolean).join(", ")}`));
       }
-      const here = seated.get(u.id) || [];
-      const children = kids.get(u.id) || [];
-      if (here.length || u.kind === "team" || !children.length) bodyEl.append(chips(here, u.kind === "team" ? "No one yet" : children.length ? "" : "No one yet"));
+      if (here.length || shown.kind === "team" || !children.length) bodyEl.append(chips(here, "No one yet"));
       if (children.length) {
         const list = el("div", "org-kids");
         list.append(...children.map(unitNode));
         bodyEl.append(list);
       }
-      if (isAdmin() && u.kind !== "team") {
+      if (isAdmin() && shown.kind !== "team") {
         const adds = el("div", "org-adds");
         if (u.kind === "division") adds.append(addLink("+ domain", `#/org/new/domain/${u.id}`));
         adds.append(addLink("+ team", `#/org/new/team/${u.id}`));
         bodyEl.append(adds);
       }
-      box.append(head(u), bodyEl);
+      box.append(head(shown, merged ? "domain · team" : shown.kind), bodyEl);
       return box;
     }
 
     const chart = $("#org-chart");
     const top = el("div", "org-top");
-    const leaders = people.filter((p) => p.unit_id === null && LEADERSHIP.includes(p.org_role)).sort(byRole);
     const topCard = el("div", "org-unit org-unit--root");
     const topHead = el("div", "org-unit__head");
-    topHead.append(el("span", "org-name", "Normal"), el("span", "org-kind", "leadership"));
-    const topBody = el("div", "org-unit__body");
-    topBody.append(chips(leaders, "Give someone the Founder or Chief of Staff role to show them here."));
-    topCard.append(topHead, topBody);
+    topHead.append(el("span", "org-name", "Normal"), el("span", "org-kind", "the top"));
+    topCard.append(topHead);
+    const atTop = seated.get(null) || [];
+    if (atTop.length) {
+      const topBody = el("div", "org-unit__body");
+      topBody.append(chips(atTop));
+      topCard.append(topBody);
+    }
     top.append(topCard);
     const divisions = kids.get(null) || [];
     if (divisions.length) {
@@ -690,27 +777,29 @@
       }));
       chart.replaceChildren(top, el("div", "org-stem"), row);
     } else {
-      chart.replaceChildren(top, el("p", "db-empty", isAdmin() ? "No divisions yet. Add one to start the chart." : "The org chart hasn't been set up yet."));
+      chart.replaceChildren(top, el("p", "db-empty", isAdmin() ? "No divisions yet. Import the Team Map, or add a division to start." : "The org chart hasn't been set up yet."));
     }
+    chart.classList.toggle("hide-leaning-no", Boolean($("#hide-leaning-no") && $("#hide-leaning-no").checked));
 
     // hover a director to light up what they oversee
     chart.querySelectorAll(".org-person[data-person]").forEach((chip) => {
       const lit = () => chart.querySelectorAll(".org-unit[data-overseers]").forEach((u) => u.classList.toggle("is-lit", u.dataset.overseers.split(" ").includes(chip.dataset.person)));
+      const off = () => chart.querySelectorAll(".is-lit").forEach((u) => u.classList.remove("is-lit"));
       chip.addEventListener("mouseenter", lit);
       chip.addEventListener("focus", lit);
-      const off = () => chart.querySelectorAll(".is-lit").forEach((u) => u.classList.remove("is-lit"));
       chip.addEventListener("mouseleave", off);
       chip.addEventListener("blur", off);
     });
 
-    const onChart = people.filter((p) => p.unit_id !== null || LEADERSHIP.includes(p.org_role));
-    const unplaced = people.filter((p) => p.unit_id === null && !LEADERSHIP.includes(p.org_role)).sort(byRole);
+    const onChart = new Set(seats.filter((s) => person.has(s.member_id)).map((s) => s.member_id));
+    const unplaced = people.filter((p) => !onChart.has(p.id)).sort((a, b) => a.name.localeCompare(b.name));
     const count = (k) => { const n = units.filter((u) => u.kind === k).length; return `${n} ${k}${n === 1 ? "" : "s"}`; };
-    $("#org-count").textContent = `${onChart.length} ${onChart.length === 1 ? "person" : "people"} on the chart · ${count("division")} · ${count("domain")} · ${count("team")}`;
-    $("#org-note").textContent = isAdmin() ? "Seat people from their member record." : "";
+    const leaning = people.filter((p) => onChart.has(p.id) && /^(leaning|joining)/.test(p.status)).length;
+    $("#org-count").textContent = `${onChart.size} ${onChart.size === 1 ? "person" : "people"} on the chart${leaning ? ` (${leaning} not confirmed yet)` : ""} · ${count("division")} · ${count("domain")} · ${count("team")}`;
+    $("#org-note").textContent = isAdmin() ? "Change someone's seats on their member record." : "";
     $("#org-unplaced").hidden = !unplaced.length;
-    $("#org-unplaced-note").textContent = isAdmin() ? "Open someone and set their seat to place them." : "";
-    $("#org-unplaced-list").replaceChildren(...unplaced.map(personChip));
+    $("#org-unplaced-note").textContent = isAdmin() ? "Open someone and give them a seat." : "";
+    $("#org-unplaced-list").replaceChildren(...unplaced.map((p) => personChip(p, null)));
   }
 
   async function unitForm(id, kindArg, parentArg) {
@@ -720,21 +809,22 @@
     const isNew = id === "new";
     const unit = isNew ? { kind: kindArg, parent_id: parentArg ? Number(parentArg) : null, overseers: [] } : org.units.find((u) => String(u.id) === id);
     const kind = unit ? unit.kind : kindArg;
-    const body = detail("#/members/chart", "org chart", isNew ? "new" : unit ? unit.code || `#${unit.id}` : "", isNew ? `add ${kind}` : unit ? unit.name : "not found", unit && !isNew ? [el("span", "db-pill", kind)] : []);
+    const body = detail("#/members/chart", "org chart", isNew ? "new" : unit ? unit.code || `#${unit.id}` : "", isNew ? `add ${kind}` : unit ? unit.name : "not found", unit && !isNew ? [el("span", "db-pill", kind), unit.parent_id ? unitPath(org.units, unit.parent_id) : ""] : []);
     if (!unit) return fail("That part of the org chart isn't there any more.");
 
     const defs = [
       { key: "name", label: "Name", required: true },
-      { key: "code", label: "Code", hint: "Short reference, e.g. FL or FL.1" },
+      { key: "code", label: "Code", hint: "Short reference, e.g. PB or PB.1" },
     ];
     if (kind !== "division") {
       const allowed = PARENT_KINDS[kind];
       defs.push({ key: "parent_id", label: kind === "domain" ? "Division" : "Sits under", type: "select", options: unitOptions(org.units, (u) => allowed.includes(u.kind)) });
     }
     if (kind === "domain") {
-      const eligible = org.people.filter((p) => OVERSEER_ROLES.includes(p.org_role)).sort((a, b) => a.name.localeCompare(b.name));
-      defs.push({ key: "overseers", label: "Overseen by", type: "checks", wide: true, options: eligible.map((p) => [String(p.id), `${p.name} (${p.org_role})`]),
-        hint: eligible.length ? "" : "Give someone the Director role on their record to pick them here." });
+      const leads = new Set(org.seats.filter((s) => OVERSEER_ROLES.includes(s.role)).map((s) => s.member_id));
+      const eligible = org.people.filter((p) => leads.has(p.id)).sort((a, b) => a.name.localeCompare(b.name));
+      defs.push({ key: "overseers", label: "Overseen by", type: "checks", wide: true, options: eligible.map((p) => [String(p.id), p.name]),
+        hint: eligible.length ? "Founders, Chiefs of Staff and Directors." : "Give someone a Director seat to pick them here." });
     }
     defs.push({ key: "note", label: "Note", type: "textarea", wide: true });
 
@@ -761,8 +851,80 @@
     if (isNew) { body.append(panel(`${kind} record`, f)); return; }
     const { main, aside } = recordLayout(body);
     main.append(panel(`${kind} record`, f));
-    const here = org.people.filter((p) => p.unit_id === unit.id);
-    aside.append(panel("seated here", here.length ? chips(here) : el("p", "db-note", "No one is seated here. Set someone's seat on their member record.")));
+    const person = new Map(org.people.map((p) => [p.id, p]));
+    const here = org.seats.filter((s) => s.unit_id === unit.id && person.has(s.member_id)).map((s) => [person.get(s.member_id), s]);
+    aside.append(panel("seated here", here.length ? chips(here) : el("p", "db-note", "No one is seated here. Give someone a seat on their member record.")));
+  }
+
+  /* ───────────── importing the Team Map ───────────── */
+  function importPage() {
+    fail("");
+    const body = detail("#/members/chart", "org chart", "import", "import from Team Map");
+    const intro = el("p", "db-note", "In the Team Map, use Export CSV, then choose that file here (or paste it). People are matched by name and units by name: anything new is added. Everyone in the file then gets the file's seats, status and round. Nobody is deleted.");
+    const file = el("input");
+    file.type = "file";
+    file.accept = ".csv,text/csv";
+    file.id = "imp-file";
+    const fileLab = el("label", "db-label", "Team Map export (.csv)");
+    fileLab.htmlFor = "imp-file";
+    const text = el("textarea", "db-input mono");
+    text.id = "imp-text";
+    text.rows = 4;
+    text.placeholder = "…or paste the CSV here";
+    text.setAttribute("aria-label", "Paste the CSV");
+    const check = button("Check file", "primary", () => run(text.value), "imp-check");
+    const out = el("div", "db-import-out");
+    file.addEventListener("change", async () => {
+      const f = file.files && file.files[0];
+      if (f) { text.value = await f.text(); run(text.value); }
+    });
+    const pick = el("div", "db-stack");
+    pick.append(intro, fileLab, file, text, el("div", "db-actions"));
+    $(".db-actions", pick).append(check);
+    body.append(panel("1. the file", pick));
+    body.append(out);
+
+    function run(csv) {
+      fail("");
+      const plan = window.NormalTeamMap.parse(csv);
+      if (plan.error) { out.replaceChildren(); return fail(plan.error); }
+      const s = plan.summary;
+      const facts = fields([
+        ["Divisions", String(s.divisions)], ["Domains", String(s.domains)], ["Teams", String(s.teams)],
+        ["People", String(s.people)], ["Seats", String(s.seats)], ["With two or more seats", String(s.twoSeats)],
+        ["Leaning in / no", String(s.leaning)], ["Left the team", String(s.left)],
+      ]);
+      const warn = plan.warnings.length ? el("ul", "db-warnings") : null;
+      if (warn) plan.warnings.forEach((w) => warn.append(el("li", "", w)));
+      const thead = el("thead"), tbody = el("tbody");
+      renderTable(thead, tbody, [
+        { label: "Name", cls: "is-name", cell: (p) => p.name },
+        { label: "Status", cell: (p) => pill(p.status, statusKey(p.status)) },
+        { label: "Seats", cell: (p) => p.seats.map((x) => `${x.role} · ${x.unit ? x.unit : "Normal"}`).join("  |  ") },
+        { label: "Round", cls: "is-muted", cell: (p) => p.round },
+        { label: "Note", cls: "is-muted", cell: (p) => [p.note, ...p.seats.map((x) => x.note)].filter(Boolean).join("; ") },
+      ], plan.people);
+      const table = el("table", "db-table");
+      table.append(thead, tbody);
+      const scroll = el("div", "db-scroll db-scroll--tall");
+      scroll.append(table);
+      const go = button(`Import ${s.people} people`, "primary", async () => {
+        go.disabled = true;
+        const r = await api("/api/admin/org", { method: "POST", json: { action: "import", units: plan.units, people: plan.people } }).catch(() => null);
+        go.disabled = false;
+        if (!r || !r.ok) return fail(errText(r, "Couldn't import that. Nothing was changed."));
+        const d = r.data;
+        toast(`Imported: ${d.peopleAdded} people added, ${d.peopleUpdated} updated, ${d.unitsAdded} divisions/domains/teams added.`);
+        listKey = null;
+        location.hash = "#/members/chart";
+      }, "imp-go");
+      out.replaceChildren(
+        panel("2. what's in it", nodes(facts, warn)),
+        (() => { const p = panel("3. check the people", null); p.append(scroll); return p; })(),
+        panel(null, el("div", "db-actions")),
+      );
+      $(".db-actions", out.lastChild).append(go, linkButton("Cancel", "#/members/chart"));
+    }
   }
 
   /* ───────────── applications ───────────── */
@@ -1187,6 +1349,7 @@
     [/^#\/m\/(new|\d+)$/, (m) => memberProfile(m[1]), "members"],
     [/^#\/members\/chart$/, () => orgChart(), "members"],
     [/^#\/org\/new\/(division|domain|team)(?:\/(\d+))?$/, (m) => unitForm("new", m[1], m[2]), "members", ["master", "admin"]],
+    [/^#\/org\/import$/, () => importPage(), "members", ["master", "admin"]],
     [/^#\/org\/(\d+)$/, (m) => unitForm(m[1]), "members", ["master", "admin"]],
     [/^#\/applications$/, () => applicationsList(), "applications", ["master", "admin"]],
     [/^#\/a\/(\d+)$/, (m) => applicationDetail(m[1]), "applications", ["master", "admin"]],

@@ -292,6 +292,34 @@ a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: va
 .org-person.is-key { padding-right: 8px; }
 .org-person.is-key .org-av { width: 12px; height: 12px; }
 
+/* ───────────── seats, statuses, import ───────────── */
+.db-pill--leaning-in, .db-pill--joining { color: var(--info); background: var(--info-soft); }
+.db-pill--leaning-no { color: var(--danger); background: #fbeceb; }
+.db-pill--on-break { color: var(--warn); background: var(--warn-soft); }
+.db-seat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.db-seat-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.db-seat-note { font-size: 12.5px; color: var(--muted); }
+.db-seat-note::before { content: "· "; }
+.db-seat-edit { margin: 16px 0 6px; padding-top: 14px; border-top: 1px solid var(--line); }
+.db-seat-rows { display: grid; gap: 8px; }
+.db-seat { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; }
+.db-seat .db-btn--sm { height: 34px; }
+@media (max-width: 720px) { .db-seat { grid-template-columns: 1fr 1fr; } .db-seat .seat-note { grid-column: 1 / -1; } }
+.db-scroll--tall { max-height: 460px; overflow: auto; }
+.db-warnings { margin: 12px 0 0; padding-left: 18px; color: var(--warn); font-size: 13px; }
+
+.org-legend__gap { width: 1px; height: 18px; background: var(--line-2); }
+.org-legend__toggle { margin-left: auto; font-size: 13px; }
+.org-person.is-leaning-in, .org-person.is-joining { border-style: dashed; border-color: var(--role-director); }
+.org-person.is-leaning-no { border-style: dashed; border-color: var(--danger); opacity: .6; }
+.org-person.is-on-break { opacity: .7; }
+.org-person.is-key.is-leaning-in .org-av, .org-person.is-key.is-joining .org-av, .org-person.is-key.is-leaning-no .org-av { background: transparent; border: 1.5px dashed currentColor; }
+.org-person.is-key.is-leaning-in, .org-person.is-key.is-joining { color: var(--role-director); }
+.org-person.is-key.is-leaning-no { color: var(--danger); opacity: 1; }
+.hide-leaning-no .org-person.is-leaning-no { display: none; }
+.org-person.has-note .org-nm::after { content: "•"; margin-left: 4px; color: var(--warn); }
+.org-unit.is-merged { background: var(--surface-2); }
+
 /* ───────────── phones and tablets ───────────── */
 @media (max-width: 900px) {
   .db-app.is-in { display: block; }
