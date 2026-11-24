@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>join us · Normal</title>
+  <meta name="description" content="Join Normal: a ground-up movement of youth doing their part to see Singapore become the home they can imagine it to be.">
+  <meta name="theme-color" content="#fbf7ee">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/bookmania-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap nav__inner">
+    <a class="nav__brand" href="index.html" aria-label="Normal, home"><img src="assets/mark.svg" alt="" width="275" height="292"></a>
+    <nav aria-label="Sections">
+      <ul class="nav__links">
+        <li><a href="index.html#plan">the plan</a></li>
+        <li><a href="events.html">what's on</a></li>
+        <li><a class="btn btn--sm" href="join.html" aria-current="page">come in</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="page-head join-head">
+    <div class="wrap join__wrap">
+      <p class="kicker reveal">join us</p>
+      <h1 class="page-title reveal">hey there!</h1>
+      <p class="lede reveal">thanks for taking this first step! we would love to know you better through this form :)</p>
+      <p class="reveal">there's really no one type of person or right answer that we're looking for, so do answer in a manner that reflects who you are, your talents and your beliefs. no maximum word count, we will read everything!</p>
+      <p class="join-head__close reveal">we'll be closing the form on 14th November 2026 at midnight.</p>
+    </div>
+  </section>
+
+  <section class="join" aria-label="Application form">
+    <div class="wrap join__wrap">
+      <ol class="join__steps" id="join-steps" aria-label="Sections of the form"></ol>
+
+      <form class="join__sheet" id="join-form" novalidate>
+        <div id="join-body"><p class="join__loading">opening the form…</p></div>
+        <!-- real people never see or fill this in -->
+        <input class="join__hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="join__nav">
+          <button class="btn btn--ghost" type="button" id="join-back">← back</button>
+          <button class="btn" type="submit" id="join-next">next →</button>
+        </div>
+        <p class="join__status" id="join-status" role="status" aria-live="polite"></p>
+        <p class="join__saved" id="join-saved" aria-hidden="true"></p>
+      </form>
+
+      <div class="join__done" id="join-done" hidden tabindex="-1">
+        <button class="door" type="button" aria-pressed="true" aria-label="Close the door">
+          <span class="door__light" aria-hidden="true"></span>
+          <span class="door__leaf" aria-hidden="true"><span class="door__knob"></span></span>
+          <img class="door__frame" src="assets/mark-frame.svg" alt="" width="275" height="292">
+        </button>
+        <h2 id="join-thanks-title"></h2>
+        <p class="lede" id="join-thanks-text"></p>
+        <p><a class="link" href="index.html">back to the house →</a></p>
+      </div>
+
+      <noscript>
+        <p class="join__noscript">This form needs JavaScript. You can also apply through <a href="https://newnormal.fillout.com/recruitment">our Fillout form</a>.</p>
+      </noscript>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <img class="footer__mark" src="assets/wordmark.svg" alt="Normal" width="1538" height="369">
+    <p>A ground-up youth movement in Singapore.</p>
+    <p class="footer__small">© <span id="year">2026</span> Normal</p>
+  </div>
+</footer>
+
+<script src="main.js"></script>
+<script src="join.js"></script>
+</body>
+</html>

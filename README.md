@@ -2,7 +2,7 @@
 
 A home built for us to be human. The home page has three parts: a hero, a hand-drawn floor plan tilted into 3D, and a "Come in" footer with contact links. Hover over a room (or tap it on a phone) to see a short card about it. The front door leads to "Come in", and the library leads to the events page.
 
-Pages: `index.html` (home) and `events.html` (all events).
+Pages: `index.html` (home), `events.html` (what's on) and `join.html` (join us: the recruitment form).
 
 | Part of the plan | What its card says |
 |---|---|
@@ -40,6 +40,19 @@ Everything on the "what's on" page (`events.html`) comes from `events.js`.
   image: "assets/events/youth-day.jpg" }
 ```
 
+## Join page
+
+`join.html` is the recruitment form, rebuilt from the Fillout form at newnormal.fillout.com/recruitment. The questions live in `join-form.json`; edit them there and the page and the sender both follow. Each question's `id` is its Fillout question ID, so keep those as they are.
+
+Applications are sent by a small Vercel function, `api/join.js`, to the same Fillout form, using Fillout's API. To switch it on:
+
+1. In Fillout, go to **Settings → Developer → API key**, click **Enable API** if needed, and copy the key.
+2. In Vercel, go to **Project → Settings → Environment Variables** and add `FILLOUT_API_KEY` with that key (for Production and Preview).
+3. Redeploy, send one test application, and check it appears in the form's **Results** in Fillout.
+
+- **Not yet sent to the Zite table.** Fillout doesn't run a form's integrations for submissions made through its API, so applications from this page appear in Fillout's Results but are not copied into the Zite table the way the Fillout form does it.
+- **Until the key is added,** the page tells applicants it can't send yet, keeps their answers on their device, and links to the Fillout form.
+
 ## Fonts
 
 The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
@@ -65,4 +78,5 @@ To add a part of the house:
 
 - [ ] Check the Bookmania licence covers web use and a public repo (see "Fonts")
 - [ ] Design assets from the reviewer
+- [ ] Add `FILLOUT_API_KEY` in Vercel and send a test application (see "Join page")
 - [ ] Fill in `events.js`: IP blurbs and images, and events

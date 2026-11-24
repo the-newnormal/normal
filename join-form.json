@@ -1,0 +1,90 @@
+{
+  "fillout": {
+    "formId": "g7Qzrx46kCus",
+    "url": "https://newnormal.fillout.com/recruitment"
+  },
+  "steps": [
+    {
+      "title": "contact details",
+      "heading": "first, how do we reach you?",
+      "questions": [
+        { "id": "ajcfQ5kz5cnttfiLv2owXd", "type": "short", "label": "full name", "required": true, "autocomplete": "name" },
+        { "id": "3S3tSshQnz2XKF7RoeVuzA", "type": "short", "label": "phone number (WhatsApp)", "required": true, "inputmode": "tel", "autocomplete": "tel" },
+        { "id": "hEMT2UG7WePgBhewDNk2gr", "type": "short", "label": "telegram handle (with the @)", "required": true, "placeholder": "@" }
+      ]
+    },
+    {
+      "title": "tell us about yourself",
+      "heading": "tell us about your unique self!",
+      "questions": [
+        { "id": "muMRbLXVFkbnLCU4ZGieNC", "type": "long", "label": "what's a recent story that reflects who you are? please tell us about it!", "required": true },
+        { "id": "ppUcX9LxrfKa3gSyr6tZCK", "type": "long", "label": "what's something you don't usually tell people, but that we'll likely find out about you over the next three months?", "required": true },
+        { "id": "gJBUbtuQHrq87v9q6wbR1n", "type": "long", "label": "what lights you up? as in, what can you do for hours without being tired, purely for the love of the game?", "required": true },
+        { "id": "adCSWY69C5NQwktm9EzS6F", "type": "short", "labelHtml": "please help to do this quick <a href=\"https://bigfive-test.com\" target=\"_blank\" rel=\"noopener\">Big Five test</a>, and submit the code you receive at the end.", "label": "Big Five test code", "hint": "it should look something like this: 6af568c5569386810eb28584", "required": false }
+      ]
+    },
+    {
+      "title": "you 🤝 the mission",
+      "heading": "you 🤝 the mission",
+      "questions": [
+        { "id": "9qeRSojuGMKxVX3fp1xFvV", "type": "long", "lead": "Normal is hard work, that is if it doesn't get you closer to your own personal goals (serving people, growing in various capacities, fulfilment, etc.).", "label": "how does Normal fit into what you are trying to achieve with your life?", "required": true },
+        { "id": "8kn8UCqXMTixE6vmkUEwfw", "type": "long", "lead": "Singapore is the place where we'll spend the bulk of our lives. thinking about the place you'd like to live in:", "label": "what do you hope for Singapore and what Singaporeans could become?", "required": true },
+        { "id": "1n1YGHGyDuGUHtT4TFtXtd", "type": "long", "lead": "we've often become generalists because of how we've been taught in school.", "label": "what is something that you are an expert/excellent at, and what are you working on developing an expertise/excellence in?", "required": true },
+        {
+          "id": "sba4p7f5GNJtm8gJHRqX4f", "type": "matrix", "label": "how would you rate yourself on these skills?", "required": true,
+          "rows": [
+            "Communication (Negotiation, public speaking, facilitating conversations)",
+            "Media (Social media management, video creation, graphic design storytelling)",
+            "Operations (Event planning, risk management, procurement)",
+            "AI Tools (specifically: coding, vibecoding)"
+          ],
+          "columns": ["I am learning", "Have some experience", "Very strong"]
+        },
+        {
+          "id": "mfXL", "type": "matrix", "label": "which roles are you keen on?", "hint": "pick your 1st, 2nd and 3rd choice", "required": false, "roles": true,
+          "rows": [
+            "Youth Day 27: For committed, intelligent and gritty people ready to push the limits of what's possible",
+            "The Great Singapore Field Trip: For creatives who love exploration and adventure and aren't afraid of big coordination",
+            "Afterwork Anonymous (AA): For people excited to grow in community building and thoughtful programme design",
+            "Cooked: For people who care about real community across schools and fairer access to schoolwork support",
+            "\"Uniqlo Killer\" (working name): For creatives with a keen business sense and supply chain skills",
+            "Pottery: For avid potters, or anyone keen to put in the time and dedication to lead this",
+            "Relationships: For sharp, trustworthy people who love working with others and connecting the dots",
+            "Storytelling: For skilled storytellers in writing, photo, video or more, especially those who can do several",
+            "Systems: For programmers and AI-savvy builders who think in systems and make tools people actually use"
+          ],
+          "columns": ["1st Choice", "2nd Choice", "3rd Choice"]
+        },
+        { "id": "w7kK", "type": "long", "label": "why these roles? please go into depth into what makes you a good fit for each of your choices.", "required": true },
+        { "id": "88SxyULAVcNRjmjeuPpWd4", "type": "long", "lead": "let's say you have a precious free Saturday and can only choose one:", "list": ["help one single person who needs you,", "work on something that could benefit many people, or", "use the time for yourself to rest/recover or grow your skills/attend a webinar."], "label": "what would you choose and why?", "required": true },
+        { "id": "29Gc", "type": "long", "label": "any cool ideas for Normal?? it's ok if you don't have one yet", "required": false },
+        { "id": "gfCELz3mGgiAmK4dSVLxGy", "type": "long", "label": "any questions for us?", "required": false }
+      ]
+    },
+    {
+      "title": "the formalities",
+      "heading": "the formalities",
+      "questions": [
+        { "id": "9MGhhCeYno1cjRDvkdeu2H", "type": "date", "label": "date of birth", "required": true, "autocomplete": "bday" },
+        {
+          "id": "unetdYLPTKxZCV8dcTE1uk", "type": "choice", "label": "what life stage are you in?", "required": true,
+          "options": ["Secondary School", "JC / Poly / ITE / MI or equivalent", "National Service", "University", "Working, early career", "Working, established", "Taking a break / figuring things out"]
+        },
+        { "id": "3Y6nF9gKPjRaRfZcgquLqT", "type": "short", "label": "name of school / relevant organisation", "required": true },
+        { "id": "9F4MedPbh1jZXu1ejUDkqe", "type": "long", "label": "what are your other commitments?", "required": true }
+      ]
+    },
+    {
+      "title": "and finally",
+      "heading": "and finally...",
+      "noticeHtml": "<p><strong>How we use your information</strong></p><p>The New Normal (“Normal”) collects the details in this form to:</p><ol><li>review your application and decide whether you’re a good fit</li><li>contact you about Normal and contact you for next steps, such as a chat/interview</li><li>set you up as a member if you join</li></ol><p>Only the leaders handling recruitment can see your answers. We don’t sell your information or share it outside Normal. Our form and storage tools may keep data outside Singapore, and we choose providers with strong protection.</p><p>If you don’t join us, we delete your details no later than 3 years after recruitment closes. If you join, they become part of your member record.</p><p>You can ask to see or correct your information, or withdraw your consent, at any time. Email us at <a href=\"mailto:hello@newnormal.sg\">hello@newnormal.sg</a> with “Data request” in the subject line. If you withdraw before recruitment ends, we may not be able to consider your application.</p>",
+      "questions": [
+        { "id": "sbGe", "type": "consent", "label": "I’ve read the notice above and agree to Normal using my information to contact me and to review my application.", "required": true }
+      ]
+    }
+  ],
+  "thanks": {
+    "title": "thank you <3",
+    "text": "we will reach out with interview timings next, see you! 😄"
+  }
+}
