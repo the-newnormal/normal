@@ -176,18 +176,9 @@ p { margin: 0 0 1em; }
 .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.4rem; margin: 0; }
 .hero__house { position: relative; margin: 0 0 1.5rem; justify-self: end; width: min(46%, 340px); }
 .hero__house img { width: 100%; height: auto; transform: rotate(3deg); }
-.hero__house figcaption {
-  position: absolute;
-  right: 0; bottom: -1.6rem;
-  font: 500 1rem var(--font);
-  color: var(--brown-2);
-  transform: rotate(-4deg);
-  white-space: nowrap;
-}
 @media (min-width: 880px) {
   .hero__grid { grid-template-columns: 1.6fr 1fr; gap: 3rem; }
   .hero__house { justify-self: center; width: 100%; max-width: 360px; }
-  .hero__house figcaption { right: auto; left: -8%; }
 }
 
 .circled { position: relative; white-space: nowrap; font-style: italic; margin: 0 .3em; }
