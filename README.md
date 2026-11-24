@@ -9,7 +9,7 @@ Pages: `index.html` (home) and `events.html` (all events).
 | Front door | Who we stand for |
 | 1 Kitchen | A laboratory · *Adventure, not fear* · Courage to explore |
 | 2 Living room | A seat at the table · *Considered, not dismissed* · Authenticity & intention |
-| 3 Bedroom | A shelter · *Dwelling, not rushing* |
+| 3 Bedroom | A shelter: real rest |
 | 4 Library | A living library · events · Staying curious |
 | Garden | *Flourish, not bare survival* · *Fulfilled* |
 | North arrow | Our north star |
@@ -64,4 +64,3 @@ To add a part of the house:
 - [ ] Design assets from the reviewer
 - [ ] Fill in `events.js`
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)
-- [ ] The doc leaves *Dwelling // ___* blank, so "Rushing" is a placeholder
