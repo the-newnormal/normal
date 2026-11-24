@@ -30,7 +30,7 @@ Deploy it to any static host (Vercel, Netlify, GitHub Pages).
 
 Everything on the "what's on" page (`events.html`) comes from `events.js`.
 
-- **Our IPs** (`NORMAL_IPS`): `name`, `blurb`, `link` (its own site, e.g. `https://youthday.sg`) and `image`. An IP with no link shows "page coming soon". Put images in `assets/ips/`.
+- **Our IPs** (`NORMAL_IPS`): `name`, `kicker`, `blurb`, `link` (its own site, e.g. `https://youthday.sg`) and `image`. `theme: "backyard"` or `"youthday"` dresses the card like that IP's own site (colours and fonts taken from backyard.sg and youthday.sg; the fonts load from Google Fonts on `events.html` only). An IP with no theme gets a plain Normal card, and one with no link shows "page coming soon". Put images in `assets/ips/`.
 - **Events** (`NORMAL_EVENTS`): see below. Put photos in `assets/events/`.
 
 ```js

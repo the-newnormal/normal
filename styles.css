@@ -490,7 +490,7 @@ svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-line
 }
 
 /* our IPs */
-.ips { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+.ips { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.2rem; max-width: 62rem; }
 .ip {
   display: flex;
   flex-direction: column;
@@ -512,6 +512,107 @@ a.ip:hover { background: var(--hl-soft); transform: rotate(-1deg); }
 .ip__cta { margin: auto 0 0; font: 400 .95rem var(--font); letter-spacing: var(--tracking); color: var(--brown-2); }
 .ip--soon { border-style: dashed; box-shadow: none; }
 .ip--soon .ip__cta { color: var(--muted); }
+
+/* IP cards dressed like their own sites */
+.ip__kicker { margin: 0; }
+.ip--backyard, .ip--youthday {
+  position: relative;
+  overflow: hidden;
+  min-height: 17rem;
+  padding: 1.6rem 1.6rem 1.4rem;
+  border: 0;
+  border-radius: 22px;
+  gap: .2rem;
+}
+a.ip--backyard:hover, a.ip--youthday:hover { transform: rotate(-1deg) translateY(-2px); }
+
+/* backyard.sg: dark green, lime, cream, a rust starburst; Archivo black italic + Instrument Serif */
+.ip--backyard {
+  color: #f9ecd0;
+  background: repeating-linear-gradient(-45deg, rgba(178, 210, 119, .13) 0 2px, transparent 2px 10px), #2f5b3b;
+  box-shadow: 0 6px 0 #1f4029;
+}
+a.ip--backyard:hover { background: repeating-linear-gradient(-45deg, rgba(178, 210, 119, .13) 0 2px, transparent 2px 10px), #336541; }
+.ip--backyard::before {
+  content: "";
+  position: absolute;
+  right: -30px; top: -30px;
+  width: 120px; height: 120px;
+  background: #7a2e1e;
+  clip-path: polygon(50.0% 0.0%, 57.8% 21.0%, 75.0% 6.7%, 71.2% 28.8%, 93.3% 25.0%, 79.0% 42.2%, 100.0% 50.0%, 79.0% 57.8%, 93.3% 75.0%, 71.2% 71.2%, 75.0% 93.3%, 57.8% 79.0%, 50.0% 100.0%, 42.2% 79.0%, 25.0% 93.3%, 28.8% 71.2%, 6.7% 75.0%, 21.0% 57.8%, 0.0% 50.0%, 21.0% 42.2%, 6.7% 25.0%, 28.8% 28.8%, 25.0% 6.7%, 42.2% 21.0%);
+}
+.ip--backyard .ip__kicker, .ip--backyard .ip__blurb {
+  position: relative;
+  font: italic 400 1.45rem/1.1 "Instrument Serif", Georgia, serif;
+  letter-spacing: 0;
+}
+.ip--backyard .ip__kicker { color: #b2d277; }
+.ip--backyard .ip__name {
+  position: relative;
+  font: italic 900 clamp(2.4rem, 5vw, 3.3rem)/.95 "Archivo", system-ui, sans-serif;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  letter-spacing: -.01em;
+  color: #b2d277;
+  text-shadow: 3px 3px 0 #1f4029;
+}
+.ip--backyard .ip__blurb { align-self: flex-end; color: #f9ecd0; }
+.ip--backyard .ip__cta {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: .65em 1.15em;
+  border-radius: 999px;
+  font: 800 .95rem/1 "Archivo", system-ui, sans-serif;
+  letter-spacing: 0;
+  color: #2f5b3b;
+  background: #f9ecd0;
+  box-shadow: 0 3px 0 #1d2a20;
+}
+
+/* youthday.sg: pale lavender with soft glows, navy + sky blue + lavender; Fraunces + Archivo caps */
+.ip--youthday {
+  color: #2b3652;
+  background:
+    radial-gradient(55% 65% at 18% 25%, rgba(255, 232, 160, .6), transparent 70%),
+    radial-gradient(55% 70% at 88% 70%, rgba(176, 166, 224, .5), transparent 70%),
+    #e8eaee;
+  box-shadow: 0 1px 0 rgba(43, 54, 82, .1), 0 18px 30px -22px rgba(43, 54, 82, .55);
+}
+.ip--youthday .ip__kicker {
+  font: 600 .78rem/1.2 "Archivo", system-ui, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #3e4e72;
+}
+.ip--youthday .ip__name {
+  margin-top: .35rem;
+  font: 900 clamp(2.6rem, 5.4vw, 3.6rem)/.95 "Fraunces", Georgia, serif;
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
+  letter-spacing: -.02em;
+  color: #3e4e72;
+}
+.ip--youthday .ip__blurb {
+  margin-top: .3rem;
+  font: 800 clamp(1.25rem, 2.4vw, 1.6rem)/1 "Archivo", system-ui, sans-serif;
+  letter-spacing: -.01em;
+  text-transform: uppercase;
+  color: #61aecb;
+}
+.ip--youthday .ip__year { color: #8e86c4; }
+.ip--youthday .ip__cta {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: .65em 1.15em;
+  border-radius: 999px;
+  font: 700 .95rem/1 "Archivo", system-ui, sans-serif;
+  letter-spacing: 0;
+  color: #fff;
+  background: #3e4e72;
+}
+@media (max-width: 640px) {
+  .ip--backyard, .ip--youthday { min-height: 0; }
+  .ip--backyard .ip__cta, .ip--youthday .ip__cta { margin-top: 1.6rem; }
+}
 .events--grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); align-items: start; }
 #events-upcoming { max-width: 46rem; }
 .nav__links a[aria-current="page"] { border-bottom-color: var(--hl); }

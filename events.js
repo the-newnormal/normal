@@ -7,12 +7,14 @@
     blurb              "One line on what it is"
     link               its page: "backyard.html", or a full "https://…" address
     image              "assets/ips/…"   a photo or poster (put the file in assets/ips/)
+    theme              "backyard" or "youthday": dresses the card like that IP's own site
+    kicker             small line above the name
 
   An IP with no link shows "page coming soon" and isn't clickable.
 */
 window.NORMAL_IPS = [
-  { name: "Backyard", blurb: "", link: "https://backyard.sg", image: "" },
-  { name: "Youth Day", blurb: "", link: "https://youthday.sg", image: "" },
+  { name: "Backyard", theme: "backyard", kicker: "we invite you to our", blurb: "community bbq", link: "https://backyard.sg" },
+  { name: "Youth Day", theme: "youthday", kicker: "archive · 5 & 6 July 2026", blurb: "will return in 2027", link: "https://youthday.sg" },
 ];
 
 /*

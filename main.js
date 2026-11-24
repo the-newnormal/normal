@@ -257,7 +257,8 @@
     }
     box.replaceChildren(...ips.map((ip) => {
       const linked = pageLink(ip.link);
-      const card = el(linked ? "a" : "article", linked ? "ip" : "ip ip--soon");
+      const theme = /^[a-z-]+$/.test(ip.theme || "") ? ` ip--${ip.theme}` : "";
+      const card = el(linked ? "a" : "article", (linked ? "ip" : "ip ip--soon") + theme);
       if (linked) {
         card.href = ip.link.trim();
         if (/^https?:\/\//.test(card.getAttribute("href"))) {
@@ -272,9 +273,25 @@
         img.loading = "lazy";
         card.append(img);
       }
+      if (ip.kicker) card.append(el("p", "ip__kicker", ip.kicker));
       card.append(el("h3", "ip__name", ip.name));
-      if (ip.blurb) card.append(el("p", "ip__blurb", ip.blurb));
-      card.append(el("p", "ip__cta", linked ? "visit →" : "page coming soon"));
+      if (ip.blurb) {
+        // a year at the end ("… 2027") gets its own colour in some themes
+        const blurb = el("p", "ip__blurb");
+        const m = ip.blurb.match(/^(.*?)(\d{4})$/);
+        if (m) blurb.append(m[1], el("span", "ip__year", m[2]));
+        else blurb.textContent = ip.blurb;
+        card.append(blurb);
+      }
+      let cta = "page coming soon";
+      if (linked) {
+        cta = "visit →";
+        try {
+          const u = new URL(card.href);
+          if (u.origin !== location.origin) cta = `visit ${u.hostname.replace(/^www\./, "")} ↗`;
+        } catch (_) { /* keep "visit →" */ }
+      }
+      card.append(el("p", "ip__cta", cta));
       return card;
     }));
   }
