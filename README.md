@@ -44,7 +44,7 @@ Everything on the "what's on" page (`events.html`) comes from `events.js`.
 
 The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
 
-- **The font files are not in git.** Bookmania is licensed and this repo is public, so `assets/fonts/` is in `.gitignore`. Copy `bookmania-regular.woff2`, `bookmania-regular.woff` and `bookmania-bold.woff2` into `assets/fonts/` wherever you deploy from.
+- **The font files are in the repo** (`assets/fonts/`). The repo is public, so they can be downloaded from GitHub.
 - **Regular is used across the site; Bold only on the Youth Day card.** Bold is set up as its own family (`bookmania-bold`) so it doesn't turn every heading bold. `bookmania-bold.woff2` was converted from the desktop `.otf`, so check the licence covers web use.
 
 ## Files
@@ -63,7 +63,7 @@ To add a part of the house:
 
 ## To do
 
-- [ ] Check the Bookmania licence covers web use, and decide how the font files get to the live site (see "Fonts")
+- [ ] Check the Bookmania licence covers web use and a public repo (see "Fonts")
 - [ ] Design assets from the reviewer
 - [ ] Fill in `events.js`: IP blurbs and images, and events
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)
