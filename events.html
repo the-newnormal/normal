@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Events · Normal</title>
+  <title>what's on · Normal</title>
   <meta name="description" content="Normal's activations, cultural works and gatherings: what's coming up, and everything we've done so far.">
   <meta name="theme-color" content="#fbf7ee">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -30,21 +30,29 @@
   <section class="page-head">
     <div class="wrap">
       <p class="kicker reveal">the library shelves</p>
-      <h1 class="page-title reveal">Events</h1>
+      <h1 class="page-title reveal">what's on</h1>
       <p class="lede reveal">Our activations, cultural works and gatherings: pieces of a better society, demonstrated rather than merely described.</p>
+    </div>
+  </section>
+
+  <!-- Filled from NORMAL_IPS in events.js -->
+  <section class="events-section" id="ips-section" aria-labelledby="ips-title">
+    <div class="wrap">
+      <h2 class="section-title" id="ips-title">our IPs</h2>
+      <div class="ips" id="ips"></div>
     </div>
   </section>
 
   <section class="events-section" aria-labelledby="upcoming-title">
     <div class="wrap">
-      <h2 class="label" id="upcoming-title">Coming up</h2>
+      <h2 class="section-title" id="upcoming-title">coming up</h2>
       <div class="events" id="events-upcoming"></div>
     </div>
   </section>
 
   <section class="events-section" aria-labelledby="past-title">
     <div class="wrap">
-      <h2 class="label" id="past-title">So far</h2>
+      <h2 class="section-title" id="past-title">so far</h2>
       <div class="events events--grid" id="events-past"></div>
     </div>
   </section>

@@ -26,9 +26,12 @@ python3 -m http.server
 
 Deploy it to any static host (Vercel, Netlify, GitHub Pages).
 
-## Add an event
+## Add an IP or an event
 
-Edit `events.js`. Every event shows up on `events.html`. Put photos in `assets/events/`.
+Everything on the "what's on" page (`events.html`) comes from `events.js`.
+
+- **Our IPs** (`NORMAL_IPS`): `name`, `blurb`, `link` (its own site, e.g. `https://youthday.sg`) and `image`. An IP with no link shows "page coming soon". Put images in `assets/ips/`.
+- **Events** (`NORMAL_EVENTS`): see below. Put photos in `assets/events/`.
 
 ```js
 { title: "Youth Day", date: "2026-12-12", time: "2pm – 8pm", place: "…", blurb: "…",
@@ -49,7 +52,7 @@ The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings an
 - `index.html`: hero, the plan (inline SVG) with each room's card text in a `<template>`, and the "Come in" footer
 - `styles.css`: paper, ink and layout
 - `main.js`: builds the 3D house (stacks the walls, places the room pins, runs the hover card) and renders events
-- `events.html`: the events page
+- `events.html`: the "what's on" page (our IPs, coming up, so far)
 - `assets/`: wordmark and door mark (traced to SVG from the hand-drawn originals), house sketch
 
 To add a part of the house:
@@ -62,5 +65,5 @@ To add a part of the house:
 
 - [ ] Check the Bookmania licence covers web use, and decide how the font files get to the live site (see "Fonts")
 - [ ] Design assets from the reviewer
-- [ ] Fill in `events.js`
+- [ ] Fill in `events.js`: IP blurbs and images, the Living Archive link, and events
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)

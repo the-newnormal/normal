@@ -243,6 +243,43 @@
   }
   renderEvents();
 
+  /* ───────────── our IPs (from events.js) ───────────── */
+  // a page in this site ("backyard.html") or a full web address; never javascript:/data: links
+  const pageLink = (u) => typeof u === "string" && u.trim() !== "" && !/^\s*(javascript|data|vbscript):/i.test(u);
+
+  function renderIPs() {
+    const box = $("#ips");
+    if (!box) return;
+    const ips = (window.NORMAL_IPS || []).filter((ip) => ip && ip.name);
+    if (!ips.length) {
+      $("#ips-section")?.setAttribute("hidden", "");
+      return;
+    }
+    box.replaceChildren(...ips.map((ip) => {
+      const linked = pageLink(ip.link);
+      const card = el(linked ? "a" : "article", linked ? "ip" : "ip ip--soon");
+      if (linked) {
+        card.href = ip.link.trim();
+        if (/^https?:\/\//.test(card.getAttribute("href"))) {
+          card.target = "_blank";
+          card.rel = "noopener";
+        }
+      }
+      if (safeUrl(ip.image)) {
+        const img = el("img", "ip__img");
+        img.src = ip.image;
+        img.alt = "";
+        img.loading = "lazy";
+        card.append(img);
+      }
+      card.append(el("h3", "ip__name", ip.name));
+      if (ip.blurb) card.append(el("p", "ip__blurb", ip.blurb));
+      card.append(el("p", "ip__cta", linked ? "visit →" : "page coming soon"));
+      return card;
+    }));
+  }
+  renderIPs();
+
   /* ───────────── fade things in as they scroll into view ───────────── */
   if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     root.classList.add("reveal-ready");

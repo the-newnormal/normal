@@ -1,7 +1,23 @@
 /*
-  Events: add gatherings here. They show up on events.html, and the next
-  three upcoming ones also appear on the Library's shelves on the home page.
+  Everything on the "what's on" page (events.html) comes from this file.
 
+  ── Our IPs ──
+  Each IP:
+    name   (required)  "Backyard"
+    blurb              "One line on what it is"
+    link               its page: "backyard.html", or a full "https://…" address
+    image              "assets/ips/…"   a photo or poster (put the file in assets/ips/)
+
+  An IP with no link shows "page coming soon" and isn't clickable.
+*/
+window.NORMAL_IPS = [
+  { name: "Backyard", blurb: "", link: "https://backyard.sg", image: "" },
+  { name: "Youth Day", blurb: "", link: "https://youthday.sg", image: "" },
+  { name: "Living Archive", blurb: "", link: "", image: "" },
+];
+
+/*
+  ── Events ──
   Each event:
     title  (required)  "Youth Day"
     date   (required)  "YYYY-MM-DD"
