@@ -2,7 +2,7 @@
 
 A home built for us to be human. The home page has three parts: a hero, a hand-drawn floor plan tilted into 3D, and a "Come in" footer with contact links. Hover over a room (or tap it on a phone) to see a short card about it. The front door leads to "Come in", and the library leads to the events page.
 
-Pages: `index.html` (home), `events.html` (what's on) and `join.html` (join us: the recruitment form).
+Pages: `index.html` (home), `events.html` (what's on), `join.html` (join us: the recruitment form) and the admin at admin.newnormal.sg (`admin/`).
 
 | Part of the plan | What its card says |
 |---|---|
@@ -40,18 +40,33 @@ Everything on the "what's on" page (`events.html`) comes from `events.js`.
   image: "assets/events/youth-day.jpg" }
 ```
 
-## Join page
+## Join page and admin
 
-`join.html` is the recruitment form, rebuilt from the Fillout form at newnormal.fillout.com/recruitment. The questions live in `join-form.json`; edit them there and the page and the sender both follow. Each question's `id` is its Fillout question ID, so keep those as they are.
+`join.html` is the recruitment form, rebuilt from the Fillout form. The questions live in `join-form.json`; edit them there and the page, the database and the admin all follow. Each question's `id` is its Fillout question ID, so keep those as they are.
 
-Applications are sent by a small Vercel function, `api/join.js`, to the same Fillout form, using Fillout's API. To switch it on:
+Applications are saved to Normal's own database by `api/join.js`. Your team reads them at **admin.newnormal.sg**: sign in, search, filter by role and life stage, open anyone's full answers, and export a spreadsheet.
 
-1. In Fillout, go to **Settings → Developer → API key**, click **Enable API** if needed, and copy the key.
-2. In Vercel, go to **Project → Settings → Environment Variables** and add `FILLOUT_API_KEY` with that key (for Production and Preview).
-3. Redeploy, send one test application, and check it appears in the form's **Results** in Fillout.
+| Piece | Where |
+|---|---|
+| Admin page | `admin/index.html`, `admin/admin.js` (served at admin.newnormal.sg, also at `/admin/`) |
+| Make-a-login page | `admin/setup.html` (admin.newnormal.sg/setup) |
+| Vercel functions | `api/join.js`, `api/admin/session.js`, `api/admin/applications.js`, `api/admin/export.js` |
+| Shared code | `lib/db.js` (database), `lib/auth.js` (logins), `lib/form.js` (questions) |
 
-- **Not yet sent to the Zite table.** Fillout doesn't run a form's integrations for submissions made through its API, so applications from this page appear in Fillout's Results but are not copied into the Zite table the way the Fillout form does it.
-- **Until the key is added,** the page tells applicants it can't send yet, keeps their answers on their device, and links to the Fillout form.
+### Switching it on (once)
+
+1. **Database.** In Vercel, open the project → **Storage** → **Create Database** → **Neon** (Postgres), and connect it to this project. That sets `DATABASE_URL`. The tables are created automatically on first use.
+2. **Logins.** Each recruitment leader opens `/admin/setup.html`, picks a name and password, and gets one line (the password is scrambled in their browser and never sent). In Vercel → **Settings → Environment Variables**, add `ADMIN_USERS` with everyone's lines, one per line or separated by commas. To remove someone, delete their line.
+3. **Domain.** In Vercel → **Settings → Domains**, add `admin.newnormal.sg` (and `newnormal.sg` when you move the main site there), then add the DNS record Vercel shows you at your domain registrar.
+4. **Redeploy**, apply once on the join page as a test, and check it appears at admin.newnormal.sg.
+
+Optional: `FILLOUT_API_KEY` also sends a copy of each application to the old Fillout form.
+
+### Security and privacy
+
+- Admin pages only show data after sign-in. Sign-ins last 12 hours, and 8 wrong passwords for the same name lock it for 15 minutes.
+- Applicants' answers are always shown as plain text, so nothing they type can run on the admin page.
+- **Deleting old applications isn't built yet.** The privacy notice promises to delete non-members' details within 3 years after recruitment closes, so that needs doing (in the Neon dashboard, or ask for a delete button).
 
 ## Fonts
 
@@ -78,5 +93,5 @@ To add a part of the house:
 
 - [ ] Check the Bookmania licence covers web use and a public repo (see "Fonts")
 - [ ] Design assets from the reviewer
-- [ ] Add `FILLOUT_API_KEY` in Vercel and send a test application (see "Join page")
+- [ ] Switch on the database, logins and admin.newnormal.sg (see "Join page and admin")
 - [ ] Fill in `events.js`: IP blurbs and images, and events

@@ -1,0 +1,11 @@
+{
+  "name": "normal-website",
+  "private": true,
+  "description": "The Normal website: static pages plus a few Vercel functions for the join form and the admin.",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
+  }
+}

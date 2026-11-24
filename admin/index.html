@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>admin · Normal</title>
+  <meta name="theme-color" content="#fbf7ee">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/bookmania-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="admin">
+
+<header class="nav is-scrolled">
+  <div class="wrap admin__bar">
+    <a class="admin__brand" href="#/" aria-label="All applications">
+      <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369">
+      <span class="admin__tag">admin</span>
+    </a>
+    <div class="admin__who" id="who" hidden>
+      <span id="who-name"></span>
+      <button class="link" type="button" id="sign-out">sign out</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap admin__main">
+
+  <!-- signed out -->
+  <section class="admin__login" id="login" hidden>
+    <form class="join__sheet admin__login-sheet" id="login-form" novalidate>
+      <p class="kicker">the house, behind the scenes</p>
+      <h1 class="admin__h1">sign in</h1>
+      <div class="q">
+        <label class="q__label" for="login-name">your name</label>
+        <input type="text" id="login-name" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div class="q">
+        <label class="q__label" for="login-password">password</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <p class="join__status is-error" id="login-error" role="alert"></p>
+      <button class="btn" type="submit" id="login-go">sign in</button>
+      <p class="admin__fine">need a login? make one on the <a href="/admin/setup.html">setup page</a> and send it to whoever runs the Vercel project.</p>
+    </form>
+  </section>
+
+  <!-- the list -->
+  <section id="list" hidden>
+    <div class="admin__head">
+      <h1 class="admin__h1">applications <span class="admin__count" id="count"></span></h1>
+      <button class="btn btn--ghost btn--sm" type="button" id="export">export spreadsheet</button>
+    </div>
+    <div class="admin__filters">
+      <input type="search" id="f-q" placeholder="search names, handles, answers…" aria-label="Search">
+      <select id="f-stage" aria-label="Life stage"><option value="">every life stage</option></select>
+      <select id="f-role" aria-label="Role"><option value="">every role</option></select>
+    </div>
+    <ol class="admin__rows" id="rows" aria-live="polite"></ol>
+    <p class="admin__empty" id="empty" hidden></p>
+  </section>
+
+  <!-- one application -->
+  <article id="detail" hidden>
+    <a class="admin__back" href="#/">← all applications</a>
+    <div id="detail-body"></div>
+  </article>
+
+  <p class="join__status is-error" id="error" role="alert"></p>
+</main>
+
+<script src="/admin/admin.js"></script>
+</body>
+</html>
