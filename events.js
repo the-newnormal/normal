@@ -13,7 +13,6 @@
 window.NORMAL_IPS = [
   { name: "Backyard", blurb: "", link: "https://backyard.sg", image: "" },
   { name: "Youth Day", blurb: "", link: "https://youthday.sg", image: "" },
-  { name: "Living Archive", blurb: "", link: "", image: "" },
 ];
 
 /*

@@ -65,5 +65,5 @@ To add a part of the house:
 
 - [ ] Check the Bookmania licence covers web use, and decide how the font files get to the live site (see "Fonts")
 - [ ] Design assets from the reviewer
-- [ ] Fill in `events.js`: IP blurbs and images, the Living Archive link, and events
+- [ ] Fill in `events.js`: IP blurbs and images, and events
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)
