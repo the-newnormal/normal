@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Events · Normal</title>
+  <meta name="description" content="Normal's activations, cultural works and gatherings: what's coming up, and everything we've done so far.">
+  <meta name="theme-color" content="#fbf7ee">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Shantell+Sans:ital,wght,BNCE,INFM@0,300..800,-100..100,0..100&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap nav__inner">
+    <a class="nav__brand" href="index.html" aria-label="Normal, home"><img src="assets/mark.svg" alt="" width="275" height="292"></a>
+    <nav aria-label="Sections">
+      <ul class="nav__links">
+        <li><a href="index.html#plan">The plan</a></li>
+        <li class="nav__hide"><a href="events.html" aria-current="page">Events</a></li>
+        <li><a class="btn btn--sm" href="index.html#door">Come in</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="page-head">
+    <div class="wrap">
+      <p class="kicker reveal">the library shelves</p>
+      <h1 class="page-title reveal">Events</h1>
+      <p class="lede reveal">Our activations, cultural works and gatherings: pieces of a better society, demonstrated rather than merely described.</p>
+    </div>
+  </section>
+
+  <section class="events-section" aria-labelledby="upcoming-title">
+    <div class="wrap">
+      <h2 class="label" id="upcoming-title">Coming up</h2>
+      <div class="events" id="events-upcoming"></div>
+    </div>
+  </section>
+
+  <section class="events-section" aria-labelledby="past-title">
+    <div class="wrap">
+      <h2 class="label" id="past-title">So far</h2>
+      <div class="events events--grid" id="events-past"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <img class="footer__mark" src="assets/wordmark.svg" alt="Normal" width="1979" height="582">
+    <p>A ground-up youth movement in Singapore.</p>
+    <p class="footer__small">© <span id="year">2026</span> Normal</p>
+  </div>
+</footer>
+
+<script src="events.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

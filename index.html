@@ -24,7 +24,7 @@
     <nav aria-label="Sections">
       <ul class="nav__links">
         <li><a href="#plan">The plan</a></li>
-        <li class="nav__hide"><a href="#library">What's on</a></li>
+        <li class="nav__hide"><a href="events.html">Events</a></li>
         <li><a class="btn btn--sm" href="#door">Come in</a></li>
       </ul>
     </nav>
@@ -60,166 +60,251 @@
       <header class="section-head reveal">
         <p class="kicker">our blueprint</p>
         <h2 id="plan-title">A home built for us to be human</h2>
-        <p class="hint">Every room stands for something we champion. Pick one to step inside.</p>
+        <p class="hint">Every room stands for something we champion. <span class="hint--hover">Hover over one to peek inside.</span><span class="hint--touch">Tap one to peek inside.</span></p>
       </header>
 
-      <div class="sheet reveal">
-        <svg class="plan" id="plan" viewBox="0 0 640 720" role="group" aria-label="Floor plan of the Normal home. Choose a room to step inside.">
-          <defs>
-            <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="4" result="noise"/>
-              <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
-            </filter>
-          </defs>
-    
-          <g class="plan-art" id="plan-art">
-            <!-- ink -->
-            <g class="plan__ink" filter="url(#wobble)" aria-hidden="true">
-              <!-- site boundary -->
-              <rect class="hair dashed" x="16" y="98" width="608" height="614" rx="4"/>
-    
-              <!-- north arrow -->
-              <circle class="thin" cx="64" cy="56" r="24"/>
-              <path class="thin" d="M64,76 V34 M54,46 L64,32 L74,46"/>
-    
-              <!-- walls -->
-              <path class="wall" d="M275,560 H600 V110 H40 V560 H220"/>
-              <path class="wall" d="M320,110 V185 M320,240 V420 M320,480 V560 M40,335 H110 M170,335 H600"/>
-    
-              <!-- windows -->
-              <rect class="window" x="35" y="220" width="10" height="64"/>
-              <rect class="window" x="360" y="105" width="70" height="10"/>
-              <rect class="window" x="420" y="555" width="70" height="10"/>
-    
-              <!-- door swings -->
-              <path class="swing" d="M220,560 V505 M220,505 A55,55 0 0 1 275,560"/>
-              <path class="swing" d="M320,240 H375 M375,240 A55,55 0 0 0 320,185"/>
-    
-              <!-- library -->
-              <rect class="thin" x="58" y="124" width="240" height="24" rx="2"/>
-              <path class="hair" d="M70,124V148 M78,124V148 M86,124V148 M94,124V148 M112,124V148 M120,124V148 M128,124V148 M162,124V148 M170,124V148 M178,124V148 M186,124V148 M194,124V148 M214,124V148 M222,124V148 M230,124V148 M250,124V148 M258,124V148 M266,124V148 M274,124V148 M282,124V148 M138,126L148,148"/>
-              <ellipse class="hair dashed" cx="150" cy="262" rx="62" ry="36"/>
-              <path class="hair" d="M152,272 l-16,-6 v-13 l16,6 l16,-6 v13 z M152,272 v-13"/>
-              <rect class="thin" x="226" y="230" width="54" height="50" rx="10"/>
-              <path class="thin" d="M228,242 H278"/>
-              <rect class="thin" x="219" y="238" width="10" height="42" rx="4"/>
-              <rect class="thin" x="277" y="238" width="10" height="42" rx="4"/>
-              <circle class="thin" cx="300" cy="206" r="9"/>
-              <path class="hair" d="M294,200 L306,212 M306,200 L294,212"/>
-    
-              <!-- bedroom -->
-              <rect class="thin" x="478" y="132" width="106" height="150" rx="6"/>
-              <rect class="thin" x="490" y="142" width="82" height="30" rx="10"/>
-              <path class="thin" d="M478,194 H584"/>
-              <path class="hair" d="M478,206 H584"/>
-              <rect class="thin" x="442" y="136" width="28" height="28" rx="3"/>
-              <circle class="hair" cx="456" cy="150" r="7"/>
-              <circle class="thin" cx="420" cy="312" r="13"/>
-              <circle class="thin" cx="440" cy="312" r="10"/>
-              <circle class="hair" cx="420" cy="312" r="4"/>
-              <path class="thin" d="M450,312 H484"/>
-              <rect class="hair" x="484" y="307" width="12" height="10" rx="2"/>
-              <circle class="thin" cx="580" cy="314" r="8"/>
-              <path class="hair" d="M580,306 C572,292 580,286 586,296 M580,306 C588,290 596,296 590,304"/>
-    
-              <!-- kitchen -->
-              <rect class="thin" x="552" y="350" width="36" height="196" rx="3"/>
-              <circle class="hair" cx="570" cy="374" r="10"/>
-              <circle class="hair" cx="570" cy="406" r="10"/>
-              <rect class="hair" x="558" y="440" width="24" height="38" rx="7"/>
-              <circle class="hair" cx="570" cy="459" r="2.5"/>
-              <path class="hair" d="M540,374 c-6,-6 4,-10 -2,-18 M530,380 c-6,-6 4,-10 -2,-18"/>
-              <rect class="thin" x="396" y="440" width="120" height="56" rx="6"/>
-              <path class="thin" d="M436,450 v12 l-10,20 h28 l-10,-20 v-12 z"/>
-              <circle class="hair" cx="442" cy="441" r="3"/>
-              <circle class="hair" cx="449" cy="432" r="2"/>
-    
-              <!-- living room -->
-              <rect class="thin" x="95" y="420" width="140" height="60" rx="10"/>
-              <circle class="thin" cx="125" cy="404" r="12"/>
-              <circle class="thin" cx="165" cy="404" r="12"/>
-              <circle class="thin chair--yours" cx="205" cy="404" r="12"/>
-              <circle class="thin" cx="125" cy="496" r="12"/>
-              <circle class="thin" cx="165" cy="496" r="12"/>
-              <circle class="thin" cx="205" cy="496" r="12"/>
-              <circle class="thin" cx="77" cy="450" r="12"/>
-              <circle class="thin" cx="253" cy="450" r="12"/>
-              <rect class="thin" x="48" y="508" width="16" height="36" rx="3"/>
-              <circle class="hair" cx="56" cy="532" r="4"/>
-              <path class="hair" d="M72,514 q9,12 0,24 M82,506 q14,20 0,40"/>
-    
-              <!-- front step + garden -->
-              <rect class="hair dashed" x="222" y="568" width="52" height="14" rx="2"/>
-              <ellipse class="hair" cx="248" cy="606" rx="12" ry="7"/>
-              <ellipse class="hair" cx="240" cy="632" rx="12" ry="7"/>
-              <ellipse class="hair" cx="250" cy="658" rx="12" ry="7"/>
-              <ellipse class="hair" cx="242" cy="684" rx="12" ry="7"/>
-              <path class="thin" d="M70,646 a20,20 0 0 1 20,-30 a20,20 0 0 1 40,0 a20,20 0 0 1 20,30 a20,20 0 0 1 -20,30 a20,20 0 0 1 -40,0 a20,20 0 0 1 -20,-30 z"/>
-              <circle class="hair" cx="110" cy="646" r="12"/>
-              <rect class="thin" x="372" y="604" width="176" height="64" rx="6"/>
-              <path class="hair" d="M392,630v-9 M392,625q-6,-1 -8,-8 M392,625q6,-1 8,-8 M412,630v-9 M412,625q-6,-1 -8,-8 M412,625q6,-1 8,-8 M432,630v-9 M432,625q-6,-1 -8,-8 M432,625q6,-1 8,-8 M452,630v-9 M452,625q-6,-1 -8,-8 M452,625q6,-1 8,-8 M472,630v-9 M472,625q-6,-1 -8,-8 M472,625q6,-1 8,-8 M492,630v-9 M492,625q-6,-1 -8,-8 M492,625q6,-1 8,-8 M512,630v-9 M512,625q-6,-1 -8,-8 M512,625q6,-1 8,-8 M532,630v-9 M532,625q-6,-1 -8,-8 M532,625q6,-1 8,-8 M392,656v-9 M392,651q-6,-1 -8,-8 M392,651q6,-1 8,-8 M412,656v-9 M412,651q-6,-1 -8,-8 M412,651q6,-1 8,-8 M432,656v-9 M432,651q-6,-1 -8,-8 M432,651q6,-1 8,-8 M452,656v-9 M452,651q-6,-1 -8,-8 M452,651q6,-1 8,-8 M472,656v-9 M472,651q-6,-1 -8,-8 M472,651q6,-1 8,-8 M492,656v-9 M492,651q-6,-1 -8,-8 M492,651q6,-1 8,-8 M512,656v-9 M512,651q-6,-1 -8,-8 M512,651q6,-1 8,-8 M532,656v-9 M532,651q-6,-1 -8,-8 M532,651q6,-1 8,-8"/>
-              <circle class="thin sun" cx="590" cy="636" r="12"/>
-              <path class="hair" d="M590,616 v-6 M590,656 v6 M570,636 h-6 M610,636 h6 M576,622 l-4,-4 M604,622 l4,-4 M576,650 l-4,4 M604,650 l4,4"/>
-            </g>
-    
-            <!-- people (the dots) -->
-            <g class="plan__people" aria-hidden="true">
-              <circle cx="124" cy="262" r="7"/>
-              <circle cx="253" cy="262" r="7"/>
-              <circle cx="531" cy="158" r="7"/>
-              <circle cx="456" cy="424" r="7"/>
-              <circle cx="532" cy="470" r="7"/>
-              <circle cx="420" cy="516" r="7"/>
-              <circle cx="125" cy="404" r="7"/>
-              <circle cx="165" cy="404" r="7"/>
-              <circle cx="125" cy="496" r="7"/>
-              <circle cx="165" cy="496" r="7"/>
-              <circle cx="205" cy="496" r="7"/>
-              <circle cx="77" cy="450" r="7"/>
-              <circle cx="253" cy="450" r="7"/>
-              <circle cx="112" cy="652" r="7"/>
-            </g>
-    
-            <!-- labels -->
-            <g class="plan__labels" aria-hidden="true">
-              <g class="tag"><circle cx="348" cy="372" r="13"/><text x="348" y="378" text-anchor="middle">1</text><text class="tag__name" x="369" y="379">Kitchen</text></g>
-              <g class="tag"><circle cx="68" cy="372" r="13"/><text x="68" y="378" text-anchor="middle">2</text><text class="tag__name" x="89" y="379">Living room</text></g>
-              <g class="tag"><circle cx="348" cy="268" r="13"/><text x="348" y="274" text-anchor="middle">3</text><text class="tag__name" x="369" y="275">Bedroom</text></g>
-              <g class="tag"><circle cx="78" cy="186" r="13"/><text x="78" y="192" text-anchor="middle">4</text><text class="tag__name" x="99" y="193">Library</text></g>
-              <text class="scrawl" x="64" y="22" text-anchor="middle">N</text>
-              <text class="scrawl scrawl--big" x="98" y="62">north star</text>
-              <text class="scrawl" x="232" y="388">yours</text>
-              <path class="scrawl-line" d="M230,384 C219,382 213,388 215,394"/>
-              <text class="scrawl" x="430" y="214" transform="rotate(-12 430 214)">z z z</text>
-              <text class="scrawl scrawl--big" x="286" y="582">front door</text>
-              <text class="scrawl scrawl--big" x="372" y="694">garden</text>
-              <text class="scrawl scrawl--muted" x="610" y="62" text-anchor="end">plan · not to scale</text>
-            </g>
-    
-          </g>
-    
-          <!-- clickable parts of the house -->
-          <a class="spot" href="#library" data-spot="library" aria-label="4. Library: a living library"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
-          <a class="spot" href="#bedroom" data-spot="bedroom" aria-label="3. Bedroom: a shelter"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></a>
-          <a class="spot" href="#living" data-spot="living" aria-label="2. Living room: a seat at the table"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></a>
-          <a class="spot" href="#kitchen" data-spot="kitchen" aria-label="1. Kitchen: a laboratory"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></a>
-          <a class="spot" href="#garden" data-spot="garden" aria-label="Garden: room to flourish"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></a>
-          <a class="spot" href="#door" data-spot="door" aria-label="Front door: come in"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
-          <a class="spot" href="#north" data-spot="north" aria-label="North star"><rect class="spot__area" x="30" y="4" width="176" height="88" rx="4"/></a>
-    
-          <!-- you are here -->
-          <circle class="here" cx="248" cy="575" r="7" aria-hidden="true"/>
-        </svg>
-        <div class="titleblock">
-          <dl>
-            <div><dt>Project</dt><dd>Normal</dd></div>
-            <div><dt>Drawing</dt><dd>A home built for us to be human</dd></div>
-            <div><dt>Drawn by</dt><dd>The youth of Singapore</dd></div>
-            <div><dt>Scale</dt><dd>1 : 1 human</dd></div>
-          </dl>
-          <img class="titleblock__house" src="assets/house.png" alt="" width="370" height="356">
+      <div class="house-wrap reveal" id="house-wrap">
+        <div class="house" id="house">
+          <div class="house__scene" id="scene">
+            <!-- the floor: furniture, people, garden -->
+            <svg class="house__floor" viewBox="0 0 640 720" aria-hidden="true">
+              <defs>
+                <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="4" result="noise"/>
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+              </defs>
+              <g class="plan-art" id="floor-art">
+                <g class="floors">
+                  <rect class="floor floor--library" x="40" y="110" width="280" height="225"/>
+                  <rect class="floor floor--bedroom" x="320" y="110" width="280" height="225"/>
+                  <rect class="floor floor--living" x="40" y="335" width="280" height="225"/>
+                  <rect class="floor floor--kitchen" x="320" y="335" width="280" height="225"/>
+                  <rect class="floor floor--garden" x="20" y="588" width="600" height="120" rx="4"/>
+                </g>
+                <g class="plan__ink" filter="url(#wobble)">
+                  <rect class="hair dashed" x="16" y="98" width="608" height="614" rx="4"/>
+
+                  <!-- north arrow -->
+                  <circle class="thin" cx="64" cy="56" r="24"/>
+                  <path class="thin" d="M64,76 V34 M54,46 L64,32 L74,46"/>
+                  <!-- door swings -->
+                  <path class="swing" d="M220,560 V505 M220,505 A55,55 0 0 1 275,560"/>
+                  <path class="swing" d="M320,240 H375 M375,240 A55,55 0 0 0 320,185"/>
+
+                  <!-- library -->
+                  <rect class="thin" x="58" y="124" width="240" height="24" rx="2"/>
+                  <path class="hair" d="M70,124V148 M78,124V148 M86,124V148 M94,124V148 M112,124V148 M120,124V148 M128,124V148 M162,124V148 M170,124V148 M178,124V148 M186,124V148 M194,124V148 M214,124V148 M222,124V148 M230,124V148 M250,124V148 M258,124V148 M266,124V148 M274,124V148 M282,124V148 M138,126L148,148"/>
+                  <ellipse class="hair dashed" cx="150" cy="262" rx="62" ry="36"/>
+                  <path class="hair" d="M152,272 l-16,-6 v-13 l16,6 l16,-6 v13 z M152,272 v-13"/>
+                  <rect class="thin" x="226" y="230" width="54" height="50" rx="10"/>
+                  <path class="thin" d="M228,242 H278"/>
+                  <rect class="thin" x="219" y="238" width="10" height="42" rx="4"/>
+                  <rect class="thin" x="277" y="238" width="10" height="42" rx="4"/>
+                  <circle class="thin" cx="300" cy="206" r="9"/>
+                  <path class="hair" d="M294,200 L306,212 M306,200 L294,212"/>
+
+                  <!-- bedroom -->
+                  <rect class="thin" x="478" y="132" width="106" height="150" rx="6"/>
+                  <rect class="thin" x="490" y="142" width="82" height="30" rx="10"/>
+                  <path class="thin" d="M478,194 H584"/>
+                  <path class="hair" d="M478,206 H584"/>
+                  <rect class="thin" x="442" y="136" width="28" height="28" rx="3"/>
+                  <circle class="hair" cx="456" cy="150" r="7"/>
+                  <circle class="thin" cx="420" cy="312" r="13"/>
+                  <circle class="thin" cx="440" cy="312" r="10"/>
+                  <circle class="hair" cx="420" cy="312" r="4"/>
+                  <path class="thin" d="M450,312 H484"/>
+                  <rect class="hair" x="484" y="307" width="12" height="10" rx="2"/>
+                  <circle class="thin" cx="580" cy="314" r="8"/>
+                  <path class="hair" d="M580,306 C572,292 580,286 586,296 M580,306 C588,290 596,296 590,304"/>
+
+                  <!-- kitchen -->
+                  <rect class="thin" x="552" y="350" width="36" height="196" rx="3"/>
+                  <circle class="hair" cx="570" cy="374" r="10"/>
+                  <circle class="hair" cx="570" cy="406" r="10"/>
+                  <rect class="hair" x="558" y="440" width="24" height="38" rx="7"/>
+                  <circle class="hair" cx="570" cy="459" r="2.5"/>
+                  <path class="hair" d="M540,374 c-6,-6 4,-10 -2,-18 M530,380 c-6,-6 4,-10 -2,-18"/>
+                  <rect class="thin" x="396" y="440" width="120" height="56" rx="6"/>
+                  <path class="thin" d="M436,450 v12 l-10,20 h28 l-10,-20 v-12 z"/>
+                  <circle class="hair" cx="442" cy="441" r="3"/>
+                  <circle class="hair" cx="449" cy="432" r="2"/>
+
+                  <!-- living room -->
+                  <rect class="thin" x="95" y="420" width="140" height="60" rx="10"/>
+                  <circle class="thin" cx="125" cy="404" r="12"/>
+                  <circle class="thin" cx="165" cy="404" r="12"/>
+                  <circle class="thin chair--yours" cx="205" cy="404" r="12"/>
+                  <circle class="thin" cx="125" cy="496" r="12"/>
+                  <circle class="thin" cx="165" cy="496" r="12"/>
+                  <circle class="thin" cx="205" cy="496" r="12"/>
+                  <circle class="thin" cx="77" cy="450" r="12"/>
+                  <circle class="thin" cx="253" cy="450" r="12"/>
+                  <rect class="thin" x="48" y="508" width="16" height="36" rx="3"/>
+                  <circle class="hair" cx="56" cy="532" r="4"/>
+                  <path class="hair" d="M72,514 q9,12 0,24 M82,506 q14,20 0,40"/>
+
+                  <!-- front step + garden -->
+                  <rect class="hair dashed" x="222" y="568" width="52" height="14" rx="2"/>
+                  <ellipse class="hair" cx="248" cy="606" rx="12" ry="7"/>
+                  <ellipse class="hair" cx="240" cy="632" rx="12" ry="7"/>
+                  <ellipse class="hair" cx="250" cy="658" rx="12" ry="7"/>
+                  <ellipse class="hair" cx="242" cy="684" rx="12" ry="7"/>
+                  <path class="thin" d="M70,646 a20,20 0 0 1 20,-30 a20,20 0 0 1 40,0 a20,20 0 0 1 20,30 a20,20 0 0 1 -20,30 a20,20 0 0 1 -40,0 a20,20 0 0 1 -20,-30 z"/>
+                  <circle class="hair" cx="110" cy="646" r="12"/>
+                  <rect class="thin" x="372" y="604" width="176" height="64" rx="6"/>
+                  <path class="hair" d="M392,630v-9 M392,625q-6,-1 -8,-8 M392,625q6,-1 8,-8 M412,630v-9 M412,625q-6,-1 -8,-8 M412,625q6,-1 8,-8 M432,630v-9 M432,625q-6,-1 -8,-8 M432,625q6,-1 8,-8 M452,630v-9 M452,625q-6,-1 -8,-8 M452,625q6,-1 8,-8 M472,630v-9 M472,625q-6,-1 -8,-8 M472,625q6,-1 8,-8 M492,630v-9 M492,625q-6,-1 -8,-8 M492,625q6,-1 8,-8 M512,630v-9 M512,625q-6,-1 -8,-8 M512,625q6,-1 8,-8 M532,630v-9 M532,625q-6,-1 -8,-8 M532,625q6,-1 8,-8 M392,656v-9 M392,651q-6,-1 -8,-8 M392,651q6,-1 8,-8 M412,656v-9 M412,651q-6,-1 -8,-8 M412,651q6,-1 8,-8 M432,656v-9 M432,651q-6,-1 -8,-8 M432,651q6,-1 8,-8 M452,656v-9 M452,651q-6,-1 -8,-8 M452,651q6,-1 8,-8 M472,656v-9 M472,651q-6,-1 -8,-8 M472,651q6,-1 8,-8 M492,656v-9 M492,651q-6,-1 -8,-8 M492,651q6,-1 8,-8 M512,656v-9 M512,651q-6,-1 -8,-8 M512,651q6,-1 8,-8 M532,656v-9 M532,651q-6,-1 -8,-8 M532,651q6,-1 8,-8"/>
+                  <circle class="thin sun" cx="590" cy="636" r="12"/>
+                  <path class="hair" d="M590,616 v-6 M590,656 v6 M570,636 h-6 M610,636 h6 M576,622 l-4,-4 M604,622 l4,-4 M576,650 l-4,4 M604,650 l4,4"/>
+                </g>
+                <g class="plan__people">
+                  <circle class="sleeper" cx="531" cy="158" r="7"/>
+                  <circle cx="124" cy="262" r="7"/>
+                  <circle cx="253" cy="262" r="7"/>
+                  <circle cx="456" cy="424" r="7"/>
+                  <circle cx="532" cy="470" r="7"/>
+                  <circle cx="420" cy="516" r="7"/>
+                  <circle cx="125" cy="404" r="7"/>
+                  <circle cx="165" cy="404" r="7"/>
+                  <circle cx="125" cy="496" r="7"/>
+                  <circle cx="165" cy="496" r="7"/>
+                  <circle cx="205" cy="496" r="7"/>
+                  <circle cx="77" cy="450" r="7"/>
+                  <circle cx="253" cy="450" r="7"/>
+                  <circle cx="112" cy="652" r="7"/>
+                </g>
+                <g class="plan__labels">
+                  <text class="scrawl" x="64" y="22" text-anchor="middle">N</text>
+                  <text class="scrawl" x="232" y="388">yours</text>
+                  <path class="scrawl-line" d="M230,384 C219,382 213,388 215,394"/>
+                  <text class="scrawl" x="430" y="214" transform="rotate(-12 430 214)">z z z</text>
+                </g>
+              </g>
+
+              <!-- hover areas (the pins below are the keyboard targets) -->
+              <a class="spot" href="#library" data-room="library" tabindex="-1"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
+              <a class="spot" href="#bedroom" data-room="bedroom" tabindex="-1"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></a>
+              <a class="spot" href="#living" data-room="living" tabindex="-1"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></a>
+              <a class="spot" href="#kitchen" data-room="kitchen" tabindex="-1"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></a>
+              <a class="spot" href="#garden" data-room="garden" tabindex="-1"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></a>
+              <a class="spot" href="#door" data-room="door" tabindex="-1"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
+              <a class="spot" href="#north" data-room="north" tabindex="-1"><rect class="spot__area" x="30" y="4" width="100" height="88" rx="4"/></a>
+
+              <circle class="here" cx="248" cy="575" r="7"/>
+            </svg>
+
+            <!-- the walls: main.js stacks copies of this to give them height -->
+            <svg class="wall-layer is-top" viewBox="0 0 640 720" aria-hidden="true">
+              <g class="plan-art" id="wall-art" filter="url(#wobble)">
+                <path class="wall" d="M275,560 H600 V110 H40 V560 H220"/>
+                <path class="wall" d="M320,110 V185 M320,240 V420 M320,480 V560 M40,335 H110 M170,335 H600"/>
+                <g class="windows">
+                  <rect class="window" x="35" y="220" width="10" height="64"/>
+                  <rect class="window" x="360" y="105" width="70" height="10"/>
+                  <rect class="window" x="420" y="555" width="70" height="10"/>
+                </g>
+              </g>
+            </svg>
+
+            <!-- people standing in the rooms -->
+            <i class="person" data-room="library" style="--x:124px;--y:262px"></i>
+            <i class="person" data-room="library" style="--x:253px;--y:262px"></i>
+            <i class="person" data-room="kitchen" style="--x:456px;--y:424px"></i>
+            <i class="person" data-room="kitchen" style="--x:532px;--y:470px"></i>
+            <i class="person" data-room="kitchen" style="--x:420px;--y:516px"></i>
+            <i class="person" data-room="living" style="--x:125px;--y:404px"></i>
+            <i class="person" data-room="living" style="--x:165px;--y:404px"></i>
+            <i class="person" data-room="living" style="--x:125px;--y:496px"></i>
+            <i class="person" data-room="living" style="--x:165px;--y:496px"></i>
+            <i class="person" data-room="living" style="--x:205px;--y:496px"></i>
+            <i class="person" data-room="living" style="--x:77px;--y:450px"></i>
+            <i class="person" data-room="living" style="--x:253px;--y:450px"></i>
+            <i class="person" data-room="garden" style="--x:112px;--y:652px"></i>
+
+            <!-- where each pin floats -->
+            <i class="anchor" data-room="door" style="--x:248px;--y:604px;--z:24px"></i>
+            <i class="anchor" data-room="kitchen" style="--x:460px;--y:448px;--z:64px"></i>
+            <i class="anchor" data-room="living" style="--x:180px;--y:448px;--z:64px"></i>
+            <i class="anchor" data-room="bedroom" style="--x:420px;--y:222px;--z:64px"></i>
+            <i class="anchor" data-room="library" style="--x:180px;--y:222px;--z:64px"></i>
+            <i class="anchor" data-room="garden" style="--x:470px;--y:650px;--z:16px"></i>
+            <i class="anchor" data-room="north" style="--x:64px;--y:56px;--z:20px"></i>
+          </div>
+
+          <nav class="pins" aria-label="Rooms">
+            <a class="pin" href="#door" data-room="door"><img class="pin__icon" src="assets/mark.svg" alt=""><span class="pin__label">Front door</span></a>
+            <a class="pin" href="#kitchen" data-room="kitchen"><span class="badge">1</span><span class="pin__label">Kitchen</span></a>
+            <a class="pin" href="#living" data-room="living"><span class="badge">2</span><span class="pin__label">Living room</span></a>
+            <a class="pin" href="#bedroom" data-room="bedroom"><span class="badge">3</span><span class="pin__label">Bedroom</span></a>
+            <a class="pin" href="#library" data-room="library"><span class="badge">4</span><span class="pin__label">Library</span></a>
+            <a class="pin" href="#garden" data-room="garden"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V10 M12,14 q-6,-1 -8,-8 q7,0 8,8 M12,12 q5,-1 7,-7 q-6,0 -7,7"/></svg><span class="pin__label">Garden</span></a>
+            <a class="pin" href="#north" data-room="north"><svg class="pin__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V4 M6,10 L12,3 L18,10"/></svg><span class="pin__label">North star</span></a>
+          </nav>
         </div>
+
+        <div class="tip" id="tip" aria-live="polite"></div>
       </div>
+
+      <div class="titleblock reveal">
+        <dl>
+          <div><dt>Project</dt><dd>Normal</dd></div>
+          <div><dt>Drawing</dt><dd>A home built for us to be human</dd></div>
+          <div><dt>Drawn by</dt><dd>The youth of Singapore</dd></div>
+          <div><dt>Scale</dt><dd>1 : 1 human</dd></div>
+        </dl>
+        <img class="titleblock__house" src="assets/house.png" alt="" width="370" height="356">
+      </div>
+
+      <!-- what each room says when you hover it -->
+      <template id="tip-default">
+        <p class="tip__title">Tap a room to peek inside.</p>
+      </template>
+      <template id="tip-door">
+        <p class="tip__kicker">front door</p>
+        <p class="tip__title">Come in.</p>
+        <p>For the quiet majority who feel paralysed, or uninvited. Consider this your invitation.</p>
+        <a class="tip__more" href="#door">Read more ↓</a>
+      </template>
+      <template id="tip-kitchen">
+        <p class="tip__kicker"><span class="badge">1</span>a laboratory</p>
+        <p class="tip__title">Kitchen</p>
+        <p>Where trying is celebrated and failure isn't feared.</p>
+        <p class="principle__name"><span>Adventure</span> <s>Fear</s></p>
+        <a class="tip__more" href="#kitchen">Read more ↓</a>
+      </template>
+      <template id="tip-living">
+        <p class="tip__kicker"><span class="badge">2</span>a seat at the table</p>
+        <p class="tip__title">Living room</p>
+        <p>Everyone recognised for who they are, and heard even in a room full of noise.</p>
+        <p class="principle__name"><span>Considered</span> <s>Dismissed</s></p>
+        <a class="tip__more" href="#living">Read more ↓</a>
+      </template>
+      <template id="tip-bedroom">
+        <p class="tip__kicker"><span class="badge">3</span>a shelter</p>
+        <p class="tip__title">Bedroom</p>
+        <p>Space held for real rest, and time to reconnect with ourselves.</p>
+        <p class="principle__name"><span>Dwelling</span> <s>Rushing</s></p>
+        <a class="tip__more" href="#bedroom">Read more ↓</a>
+      </template>
+      <template id="tip-library">
+        <p class="tip__kicker"><span class="badge">4</span>a living library</p>
+        <p class="tip__title">Library</p>
+        <p>Pieces of a better society, demonstrated rather than merely described. Our gatherings live here.</p>
+        <a class="tip__more" href="#library">Read more ↓</a>
+      </template>
+      <template id="tip-garden">
+        <p class="tip__kicker">garden</p>
+        <p class="tip__title">Room to flourish</p>
+        <p>The space, time and stability to be whole.</p>
+        <p class="principle__name"><span>Flourish</span> <s>Bare survival</s></p>
+        <a class="tip__more" href="#garden">Read more ↓</a>
+      </template>
+      <template id="tip-north">
+        <p class="tip__kicker">north star</p>
+        <p class="tip__title">To make people happier, and to see people loved.</p>
+        <a class="tip__more" href="#north">Read more ↓</a>
+      </template>
     </div>
   </section>
 
@@ -339,7 +424,8 @@
         <p>A tangible glimpse of what could be <em>normal</em>, through our activations, cultural works and gatherings.</p>
         <div class="shelf">
           <h3 class="label">On the shelves</h3>
-          <div class="events" id="events" aria-live="polite"></div>
+          <div class="events" id="events" data-limit="3"></div>
+          <p><a class="link" href="events.html">All events →</a></p>
         </div>
         <div class="value">
           <h3 class="label">How we build</h3>

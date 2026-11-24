@@ -90,6 +90,8 @@ p { margin: 0 0 1em; }
   margin-bottom: .5em;
 }
 .hint { font: 500 1.02rem/1.5 var(--hand); color: var(--muted); }
+.hint--touch { display: none; }
+@media (hover: none) { .hint--hover { display: none; } .hint--touch { display: inline; } }
 
 .badge {
   display: inline-grid;
@@ -163,7 +165,7 @@ p { margin: 0 0 1em; }
 .hero__house img { width: 100%; height: auto; transform: rotate(3deg); }
 .hero__house figcaption {
   position: absolute;
-  left: -18%; bottom: -1.6rem;
+  right: 0; bottom: -1.6rem;
   font: 500 1rem var(--hand);
   font-variation-settings: "INFM" 100;
   color: var(--brown-2);
@@ -173,7 +175,7 @@ p { margin: 0 0 1em; }
 @media (min-width: 880px) {
   .hero__grid { grid-template-columns: 1.6fr 1fr; gap: 3rem; }
   .hero__house { justify-self: center; width: 100%; max-width: 360px; }
-  .hero__house figcaption { left: -8%; }
+  .hero__house figcaption { right: auto; left: -8%; }
 }
 
 .circled { position: relative; white-space: nowrap; font-style: italic; margin: 0 .3em; }
@@ -201,19 +203,8 @@ p { margin: 0 0 1em; }
   background: var(--paper-2);
   border-block: 1.5px solid rgba(76, 35, 22, .14);
 }
-.section-head { max-width: 40rem; margin: 0 auto clamp(1.8rem, 4vw, 2.8rem); text-align: center; }
+.section-head { max-width: 40rem; margin: 0 auto clamp(1rem, 3vw, 2rem); text-align: center; }
 .section-head .kicker { justify-content: center; }
-
-.sheet {
-  max-width: 740px;
-  margin: 0 auto;
-  padding: clamp(6px, 2vw, 18px);
-  background: var(--graph), var(--paper);
-  border: 2px solid var(--brown);
-  border-radius: 4px;
-  box-shadow: 0 30px 50px -36px rgba(76, 35, 22, .55);
-}
-.plan { width: 100%; height: auto; aspect-ratio: 640 / 720; overflow: visible; }
 
 .plan-art .wall   { fill: none; stroke: var(--brown); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
 .plan-art .thin   { fill: none; stroke: var(--brown); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -234,7 +225,7 @@ p { margin: 0 0 1em; }
 
 .spot { cursor: pointer; outline: none; }
 .spot__area { fill: transparent; mix-blend-mode: multiply; transition: fill .25s ease; }
-.spot:hover .spot__area { fill: rgba(246, 201, 69, .32); }
+.spot:hover .spot__area, .spot.is-active .spot__area { fill: rgba(246, 201, 69, .4); }
 .spot:focus-visible .spot__area { fill: rgba(246, 201, 69, .32); stroke: var(--ink); stroke-width: 3; stroke-dasharray: 9 7; }
 
 .here {
@@ -254,7 +245,8 @@ p { margin: 0 0 1em; }
 .titleblock {
   display: grid;
   grid-template-columns: 1fr 5rem;
-  margin-top: clamp(6px, 2vw, 16px);
+  max-width: 740px;
+  margin: clamp(1.5rem, 4vw, 2.5rem) auto 0;
   border: 2px solid var(--brown);
   border-radius: 3px;
   background: var(--sheet);
@@ -269,6 +261,161 @@ p { margin: 0 0 1em; }
   .titleblock { grid-template-columns: 1fr 4.4rem; }
   .titleblock dl { grid-template-columns: repeat(4, auto); }
   .titleblock dl div:nth-child(-n+2) { border-bottom: 0; }
+}
+
+/* ─────────────────────────── The house in 3D ───────────────────────────
+   The flat plan, tilted. Walls are a stack of copies (main.js adds them);
+   people are little billboards that always face you. */
+
+.house-wrap { position: relative; max-width: 1040px; margin: 0 auto; }
+.house {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10.5;
+  --rx: 56deg;
+  --rz: -32deg;
+}
+.house__scene {
+  position: absolute;
+  left: 50%; top: 55%;
+  width: 640px; height: 720px;
+  margin: -360px 0 0 -320px;
+  transform-style: preserve-3d;
+  transform: translateY(var(--dy, 0px)) scale(var(--s, .55)) rotateX(var(--rx)) rotateZ(var(--rz));
+}
+.house__floor, .wall-layer {
+  position: absolute;
+  inset: 0;
+  width: 640px; height: 720px;
+  max-width: none;
+  overflow: visible;
+}
+.house__floor {
+  background: var(--graph), var(--paper);
+  border: 2px solid var(--brown);
+  border-radius: 6px;
+  box-shadow: 0 50px 70px -30px rgba(76, 35, 22, .4);
+}
+.wall-layer { pointer-events: none; transform: translateZ(calc(var(--i, 0) * 2.6px)); }
+.wall-layer .wall { stroke: #3a180d; stroke-width: 9; }
+.wall-layer.is-top .wall { stroke: #74422d; }
+.wall-layer:not(.is-top) .windows { display: none; }
+.house .plan__people circle:not(.sleeper) { display: none; }
+
+.plan-art .floor { fill: transparent; }
+.plan-art .floor--library { fill: #f4ead6; }
+.plan-art .floor--bedroom { fill: #f6e8e1; }
+.plan-art .floor--living  { fill: #f3ebdb; }
+.plan-art .floor--kitchen { fill: #eaefe0; }
+.plan-art .floor--garden  { fill: #e5ecd3; }
+
+.person {
+  position: absolute;
+  left: var(--x); top: var(--y);
+  width: 16px; height: 30px;
+  margin: -30px 0 0 -8px;
+  transform-origin: 50% 100%;
+  transform: rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx)));
+  pointer-events: none;
+}
+.person::before, .person::after { content: ""; position: absolute; background: var(--ink); }
+.person::before { left: 2px; top: 0; width: 12px; height: 12px; border-radius: 50%; }
+.person::after { left: 0; bottom: 0; width: 16px; height: 16px; border-radius: 8px 8px 3px 3px; }
+.person.is-hopping { animation: hop .5s ease-in-out infinite alternate; }
+@keyframes hop { to { translate: 0 0 9px; } }
+
+.anchor { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; transform: translateZ(var(--z)); }
+
+/* pins: the room names floating over the house */
+.pins { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; padding-top: 1rem; }
+.house.is-ready .pins { position: absolute; inset: 0; display: block; padding: 0; pointer-events: none; }
+.pin {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  padding: .3em .75em .3em .3em;
+  font: 650 .92rem/1 var(--hand);
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--sheet);
+  border: 2px solid var(--brown);
+  border-radius: 999px;
+  box-shadow: 0 6px 12px -8px rgba(76, 35, 22, .6);
+  transition: background .2s ease, scale .2s ease;
+}
+.house.is-ready .pin {
+  position: absolute;
+  left: 0; top: 0;
+  translate: var(--px, 0) var(--py, 0);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: auto;
+}
+.house.is-ready .pin::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 100%;
+  width: 2px; height: 10px;
+  translate: -50% 0;
+  background: var(--brown);
+}
+.pin .badge { width: 1.55em; height: 1.55em; font-size: .78rem; }
+.pin__icon { flex: none; width: 1.55em; height: 1.55em; padding: .18em; border: 2px solid var(--brown); border-radius: 50%; background: var(--paper); }
+svg.pin__icon { fill: none; stroke: var(--brown); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.pin:hover, .pin.is-active { background: var(--hl); scale: 1.06; z-index: 2; }
+
+/* the peek card */
+.tip {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 5;
+  width: 290px;
+  translate: var(--tx, 0) var(--ty, 0);
+  padding: 1rem 1.1rem .9rem;
+  background: var(--sheet);
+  border: 2px solid var(--brown);
+  border-radius: 14px 4px 16px 5px / 5px 16px 4px 14px;
+  box-shadow: 0 18px 30px -18px rgba(76, 35, 22, .55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity .2s ease, transform .2s ease, visibility .2s;
+}
+.tip:not(:has(.tip__cue)) .tip__more { pointer-events: auto; }
+.tip:has(.tip__cue) .tip__more { display: none; }
+.tip__cue { margin: .2rem 0 0 !important; font: 600 .85rem var(--hand) !important; color: var(--brown-2); }
+.tip.is-open { opacity: 1; visibility: visible; transform: none; }
+.tip p { margin: 0 0 .5rem; font-size: .98rem; line-height: 1.45; }
+.tip__kicker { display: flex; align-items: center; gap: .45em; font: 600 .85rem/1.2 var(--hand) !important; color: var(--brown); }
+.tip__kicker .badge { width: 1.55em; height: 1.55em; font-size: .72rem; }
+.tip__title { font: 760 1.35rem/1.15 var(--hand) !important; font-variation-settings: "INFM" 60; }
+.tip .principle__name { font-size: 1.15rem; margin-bottom: .45rem; }
+.tip .principle__name s { font-size: .95rem; }
+.tip__more { font: 650 .92rem var(--hand); color: var(--ink); text-decoration: none; border-bottom: 2.5px solid var(--hl); }
+.tip__more:hover { background: var(--hl-soft); }
+
+/* touch screens and phones: the card sits under the house instead of floating */
+@media (hover: none), (max-width: 700px) {
+  .tip {
+    position: static;
+    width: auto;
+    max-width: 30rem;
+    min-height: 8.5rem;
+    margin: .6rem auto 0;
+    translate: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (max-width: 700px) {
+  .house { aspect-ratio: 1 / .95; --rx: 50deg; --rz: -18deg; }
+  .pin { font-size: .8rem; padding: .25em .6em .25em .25em; }
+  .house.is-ready .pin:not(.is-active) { padding: .2em; }
+  .house.is-ready .pin:not(.is-active) .pin__label { display: none; }
+  .house.is-ready .pin::before { content: ""; position: absolute; inset: -9px; }
 }
 
 /* ─────────────────────────── Rooms ─────────────────────────── */
@@ -386,6 +533,30 @@ p { margin: 0 0 1em; }
 .event p { margin: .25rem 0 0; font-size: .98rem; }
 .event__meta { font: 500 .88rem var(--hand) !important; color: var(--muted); }
 .event--past { opacity: .62; border-style: dashed; }
+.event--photo { grid-template-columns: 1fr; }
+.event--photo .event__img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 2px solid var(--brown);
+  border-radius: 4px;
+}
+.event--photo .event__row { display: grid; grid-template-columns: 4.2rem 1fr; gap: .9rem; }
+
+/* events page */
+.page-head { padding: clamp(3rem, 8vw, 5.5rem) 0 clamp(1.5rem, 4vw, 2.5rem); }
+.page-title {
+  font: 760 clamp(2.8rem, 8vw, 4.6rem)/1 var(--hand);
+  font-variation-settings: "INFM" 60, "BNCE" 20;
+  letter-spacing: -.01em;
+  margin: .2em 0 .35em;
+}
+.page-head .lede { max-width: 36rem; }
+.events-section { padding: 0 0 clamp(3rem, 7vw, 5rem); }
+.events-section .label { font-size: .85rem; margin-bottom: 1rem; }
+.events--grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); align-items: start; }
+#events-upcoming { max-width: 46rem; }
+.nav__links a[aria-current="page"] { border-bottom-color: var(--hl); }
 .events__empty {
   padding: 1rem 1.1rem;
   border: 2px dashed rgba(76, 35, 22, .45);

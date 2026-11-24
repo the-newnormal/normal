@@ -1,22 +1,166 @@
 (() => {
   const root = document.documentElement;
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+  const stripIds = (node) => {
+    node.removeAttribute("id");
+    $$("[id]", node).forEach((n) => n.removeAttribute("id"));
+    return node;
+  };
 
-  /* ───────────── room details: reuse the plan's drawing, cropped to each room ───────────── */
-  const art = document.getElementById("plan-art");
-  document.querySelectorAll("[data-crop]").forEach((svg) => {
-    const copy = art.cloneNode(true);
-    copy.removeAttribute("id");
-    svg.append(copy);
-  });
+  /* ───────────── room details: the plan's drawing, cropped to each room ───────────── */
+  const floorArt = $("#floor-art");
+  const wallArt = $("#wall-art");
+  if (floorArt && wallArt) {
+    $$("[data-crop]").forEach((svg) => {
+      svg.append(stripIds(floorArt.cloneNode(true)), stripIds(wallArt.cloneNode(true)));
+    });
+  }
+
+  /* ───────────── the 3D house ───────────── */
+  const house = $("#house");
+  if (house) {
+    const scene = $("#scene");
+    const wrap = $("#house-wrap");
+    const tip = $("#tip");
+
+    // stack copies of the walls to give them height
+    const top = $(".wall-layer.is-top", scene);
+    const LAYERS = 13;
+    for (let i = 0; i < LAYERS; i++) {
+      const layer = stripIds(top.cloneNode(true));
+      layer.classList.remove("is-top");
+      layer.style.setProperty("--i", i);
+      scene.insertBefore(layer, top);
+    }
+    top.style.setProperty("--i", LAYERS);
+
+    const anchors = $$(".anchor", scene);
+    const pins = new Map($$(".pin", house).map((p) => [p.dataset.room, p]));
+    const spots = $$(".spot", scene);
+    const people = $$(".person", scene);
+    let active = null;
+    let activeAtDown = null;
+    let lastPointer = "mouse";
+
+    const docked = () => getComputedStyle(tip).position === "static";
+
+    function layout() {
+      const W = house.clientWidth;
+      const H = house.clientHeight;
+      if (!W || !H) return;
+      // measure the tilted floor at scale 1, then fit it (leaving room for walls and pins)
+      scene.style.setProperty("--s", 1);
+      scene.style.setProperty("--dy", "0px");
+      const r = scene.getBoundingClientRect();
+      const s = Math.min((W - 16) / r.width, (innerHeight * 0.82 - 90) / (r.height + 40));
+      scene.style.setProperty("--s", s.toFixed(4));
+      // size the box to the drawing, with room on top for the walls and pins
+      const h = Math.ceil((r.height + 40) * s + 34);
+      if (Math.abs(house.offsetHeight - h) > 1) {
+        house.style.aspectRatio = "auto";
+        house.style.height = `${h}px`;
+      }
+      const hr = house.getBoundingClientRect();
+      const sr = scene.getBoundingClientRect();
+      scene.style.setProperty("--dy", `${(hr.top + hr.height - 14 - sr.bottom).toFixed(1)}px`);
+      anchors.forEach((a) => {
+        const pin = pins.get(a.dataset.room);
+        const ar = a.getBoundingClientRect();
+        pin.style.setProperty("--px", `${ar.left - hr.left}px`);
+        pin.style.setProperty("--py", `${ar.top - hr.top}px`);
+      });
+      house.classList.add("is-ready");
+      if (active) placeTip();
+    }
+
+    function fill(id) {
+      const t = document.getElementById(`tip-${id}`);
+      if (!t) return;
+      tip.replaceChildren(t.content.cloneNode(true));
+      // floating card can't be clicked (so it never blocks the rooms behind it): clicking the room reads more
+      if (id !== "default" && !docked()) tip.append(Object.assign(document.createElement("p"), { className: "tip__cue", textContent: "click to read more ↓" }));
+    }
+
+    function placeTip() {
+      if (docked()) {
+        tip.style.removeProperty("--tx");
+        tip.style.removeProperty("--ty");
+        return;
+      }
+      const pin = pins.get(active);
+      const wr = wrap.getBoundingClientRect();
+      const pr = pin.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      const x = Math.max(0, Math.min(wr.width - tw, pr.left - wr.left + pr.width / 2 - tw / 2));
+      let y = pr.top - wr.top - th - 12;
+      if (y < 0) y = pr.bottom - wr.top + 12;
+      tip.style.setProperty("--tx", `${x}px`);
+      tip.style.setProperty("--ty", `${y}px`);
+    }
+
+    function show(id) {
+      if (active === id) return;
+      active = id;
+      fill(id);
+      pins.forEach((p, k) => p.classList.toggle("is-active", k === id));
+      spots.forEach((s) => s.classList.toggle("is-active", s.dataset.room === id));
+      people.forEach((p) => p.classList.toggle("is-hopping", p.dataset.room === id));
+      tip.classList.add("is-open");
+      placeTip();
+    }
+
+    function hide() {
+      if (!active) return;
+      active = null;
+      pins.forEach((p) => p.classList.remove("is-active"));
+      spots.forEach((s) => s.classList.remove("is-active"));
+      people.forEach((p) => p.classList.remove("is-hopping"));
+      tip.classList.remove("is-open");
+      if (docked()) fill("default");
+    }
+
+    // hover to peek; on touch, the first tap peeks and a second tap goes to the room
+    house.addEventListener("pointerdown", (e) => {
+      lastPointer = e.pointerType;
+      activeAtDown = active;
+    }, true);
+    [...spots, ...pins.values()].forEach((el) => {
+      const id = el.dataset.room;
+      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") show(id); });
+      el.addEventListener("focus", () => show(id));
+      el.addEventListener("click", (e) => {
+        if (lastPointer !== "mouse" && e.detail !== 0 && activeAtDown !== id) {
+          e.preventDefault();
+          show(id);
+        }
+      });
+    });
+    wrap.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hide(); });
+    wrap.addEventListener("focusout", (e) => { if (!wrap.contains(e.relatedTarget)) hide(); });
+    document.addEventListener("pointerdown", (e) => { if (!wrap.contains(e.target)) hide(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+
+    if (docked()) fill("default");
+    let raf;
+    new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(layout);
+    }).observe(house);
+    document.fonts?.ready.then(layout);
+  }
 
   /* ───────────── nav gets a line once you scroll ───────────── */
-  const nav = document.getElementById("nav");
-  const onScroll = () => nav.classList.toggle("is-scrolled", scrollY > 8);
-  addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  const nav = $("#nav");
+  if (nav) {
+    const onScroll = () => nav.classList.toggle("is-scrolled", scrollY > 8);
+    addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
 
   /* ───────────── the door ───────────── */
-  document.querySelectorAll(".door").forEach((door) => {
+  $$(".door").forEach((door) => {
     door.addEventListener("click", () => {
       const open = door.getAttribute("aria-pressed") !== "true";
       door.setAttribute("aria-pressed", String(open));
@@ -25,57 +169,66 @@
   });
 
   /* ───────────── events (from events.js) ───────────── */
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text) n.textContent = text;
+    return n;
+  };
+  const safeUrl = (u) => typeof u === "string" && /^(https?:\/\/|assets\/|\.\/)/.test(u);
+  const toDate = (s) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  function eventCard(e, isPast) {
+    const d = toDate(e.date);
+    const card = el("article", `event${isPast ? " event--past" : ""}${safeUrl(e.image) ? " event--photo" : ""}`);
+    if (safeUrl(e.image)) {
+      const img = el("img", "event__img");
+      img.src = e.image;
+      img.alt = "";
+      img.loading = "lazy";
+      card.append(img);
+    }
+    const row = safeUrl(e.image) ? el("div", "event__row") : card;
+    const date = el("div", "event__date", String(d.getDate()));
+    date.append(el("small", "", d.toLocaleDateString("en-SG", { month: "short" })));
+    const body = el("div");
+    body.append(el("h4", "", e.title));
+    const meta = [d.toLocaleDateString("en-SG", { weekday: "short", day: "numeric", month: "short", year: "numeric" }), e.time, e.place].filter(Boolean).join(" · ");
+    body.append(el("p", "event__meta", meta));
+    if (e.blurb) body.append(el("p", "", e.blurb));
+    const href = isPast ? e.recap : e.link;
+    if (safeUrl(href)) {
+      const a = el("a", "link", isPast ? "See the recap →" : "Sign up →");
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener";
+      const p = el("p");
+      p.append(a);
+      body.append(p);
+    }
+    row.append(date, body);
+    if (row !== card) card.append(row);
+    return card;
+  }
+
   function renderEvents() {
-    const box = document.getElementById("events");
-    if (!box) return;
     const list = (window.NORMAL_EVENTS || []).filter((e) => e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date));
-    const toDate = (s) => {
-      const [y, m, d] = s.split("-").map(Number);
-      return new Date(y, m - 1, d);
-    };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const upcoming = list.filter((e) => toDate(e.date) >= today).sort((a, b) => toDate(a.date) - toDate(b.date));
-    const past = list.filter((e) => toDate(e.date) < today).sort((a, b) => toDate(b.date) - toDate(a.date)).slice(0, 6);
-
-    const el = (tag, cls, text) => {
-      const n = document.createElement(tag);
-      if (cls) n.className = cls;
-      if (text) n.textContent = text;
-      return n;
+    const past = list.filter((e) => toDate(e.date) < today).sort((a, b) => toDate(b.date) - toDate(a.date));
+    const fillBox = (box, items, isPast, empty) => {
+      if (!box) return;
+      box.replaceChildren(...(items.length ? items.map((e) => eventCard(e, isPast)) : [el("p", "events__empty", empty)]));
     };
 
-    box.replaceChildren();
-    if (!upcoming.length && !past.length) {
-      box.append(el("p", "events__empty", "Nothing on the shelves yet. The next gathering lands here first."));
-      return;
-    }
-
-    [...upcoming, ...past].forEach((e) => {
-      const d = toDate(e.date);
-      const isPast = d < today;
-      const card = el("article", isPast ? "event event--past" : "event");
-      const date = el("div", "event__date", String(d.getDate()));
-      date.append(el("small", "", d.toLocaleDateString("en-SG", { month: "short" })));
-
-      const body = el("div");
-      body.append(el("h4", "", e.title));
-      const meta = [d.toLocaleDateString("en-SG", { weekday: "short", year: "numeric" }), e.time, e.place].filter(Boolean).join(" · ");
-      body.append(el("p", "event__meta", meta));
-      if (e.blurb) body.append(el("p", "", e.blurb));
-      if (!isPast && e.link && /^https?:\/\//.test(e.link)) {
-        const a = el("a", "link", "Sign up →");
-        a.href = e.link;
-        a.target = "_blank";
-        a.rel = "noopener";
-        const p = el("p");
-        p.append(a);
-        body.append(p);
-      }
-      card.append(date, body);
-      box.append(card);
-    });
+    const shelf = $("#events");
+    if (shelf) fillBox(shelf, upcoming.slice(0, Number(shelf.dataset.limit) || 3), false, "Nothing on the shelves yet. The next gathering lands here first.");
+    fillBox($("#events-upcoming"), upcoming, false, "Nothing coming up just yet. The next gathering lands here first.");
+    fillBox($("#events-past"), past, true, "Past gatherings will be collected here.");
   }
   renderEvents();
 
@@ -91,8 +244,9 @@
       }),
       { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
     );
-    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    $$(".reveal").forEach((n) => io.observe(n));
   }
 
-  document.getElementById("year").textContent = new Date().getFullYear();
+  const year = $("#year");
+  if (year) year.textContent = new Date().getFullYear();
 })();
