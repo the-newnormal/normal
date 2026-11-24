@@ -37,9 +37,16 @@ Edit `events.js`. Every event shows up on `events.html`. Put photos in `assets/e
   image: "assets/events/youth-day.jpg" }
 ```
 
-## Change the fonts
+## Fonts
 
-There are two variables at the top of `styles.css`: `--hand` (headings and labels) and `--serif` (body text). Also update the Google Fonts `<link>` in `index.html` and `events.html`.
+The site uses one font, Bookmania. Headings and display text are set at -80 tracking (`--tracking: -0.08em`) and body text at `--tracking-body`. Both are at the top of `styles.css`.
+
+Bookmania is licensed through Adobe Fonts, so it has to be connected before it shows:
+
+1. In Adobe Fonts, add Bookmania to a web project.
+2. Paste the project's `<link>` where the `TODO` is in the `<head>` of `index.html` and `events.html`.
+
+Until then the site falls back to Bookman Old Style, then Georgia.
 
 ## Files
 
@@ -57,7 +64,7 @@ To add a part of the house:
 
 ## To do
 
-- [ ] Fonts from the reviewer (see "Change the fonts")
+- [ ] Connect Bookmania through Adobe Fonts (see "Fonts")
 - [ ] Design assets from the reviewer
 - [ ] Fill in `events.js`
 - [ ] Real Instagram and email links (in `index.html`, marked `TODO`)
