@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>welcome · Normal admin</title>
+  <meta name="theme-color" content="#fbf7ee">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/bookmania-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="admin">
+
+<header class="nav is-scrolled">
+  <div class="wrap admin__bar">
+    <span class="admin__brand">
+      <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369">
+      <span class="admin__tag">admin</span>
+    </span>
+  </div>
+</header>
+
+<main class="wrap admin__main">
+  <section class="admin__login">
+    <form class="join__sheet admin__login-sheet" id="w-form" novalidate hidden>
+      <p class="kicker">come in</p>
+      <h1 class="admin__h1">welcome, <span id="w-name"></span></h1>
+      <p>your username is <strong id="w-username"></strong>. choose a password to finish setting up your login.</p>
+      <div class="q">
+        <label class="q__label" for="w-pass">password <span class="q__opt">10 characters or more</span></label>
+        <input type="password" id="w-pass" autocomplete="new-password" minlength="10" required>
+      </div>
+      <div class="q">
+        <label class="q__label" for="w-pass2">same password again</label>
+        <input type="password" id="w-pass2" autocomplete="new-password" required>
+      </div>
+      <input type="text" id="w-user" autocomplete="username" hidden>
+      <p class="join__status is-error" id="w-error" role="alert"></p>
+      <button class="btn" type="submit" id="w-go">set password and sign in</button>
+    </form>
+
+    <div class="join__sheet admin__login-sheet" id="w-dead" hidden>
+      <p class="kicker">hmm</p>
+      <h1 class="admin__h1">this link doesn't work</h1>
+      <p>setup links work once and last 7 days. ask a Master Admin for a new one.</p>
+      <p><a class="link" href="/">go to sign in →</a></p>
+    </div>
+  </section>
+</main>
+
+<script src="/admin/welcome.js"></script>
+</body>
+</html>

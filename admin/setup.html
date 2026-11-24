@@ -18,9 +18,9 @@
 
 <main class="wrap admin__main">
   <form class="join__sheet admin__login-sheet" id="setup" novalidate>
-    <p class="kicker">make a login</p>
-    <h1 class="admin__h1">your admin login</h1>
-    <p>Pick a name and password. This page scrambles the password <strong>in your browser</strong> (nothing is sent anywhere) and gives you one line to pass to whoever runs Normal's Vercel project.</p>
+    <p class="kicker">the first login</p>
+    <h1 class="admin__h1">Master Admin login</h1>
+    <p>Pick a name and password. This page scrambles the password <strong>in your browser</strong> (nothing is sent anywhere) and gives you one line to pass to whoever runs Normal's Vercel project. This is only for the first Master Admin or two: everyone else gets a login from the portal (accounts → create an account).</p>
     <div class="q">
       <label class="q__label" for="s-name">name <span class="q__opt">(lowercase, no spaces, e.g. ashton)</span></label>
       <input type="text" id="s-name" autocapitalize="none" spellcheck="false" pattern="[a-z0-9._-]{2,32}" required>
@@ -43,7 +43,7 @@
       <ol class="admin__steps">
         <li>Send this line to whoever runs the Vercel project (it's safe to send: it can't be turned back into your password).</li>
         <li>In Vercel → Project → Settings → Environment Variables, they add it to <code>ADMIN_USERS</code>. Several people go on separate lines, or separated by commas.</li>
-        <li>After the next deploy, sign in at admin.newnormal.sg with your name and password.</li>
+        <li>After the next deploy, sign in at admin.newnormal.sg with that name and password.</li>
       </ol>
     </div>
   </form>

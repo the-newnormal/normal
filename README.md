@@ -2,7 +2,7 @@
 
 A home built for us to be human. The home page has three parts: a hero, a hand-drawn floor plan tilted into 3D, and a "Come in" footer with contact links. Hover over a room (or tap it on a phone) to see a short card about it. The front door leads to "Come in", and the library leads to the events page.
 
-Pages: `index.html` (home), `events.html` (what's on), `join.html` (join us: the recruitment form) and the admin at admin.newnormal.sg (`admin/`).
+Pages: `index.html` (home), `events.html` (what's on), `join.html` (join us: the recruitment form) and the admin portal at admin.newnormal.sg (`admin/`).
 
 | Part of the plan | What its card says |
 |---|---|
@@ -28,44 +28,56 @@ Deploy it to any static host (Vercel, Netlify, GitHub Pages).
 
 ## Add an IP or an event
 
-Everything on the "what's on" page (`events.html`) comes from `events.js`.
+Admins edit the "what's on" page (`events.html`) in the portal: **admin.newnormal.sg → what's on**. Changes show on the page within a minute.
 
-- **Our IPs** (`NORMAL_IPS`): `name`, `kicker`, `blurb`, `link` (its own site, e.g. `https://youthday.sg`) and `image`. `theme: "backyard"` or `"youthday"` dresses the card like that IP's own site (colours and fonts taken from backyard.sg and youthday.sg; the fonts load from Google Fonts on `events.html` only). An IP with no theme gets a plain Normal card, and one with no link shows "page coming soon". Put images in `assets/ips/`.
-- **Events** (`NORMAL_EVENTS`): see below. Put photos in `assets/events/`.
+- **Our IPs**: name, the small line above it, the line below, a link (its own site, e.g. `https://youthday.sg`) and an image. The "card style" dresses it like Backyard's or Youth Day's own site (colours and fonts from backyard.sg and youthday.sg; the fonts load from Google Fonts on `events.html` only). With no style it's a plain Normal card, and with no link it says "page coming soon". Use ↑ ↓ to reorder.
+- **Events**: title, date, time, place, a blurb, a sign-up link (shown while upcoming), a recap link (shown once it's past) and a photo. Untick "show on the what's on page" to keep one hidden.
+- Images can be full `https://` addresses, or files you add to `assets/ips/` and `assets/events/`.
 
-```js
-{ title: "Youth Day", date: "2026-12-12", time: "2pm – 8pm", place: "…", blurb: "…",
-  link: "https://…",          // sign-up, shown while upcoming
-  recap: "https://…",         // shown once it's past
-  image: "assets/events/youth-day.jpg" }
-```
+`whats-on.json` is the starting data: it's copied into the database the first time, and the page falls back to it if the database can't be reached.
 
-## Join page and admin
+## The admin portal (admin.newnormal.sg)
+
+One place for Normal's people and admin.
+
+| Section | What's in it | Who sees it |
+|---|---|---|
+| members | Everyone in Normal: name, title, team, Telegram, phone, email, birthday, school, joined, status, notes. Search, filter, export. | Everyone. Members see only name, title, team and Telegram of others, and edit only their own contact details. |
+| applications | Join-page applications: full answers, status (new, interviewing, accepted, declined), "accept" adds them to members. Export. | Admins |
+| what's on | The IPs and events on the what's on page | Admins |
+| accounts | Who can sign in, and as what | Master Admins |
+
+**Roles.** Master Admin: everything, plus accounts. Admin: everything except accounts. Member: the members directory and their own profile.
+
+**Giving someone a login.** accounts → create an account (or "make them a login" on their member profile). Pick their role and their member profile. You get a one-time link to send on WhatsApp or Telegram; they open it and choose their own password. Links work once and last 7 days. If someone forgets their password, open their account → new password link.
+
+**Taking access away.** Disable or delete the account, or change their role. Any of these signs them out straight away.
 
 `join.html` is the recruitment form, rebuilt from the Fillout form. The questions live in `join-form.json`; edit them there and the page, the database and the admin all follow. Each question's `id` is its Fillout question ID, so keep those as they are.
 
-Applications are saved to Normal's own database by `api/join.js`. Your team reads them at **admin.newnormal.sg**: sign in, search, filter by role and life stage, open anyone's full answers, and export a spreadsheet.
-
 | Piece | Where |
 |---|---|
-| Admin page | `admin/index.html`, `admin/admin.js` (served at admin.newnormal.sg, also at `/admin/`) |
-| Make-a-login page | `admin/setup.html` (admin.newnormal.sg/setup) |
-| Vercel functions | `api/join.js`, `api/admin/session.js`, `api/admin/applications.js`, `api/admin/export.js` |
-| Shared code | `lib/db.js` (database), `lib/auth.js` (logins), `lib/form.js` (questions) |
+| Portal | `admin/index.html`, `admin/admin.js` (served at admin.newnormal.sg, also at `/admin/`) |
+| Setup-link page | `admin/welcome.html` (admin.newnormal.sg/welcome) |
+| First Master Admin's login line | `admin/setup.html` (admin.newnormal.sg/setup) |
+| Vercel functions (8 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js` |
+| Shared code | `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/form.js` (questions) |
 
 ### Switching it on (once)
 
 1. **Database.** In Vercel, open the project → **Storage** → **Create Database** → **Neon** (Postgres), and connect it to this project. That sets `DATABASE_URL`. The tables are created automatically on first use.
-2. **Logins.** Each recruitment leader opens `/admin/setup.html`, picks a name and password, and gets one line (the password is scrambled in their browser and never sent). In Vercel → **Settings → Environment Variables**, add `ADMIN_USERS` with everyone's lines, one per line or separated by commas. To remove someone, delete their line.
+2. **The first Master Admin.** Open `/admin/setup.html`, pick a username and password, and copy the line it gives you (the password is scrambled in your browser and never sent). In Vercel → **Settings → Environment Variables**, add `ADMIN_USERS` with that line. Master Admins set this way can't be changed from the portal, so keep it to one or two people. Everyone else gets an account from the portal.
 3. **Domain.** In Vercel → **Settings → Domains**, add `admin.newnormal.sg` (and `newnormal.sg` when you move the main site there), then add the DNS record Vercel shows you at your domain registrar.
-4. **Redeploy**, apply once on the join page as a test, and check it appears at admin.newnormal.sg.
+4. **Redeploy**, sign in at admin.newnormal.sg, and create the other accounts.
 
-Optional: `FILLOUT_API_KEY` also sends a copy of each application to the old Fillout form.
+Optional: `FILLOUT_API_KEY` also sends a copy of each application to the old Fillout form. `ADMIN_SESSION_SECRET` (any long random text) signs the login cookies; without it one is made from `ADMIN_USERS` and the database address.
 
 ### Security and privacy
 
-- Admin pages only show data after sign-in. Sign-ins last 12 hours, and 8 wrong passwords for the same name lock it for 15 minutes.
-- Applicants' answers are always shown as plain text, so nothing they type can run on the admin page.
+- Every permission is checked on the server; the portal only hides what you can't use.
+- Sign-ins last 12 hours. 8 wrong passwords for the same username lock it for 15 minutes.
+- Passwords are stored scrambled (PBKDF2). Setup links are stored only as a fingerprint, so a database leak doesn't leak working links.
+- Anything people typed is shown as plain text, so nothing they type can run in the portal.
 - **Deleting old applications isn't built yet.** The privacy notice promises to delete non-members' details within 3 years after recruitment closes, so that needs doing (in the Neon dashboard, or ask for a delete button).
 
 ## Fonts
@@ -79,7 +91,7 @@ The site uses one font, Bookmania, self-hosted from `assets/fonts/`. Headings an
 
 - `index.html`: hero, the plan (inline SVG) with each room's card text in a `<template>`, and the "Come in" footer
 - `styles.css`: paper, ink and layout
-- `main.js`: builds the 3D house (stacks the walls, places the room pins, runs the hover card) and renders events
+- `main.js`: builds the 3D house (stacks the walls, places the room pins, runs the hover card) and renders what's on
 - `events.html`: the "what's on" page (our IPs, coming up, so far)
 - `assets/`: wordmark and door mark (traced to SVG from the hand-drawn originals), house sketch
 
@@ -93,5 +105,6 @@ To add a part of the house:
 
 - [ ] Check the Bookmania licence covers web use and a public repo (see "Fonts")
 - [ ] Design assets from the reviewer
-- [ ] Switch on the database, logins and admin.newnormal.sg (see "Join page and admin")
-- [ ] Fill in `events.js`: IP blurbs and images, and events
+- [ ] Switch on the database, the first Master Admin and admin.newnormal.sg (see "The admin portal")
+- [ ] Fill in what's on in the portal: IP blurbs and images, and events
+- [ ] Delete `events.js` (replaced by the portal and `whats-on.json`)

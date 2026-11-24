@@ -1,10 +1,12 @@
 {
   "rewrites": [
     { "source": "/", "has": [{ "type": "host", "value": "admin.newnormal.sg" }], "destination": "/admin/index.html" },
-    { "source": "/setup", "has": [{ "type": "host", "value": "admin.newnormal.sg" }], "destination": "/admin/setup.html" }
+    { "source": "/setup", "has": [{ "type": "host", "value": "admin.newnormal.sg" }], "destination": "/admin/setup.html" },
+    { "source": "/welcome", "has": [{ "type": "host", "value": "admin.newnormal.sg" }], "destination": "/admin/welcome.html" }
   ],
   "headers": [
-    { "source": "/admin/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
-    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
+    { "source": "/admin/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/api/admin/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
+    { "source": "/api/join", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
   ]
 }

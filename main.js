@@ -181,7 +181,7 @@
     });
   });
 
-  /* ───────────── events (from events.js) ───────────── */
+  /* ───────────── what's on: IPs and events, edited in the admin portal ───────────── */
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -227,8 +227,8 @@
     return card;
   }
 
-  function renderEvents() {
-    const list = (window.NORMAL_EVENTS || []).filter((e) => e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date));
+  function renderEvents(events) {
+    const list = (events || []).filter((e) => e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const upcoming = list.filter((e) => toDate(e.date) >= today).sort((a, b) => toDate(a.date) - toDate(b.date));
@@ -241,16 +241,15 @@
     fillBox($("#events-upcoming"), upcoming, false, "Nothing coming up just yet. The next gathering lands here first.");
     fillBox($("#events-past"), past, true, "Past gatherings will be collected here.");
   }
-  renderEvents();
 
-  /* ───────────── our IPs (from events.js) ───────────── */
+  /* our IPs */
   // a page in this site ("backyard.html") or a full web address; never javascript:/data: links
   const pageLink = (u) => typeof u === "string" && u.trim() !== "" && !/^\s*(javascript|data|vbscript):/i.test(u);
 
-  function renderIPs() {
+  function renderIPs(all) {
     const box = $("#ips");
     if (!box) return;
-    const ips = (window.NORMAL_IPS || []).filter((ip) => ip && ip.name);
+    const ips = (all || []).filter((ip) => ip && ip.name);
     if (!ips.length) {
       $("#ips-section")?.setAttribute("hidden", "");
       return;
@@ -295,7 +294,18 @@
       return card;
     }));
   }
-  renderIPs();
+
+  // from the portal (api/whats-on); whats-on.json if that's not reachable
+  if ($("#ips") || $("#events-upcoming") || $("#events-past")) {
+    const load = (url) => fetch(url, { headers: { Accept: "application/json" } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+    load("api/whats-on")
+      .catch(() => load("whats-on.json"))
+      .catch(() => ({ ips: [], events: [] }))
+      .then((data) => {
+        renderIPs(Array.isArray(data.ips) ? data.ips : []);
+        renderEvents(Array.isArray(data.events) ? data.events : []);
+      });
+  }
 
   /* ───────────── fade things in as they scroll into view ───────────── */
   if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {

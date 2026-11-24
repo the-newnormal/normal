@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <title>admin · Normal</title>
   <meta name="theme-color" content="#fbf7ee">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -14,26 +15,33 @@
 
 <header class="nav is-scrolled">
   <div class="wrap admin__bar">
-    <a class="admin__brand" href="#/" aria-label="All applications">
+    <a class="admin__brand" href="#/" aria-label="Admin home">
       <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369">
       <span class="admin__tag">admin</span>
     </a>
     <div class="admin__who" id="who" hidden>
-      <span id="who-name"></span>
+      <a class="link" id="who-name" href="#/"></a>
+      <span class="admin__role" id="who-role"></span>
       <button class="link" type="button" id="sign-out">sign out</button>
     </div>
   </div>
+  <nav class="wrap admin__tabs" id="tabs" aria-label="Sections" hidden>
+    <a href="#/members" data-tab="members">members</a>
+    <a href="#/applications" data-tab="applications" data-roles="master admin">applications</a>
+    <a href="#/whats-on" data-tab="whats-on" data-roles="master admin">what's on</a>
+    <a href="#/accounts" data-tab="accounts" data-roles="master">accounts</a>
+  </nav>
 </header>
 
 <main id="main" class="wrap admin__main">
 
   <!-- signed out -->
-  <section class="admin__login" id="login" hidden>
+  <section class="admin__login" id="login" data-view hidden>
     <form class="join__sheet admin__login-sheet" id="login-form" novalidate>
       <p class="kicker">the house, behind the scenes</p>
       <h1 class="admin__h1">sign in</h1>
       <div class="q">
-        <label class="q__label" for="login-name">your name</label>
+        <label class="q__label" for="login-name">username</label>
         <input type="text" id="login-name" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div class="q">
@@ -42,32 +50,47 @@
       </div>
       <p class="join__status is-error" id="login-error" role="alert"></p>
       <button class="btn" type="submit" id="login-go">sign in</button>
-      <p class="admin__fine">need a login? make one on the <a href="/admin/setup.html">setup page</a> and send it to whoever runs the Vercel project.</p>
+      <p class="admin__fine">no login yet, or forgot your password? ask a Master Admin for a setup link.</p>
     </form>
   </section>
 
-  <!-- the list -->
-  <section id="list" hidden>
+  <!-- any list: members, applications, accounts -->
+  <section id="list" data-view hidden>
     <div class="admin__head">
-      <h1 class="admin__h1">applications <span class="admin__count" id="count"></span></h1>
-      <button class="btn btn--ghost btn--sm" type="button" id="export">export spreadsheet</button>
+      <h1 class="admin__h1"><span id="list-title"></span> <span class="admin__count" id="count"></span></h1>
+      <div class="admin__actions" id="list-actions"></div>
     </div>
-    <div class="admin__filters">
-      <input type="search" id="f-q" placeholder="search names, handles, answers…" aria-label="Search">
-      <select id="f-stage" aria-label="Life stage"><option value="">every life stage</option></select>
-      <select id="f-role" aria-label="Role"><option value="">every role</option></select>
-    </div>
+    <div class="admin__filters" id="filters"></div>
     <ol class="admin__rows" id="rows" aria-live="polite"></ol>
     <p class="admin__empty" id="empty" hidden></p>
   </section>
 
-  <!-- one application -->
-  <article id="detail" hidden>
-    <a class="admin__back" href="#/">← all applications</a>
+  <!-- one thing: an application, a member, an IP or event, a new account -->
+  <article id="detail" data-view hidden>
+    <a class="admin__back" id="back" href="#/">←</a>
     <div id="detail-body"></div>
   </article>
 
+  <!-- what's on: IPs and events together -->
+  <section id="whats-on" data-view hidden>
+    <div class="admin__head">
+      <h1 class="admin__h1">what's on</h1>
+      <a class="link" href="/events.html" target="_blank" rel="noopener">see the page ↗</a>
+    </div>
+    <div class="admin__head admin__head--sub">
+      <h2 class="adetail__h2">our IPs</h2>
+      <a class="btn btn--ghost btn--sm" href="#/w/ip/new">add an IP</a>
+    </div>
+    <ol class="admin__rows" id="ip-rows"></ol>
+    <div class="admin__head admin__head--sub">
+      <h2 class="adetail__h2">events</h2>
+      <a class="btn btn--ghost btn--sm" href="#/w/event/new">add an event</a>
+    </div>
+    <ol class="admin__rows" id="event-rows"></ol>
+  </section>
+
   <p class="join__status is-error" id="error" role="alert"></p>
+  <p class="admin__toast" id="toast" role="status" aria-live="polite"></p>
 </main>
 
 <script src="/admin/admin.js"></script>
