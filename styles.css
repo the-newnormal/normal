@@ -586,7 +586,10 @@ a.ip--backyard:hover { background: repeating-linear-gradient(-45deg, rgba(178, 2
 }
 .ip--youthday .ip__name {
   margin-top: .35rem;
-  font: 400 clamp(2.6rem, 5.4vw, 3.6rem)/.95 var(--font);
+  /* Bold Bookmania. Until a Bold file is added (an @font-face with font-weight: 700),
+     the browser thickens the Regular; once it's there it is used automatically. */
+  font: 700 clamp(2.6rem, 5.4vw, 3.6rem)/.95 var(--font);
+  font-synthesis-weight: auto;
   letter-spacing: -.03em;
   color: #3e4e72;
 }
