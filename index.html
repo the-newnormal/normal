@@ -2,7 +2,7 @@
 <html lang="en-SG">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Normal — a home built for us to be human</title>
   <meta name="description" content="Normal is a ground-up movement of youth doing their part to see Singapore become the home they can imagine it to be.">
   <meta name="theme-color" content="#fbf7ee">
@@ -14,323 +14,388 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Shantell+Sans:ital,wght,BNCE,INFM@0,300..800,-100..100,0..100&display=swap">
   <link rel="stylesheet" href="styles.css">
-  <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
-<h1 class="sr-only">Normal — a home built for us to be human</h1>
+<a class="skip" href="#main">Skip to content</a>
 
-<div class="app" id="app">
-
-  <!-- ═════════════════════════ THE PLAN ═════════════════════════ -->
-  <div class="stage" id="stage">
-    <svg class="plan" id="plan" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Floor plan of the Normal home. Choose a room to step inside.">
-      <defs>
-        <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="4" result="noise"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-      </defs>
-
-      <!-- ink -->
-      <g class="plan__ink" filter="url(#wobble)" aria-hidden="true">
-        <!-- site boundary -->
-        <rect class="hair dashed" x="16" y="98" width="608" height="614" rx="4"/>
-
-        <!-- north arrow -->
-        <circle class="thin" cx="64" cy="56" r="24"/>
-        <path class="thin" d="M64,76 V34 M54,46 L64,32 L74,46"/>
-
-        <!-- walls -->
-        <path class="wall" d="M275,560 H600 V110 H40 V560 H220"/>
-        <path class="wall" d="M320,110 V185 M320,240 V420 M320,480 V560 M40,335 H110 M170,335 H600"/>
-
-        <!-- windows -->
-        <rect class="window" x="35" y="220" width="10" height="64"/>
-        <rect class="window" x="360" y="105" width="70" height="10"/>
-        <rect class="window" x="420" y="555" width="70" height="10"/>
-
-        <!-- door swings -->
-        <path class="swing" d="M220,560 V505 M220,505 A55,55 0 0 1 275,560"/>
-        <path class="swing" d="M320,240 H375 M375,240 A55,55 0 0 0 320,185"/>
-
-        <!-- library -->
-        <rect class="thin" x="58" y="124" width="240" height="24" rx="2"/>
-        <path class="hair" d="M70,124V148 M78,124V148 M86,124V148 M94,124V148 M112,124V148 M120,124V148 M128,124V148 M162,124V148 M170,124V148 M178,124V148 M186,124V148 M194,124V148 M214,124V148 M222,124V148 M230,124V148 M250,124V148 M258,124V148 M266,124V148 M274,124V148 M282,124V148 M138,126L148,148"/>
-        <ellipse class="hair dashed" cx="150" cy="262" rx="62" ry="36"/>
-        <path class="hair" d="M152,272 l-16,-6 v-13 l16,6 l16,-6 v13 z M152,272 v-13"/>
-        <rect class="thin" x="226" y="230" width="54" height="50" rx="10"/>
-        <path class="thin" d="M228,242 H278"/>
-        <rect class="thin" x="219" y="238" width="10" height="42" rx="4"/>
-        <rect class="thin" x="277" y="238" width="10" height="42" rx="4"/>
-        <circle class="thin" cx="300" cy="206" r="9"/>
-        <path class="hair" d="M294,200 L306,212 M306,200 L294,212"/>
-
-        <!-- bedroom -->
-        <rect class="thin" x="478" y="132" width="106" height="150" rx="6"/>
-        <rect class="thin" x="490" y="142" width="82" height="30" rx="10"/>
-        <path class="thin" d="M478,194 H584"/>
-        <path class="hair" d="M478,206 H584"/>
-        <rect class="thin" x="442" y="136" width="28" height="28" rx="3"/>
-        <circle class="hair" cx="456" cy="150" r="7"/>
-        <circle class="thin" cx="420" cy="312" r="13"/>
-        <circle class="thin" cx="440" cy="312" r="10"/>
-        <circle class="hair" cx="420" cy="312" r="4"/>
-        <path class="thin" d="M450,312 H484"/>
-        <rect class="hair" x="484" y="307" width="12" height="10" rx="2"/>
-        <circle class="thin" cx="580" cy="314" r="8"/>
-        <path class="hair" d="M580,306 C572,292 580,286 586,296 M580,306 C588,290 596,296 590,304"/>
-
-        <!-- kitchen -->
-        <rect class="thin" x="552" y="350" width="36" height="196" rx="3"/>
-        <circle class="hair" cx="570" cy="374" r="10"/>
-        <circle class="hair" cx="570" cy="406" r="10"/>
-        <rect class="hair" x="558" y="440" width="24" height="38" rx="7"/>
-        <circle class="hair" cx="570" cy="459" r="2.5"/>
-        <path class="hair" d="M540,374 c-6,-6 4,-10 -2,-18 M530,380 c-6,-6 4,-10 -2,-18"/>
-        <rect class="thin" x="396" y="440" width="120" height="56" rx="6"/>
-        <path class="thin" d="M436,450 v12 l-10,20 h28 l-10,-20 v-12 z"/>
-        <circle class="hair" cx="442" cy="441" r="3"/>
-        <circle class="hair" cx="449" cy="432" r="2"/>
-
-        <!-- living room -->
-        <rect class="thin" x="95" y="420" width="140" height="60" rx="10"/>
-        <circle class="thin" cx="125" cy="404" r="12"/>
-        <circle class="thin" cx="165" cy="404" r="12"/>
-        <circle class="thin chair--yours" cx="205" cy="404" r="12"/>
-        <circle class="thin" cx="125" cy="496" r="12"/>
-        <circle class="thin" cx="165" cy="496" r="12"/>
-        <circle class="thin" cx="205" cy="496" r="12"/>
-        <circle class="thin" cx="77" cy="450" r="12"/>
-        <circle class="thin" cx="253" cy="450" r="12"/>
-        <rect class="thin" x="48" y="508" width="16" height="36" rx="3"/>
-        <circle class="hair" cx="56" cy="532" r="4"/>
-        <path class="hair" d="M72,514 q9,12 0,24 M82,506 q14,20 0,40"/>
-
-        <!-- front step + garden -->
-        <rect class="hair dashed" x="222" y="568" width="52" height="14" rx="2"/>
-        <ellipse class="hair" cx="248" cy="606" rx="12" ry="7"/>
-        <ellipse class="hair" cx="240" cy="632" rx="12" ry="7"/>
-        <ellipse class="hair" cx="250" cy="658" rx="12" ry="7"/>
-        <ellipse class="hair" cx="242" cy="684" rx="12" ry="7"/>
-        <path class="thin" d="M70,646 a20,20 0 0 1 20,-30 a20,20 0 0 1 40,0 a20,20 0 0 1 20,30 a20,20 0 0 1 -20,30 a20,20 0 0 1 -40,0 a20,20 0 0 1 -20,-30 z"/>
-        <circle class="hair" cx="110" cy="646" r="12"/>
-        <rect class="thin" x="372" y="604" width="176" height="64" rx="6"/>
-        <path class="hair" d="M392,630v-9 M392,625q-6,-1 -8,-8 M392,625q6,-1 8,-8 M412,630v-9 M412,625q-6,-1 -8,-8 M412,625q6,-1 8,-8 M432,630v-9 M432,625q-6,-1 -8,-8 M432,625q6,-1 8,-8 M452,630v-9 M452,625q-6,-1 -8,-8 M452,625q6,-1 8,-8 M472,630v-9 M472,625q-6,-1 -8,-8 M472,625q6,-1 8,-8 M492,630v-9 M492,625q-6,-1 -8,-8 M492,625q6,-1 8,-8 M512,630v-9 M512,625q-6,-1 -8,-8 M512,625q6,-1 8,-8 M532,630v-9 M532,625q-6,-1 -8,-8 M532,625q6,-1 8,-8 M392,656v-9 M392,651q-6,-1 -8,-8 M392,651q6,-1 8,-8 M412,656v-9 M412,651q-6,-1 -8,-8 M412,651q6,-1 8,-8 M432,656v-9 M432,651q-6,-1 -8,-8 M432,651q6,-1 8,-8 M452,656v-9 M452,651q-6,-1 -8,-8 M452,651q6,-1 8,-8 M472,656v-9 M472,651q-6,-1 -8,-8 M472,651q6,-1 8,-8 M492,656v-9 M492,651q-6,-1 -8,-8 M492,651q6,-1 8,-8 M512,656v-9 M512,651q-6,-1 -8,-8 M512,651q6,-1 8,-8 M532,656v-9 M532,651q-6,-1 -8,-8 M532,651q6,-1 8,-8"/>
-        <circle class="thin sun" cx="590" cy="636" r="12"/>
-        <path class="hair" d="M590,616 v-6 M590,656 v6 M570,636 h-6 M610,636 h6 M576,622 l-4,-4 M604,622 l4,-4 M576,650 l-4,4 M604,650 l4,4"/>
-      </g>
-
-      <!-- people (the dots) -->
-      <g class="plan__people" aria-hidden="true">
-        <circle cx="124" cy="262" r="7"/>
-        <circle cx="253" cy="262" r="7"/>
-        <circle cx="531" cy="158" r="7"/>
-        <circle cx="456" cy="424" r="7"/>
-        <circle cx="532" cy="470" r="7"/>
-        <circle cx="420" cy="516" r="7"/>
-        <circle cx="125" cy="404" r="7"/>
-        <circle cx="165" cy="404" r="7"/>
-        <circle cx="125" cy="496" r="7"/>
-        <circle cx="165" cy="496" r="7"/>
-        <circle cx="205" cy="496" r="7"/>
-        <circle cx="77" cy="450" r="7"/>
-        <circle cx="253" cy="450" r="7"/>
-        <circle cx="112" cy="652" r="7"/>
-      </g>
-
-      <!-- clickable parts of the house -->
-      <a class="spot" href="#library" data-spot="library" aria-label="4. Library: a living library"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
-      <a class="spot" href="#bedroom" data-spot="bedroom" aria-label="3. Bedroom: a shelter"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></a>
-      <a class="spot" href="#living" data-spot="living" aria-label="2. Living room: a seat at the table"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></a>
-      <a class="spot" href="#kitchen" data-spot="kitchen" aria-label="1. Kitchen: a laboratory"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></a>
-      <a class="spot" href="#garden" data-spot="garden" aria-label="Garden: room to flourish"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></a>
-      <a class="spot" href="#door" data-spot="door" aria-label="Front door: come in"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
-      <a class="spot" href="#north" data-spot="north" aria-label="North star"><rect class="spot__area" x="30" y="4" width="176" height="88" rx="4"/></a>
-
-      <!-- labels -->
-      <g class="plan__labels" aria-hidden="true">
-        <g class="tag"><circle cx="348" cy="372" r="13"/><text x="348" y="378" text-anchor="middle">1</text><text class="tag__name" x="369" y="379">Kitchen</text></g>
-        <g class="tag"><circle cx="68" cy="372" r="13"/><text x="68" y="378" text-anchor="middle">2</text><text class="tag__name" x="89" y="379">Living room</text></g>
-        <g class="tag"><circle cx="348" cy="268" r="13"/><text x="348" y="274" text-anchor="middle">3</text><text class="tag__name" x="369" y="275">Bedroom</text></g>
-        <g class="tag"><circle cx="78" cy="186" r="13"/><text x="78" y="192" text-anchor="middle">4</text><text class="tag__name" x="99" y="193">Library</text></g>
-        <text class="scrawl" x="64" y="22" text-anchor="middle">N</text>
-        <text class="scrawl scrawl--big" x="98" y="62">north star</text>
-        <text class="scrawl" x="232" y="388">yours</text>
-        <path class="scrawl-line" d="M230,384 C219,382 213,388 215,394"/>
-        <text class="scrawl" x="430" y="214" transform="rotate(-12 430 214)">z z z</text>
-        <text class="scrawl scrawl--big" x="286" y="582">front door</text>
-        <text class="scrawl scrawl--big" x="372" y="694">garden</text>
-        <text class="scrawl scrawl--muted" x="610" y="62" text-anchor="end">plan · not to scale</text>
-      </g>
-
-      <!-- you are here -->
-      <circle class="here" cx="248" cy="575" r="7" aria-hidden="true"/>
-    </svg>
-
-    <a class="whole" href="#" aria-label="Back to the whole house">← whole house</a>
+<header class="nav" id="nav">
+  <div class="wrap nav__inner">
+    <a class="nav__brand" href="#top" aria-label="Normal, back to top"><img src="assets/mark.svg" alt="" width="275" height="292"></a>
+    <nav aria-label="Sections">
+      <ul class="nav__links">
+        <li><a href="#plan">The plan</a></li>
+        <li class="nav__hide"><a href="#library">What's on</a></li>
+        <li><a class="btn btn--sm" href="#door">Come in</a></li>
+      </ul>
+    </nav>
   </div>
+</header>
 
-  <!-- ═════════════════════════ THE NOTES ═════════════════════════ -->
-  <aside class="notes" id="notes" aria-label="Room notes">
-    <button class="handle" id="handle" type="button" aria-expanded="false" aria-controls="notes">
-      <span class="sr-only">Show more</span>
-    </button>
+<main id="main">
 
-    <!-- home: the title block -->
-    <section class="note note--home is-current" id="home" data-panel aria-labelledby="home-title">
-      <h2 id="home-title" class="wordmark" tabindex="-1"><img src="assets/wordmark.svg" alt="Normal" width="1979" height="582"></h2>
-      <p class="lede">is a ground-up movement of youth doing their part to see Singapore become the
-        <span class="circled">home<svg viewBox="0 0 160 70" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M118,10 C80,2 22,6 9,30 C-3,54 52,66 96,62 C140,58 160,40 150,22 C141,7 102,4 70,9"/></svg></span>
-        they can imagine it to be.</p>
-      <p class="hint"><span class="hint--wide">← Pick a room to step inside.</span><span class="hint--narrow">↑ Tap a room to step inside.</span></p>
-      <p><a class="btn" href="#door">Come in</a></p>
-
-      <h3 class="label">Rooms</h3>
-      <ol class="legend">
-        <li><a href="#door"><span class="badge badge--icon"><img src="assets/mark.svg" alt=""></span><span>Front door</span><em>come in</em></a></li>
-        <li><a href="#kitchen"><span class="badge">1</span><span>Kitchen</span><em>a laboratory</em></a></li>
-        <li><a href="#living"><span class="badge">2</span><span>Living room</span><em>a seat at the table</em></a></li>
-        <li><a href="#bedroom"><span class="badge">3</span><span>Bedroom</span><em>a shelter</em></a></li>
-        <li><a href="#library"><span class="badge">4</span><span>Library</span><em>a living library</em></a></li>
-        <li><a href="#garden"><span class="badge badge--icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V10 M12,14 q-6,-1 -8,-8 q7,0 8,8 M12,12 q5,-1 7,-7 q-6,0 -7,7"/></svg></span><span>Garden</span><em>room to flourish</em></a></li>
-        <li><a href="#north"><span class="badge badge--icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20 V4 M6,10 L12,3 L18,10"/></svg></span><span>North star</span><em>why we're here</em></a></li>
-      </ol>
-
-      <div class="titleblock">
-        <dl>
-          <div><dt>Project</dt><dd>Normal</dd></div>
-          <div><dt>Drawing</dt><dd>A home built for us to be human</dd></div>
-          <div><dt>Drawn by</dt><dd>The youth of Singapore</dd></div>
-          <div><dt>Scale</dt><dd>1 : 1 human</dd></div>
-        </dl>
-        <img class="titleblock__house" src="assets/house.png" alt="" width="370" height="356">
+  <!-- ═════════════════════════ Hero ═════════════════════════ -->
+  <section class="hero" id="top">
+    <div class="wrap hero__grid">
+      <div>
+        <p class="kicker reveal">welcome home</p>
+        <h1 class="hero__title reveal"><img src="assets/wordmark.svg" alt="Normal" width="1979" height="582"></h1>
+        <p class="hero__lede reveal">is a ground-up movement of youth doing their part to see Singapore become the
+          <span class="circled">home<svg viewBox="0 0 160 70" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M118,10 C80,2 22,6 9,30 C-3,54 52,66 96,62 C140,58 160,40 150,22 C141,7 102,4 70,9"/></svg></span>
+          they can imagine it to be.</p>
+        <p class="hero__actions reveal">
+          <a class="btn" href="#plan">See the plan ↓</a>
+          <a class="link" href="#door">Come in →</a>
+        </p>
       </div>
-    </section>
+      <figure class="hero__house reveal">
+        <img src="assets/house.png" alt="A crayon sketch of a house shaped like an open envelope" width="370" height="356">
+        <figcaption>a home built for us to be human</figcaption>
+      </figure>
+    </div>
+  </section>
 
-    <!-- front door -->
-    <article class="note" id="door" data-panel aria-labelledby="door-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker">front door</p>
-      <h2 id="door-title" tabindex="-1">Come in.</h2>
-      <button class="door" type="button" aria-pressed="false" aria-label="Open the door">
-        <span class="door__light" aria-hidden="true"></span>
-        <span class="door__leaf" aria-hidden="true"><span class="door__knob"></span></span>
-        <img class="door__frame" src="assets/mark-frame.svg" alt="" width="275" height="292">
-      </button>
-      <p class="lede">Normal stands for the quiet majority of our society: the many currently disengaged from the greater community, who feel paralysed, or uninvited.</p>
-      <p>Consider this your invitation.</p>
-      <p>We believe progress itself demands that humans find better ways to love and serve one another. This house is where we're trying.</p>
-      <div class="actions">
-        <!-- TODO: swap in Normal's real Instagram handle and email -->
-        <a class="btn" href="https://instagram.com/" rel="noopener">Follow on Instagram</a>
-        <a class="btn btn--ghost" href="mailto:hello@example.com">Email us</a>
+  <!-- ═════════════════════════ The plan ═════════════════════════ -->
+  <section class="blueprint" id="plan" aria-labelledby="plan-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">our blueprint</p>
+        <h2 id="plan-title">A home built for us to be human</h2>
+        <p class="hint">Every room stands for something we champion. Pick one to step inside.</p>
+      </header>
+
+      <div class="sheet reveal">
+        <svg class="plan" id="plan" viewBox="0 0 640 720" role="group" aria-label="Floor plan of the Normal home. Choose a room to step inside.">
+          <defs>
+            <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="4" result="noise"/>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+          </defs>
+    
+          <g class="plan-art" id="plan-art">
+            <!-- ink -->
+            <g class="plan__ink" filter="url(#wobble)" aria-hidden="true">
+              <!-- site boundary -->
+              <rect class="hair dashed" x="16" y="98" width="608" height="614" rx="4"/>
+    
+              <!-- north arrow -->
+              <circle class="thin" cx="64" cy="56" r="24"/>
+              <path class="thin" d="M64,76 V34 M54,46 L64,32 L74,46"/>
+    
+              <!-- walls -->
+              <path class="wall" d="M275,560 H600 V110 H40 V560 H220"/>
+              <path class="wall" d="M320,110 V185 M320,240 V420 M320,480 V560 M40,335 H110 M170,335 H600"/>
+    
+              <!-- windows -->
+              <rect class="window" x="35" y="220" width="10" height="64"/>
+              <rect class="window" x="360" y="105" width="70" height="10"/>
+              <rect class="window" x="420" y="555" width="70" height="10"/>
+    
+              <!-- door swings -->
+              <path class="swing" d="M220,560 V505 M220,505 A55,55 0 0 1 275,560"/>
+              <path class="swing" d="M320,240 H375 M375,240 A55,55 0 0 0 320,185"/>
+    
+              <!-- library -->
+              <rect class="thin" x="58" y="124" width="240" height="24" rx="2"/>
+              <path class="hair" d="M70,124V148 M78,124V148 M86,124V148 M94,124V148 M112,124V148 M120,124V148 M128,124V148 M162,124V148 M170,124V148 M178,124V148 M186,124V148 M194,124V148 M214,124V148 M222,124V148 M230,124V148 M250,124V148 M258,124V148 M266,124V148 M274,124V148 M282,124V148 M138,126L148,148"/>
+              <ellipse class="hair dashed" cx="150" cy="262" rx="62" ry="36"/>
+              <path class="hair" d="M152,272 l-16,-6 v-13 l16,6 l16,-6 v13 z M152,272 v-13"/>
+              <rect class="thin" x="226" y="230" width="54" height="50" rx="10"/>
+              <path class="thin" d="M228,242 H278"/>
+              <rect class="thin" x="219" y="238" width="10" height="42" rx="4"/>
+              <rect class="thin" x="277" y="238" width="10" height="42" rx="4"/>
+              <circle class="thin" cx="300" cy="206" r="9"/>
+              <path class="hair" d="M294,200 L306,212 M306,200 L294,212"/>
+    
+              <!-- bedroom -->
+              <rect class="thin" x="478" y="132" width="106" height="150" rx="6"/>
+              <rect class="thin" x="490" y="142" width="82" height="30" rx="10"/>
+              <path class="thin" d="M478,194 H584"/>
+              <path class="hair" d="M478,206 H584"/>
+              <rect class="thin" x="442" y="136" width="28" height="28" rx="3"/>
+              <circle class="hair" cx="456" cy="150" r="7"/>
+              <circle class="thin" cx="420" cy="312" r="13"/>
+              <circle class="thin" cx="440" cy="312" r="10"/>
+              <circle class="hair" cx="420" cy="312" r="4"/>
+              <path class="thin" d="M450,312 H484"/>
+              <rect class="hair" x="484" y="307" width="12" height="10" rx="2"/>
+              <circle class="thin" cx="580" cy="314" r="8"/>
+              <path class="hair" d="M580,306 C572,292 580,286 586,296 M580,306 C588,290 596,296 590,304"/>
+    
+              <!-- kitchen -->
+              <rect class="thin" x="552" y="350" width="36" height="196" rx="3"/>
+              <circle class="hair" cx="570" cy="374" r="10"/>
+              <circle class="hair" cx="570" cy="406" r="10"/>
+              <rect class="hair" x="558" y="440" width="24" height="38" rx="7"/>
+              <circle class="hair" cx="570" cy="459" r="2.5"/>
+              <path class="hair" d="M540,374 c-6,-6 4,-10 -2,-18 M530,380 c-6,-6 4,-10 -2,-18"/>
+              <rect class="thin" x="396" y="440" width="120" height="56" rx="6"/>
+              <path class="thin" d="M436,450 v12 l-10,20 h28 l-10,-20 v-12 z"/>
+              <circle class="hair" cx="442" cy="441" r="3"/>
+              <circle class="hair" cx="449" cy="432" r="2"/>
+    
+              <!-- living room -->
+              <rect class="thin" x="95" y="420" width="140" height="60" rx="10"/>
+              <circle class="thin" cx="125" cy="404" r="12"/>
+              <circle class="thin" cx="165" cy="404" r="12"/>
+              <circle class="thin chair--yours" cx="205" cy="404" r="12"/>
+              <circle class="thin" cx="125" cy="496" r="12"/>
+              <circle class="thin" cx="165" cy="496" r="12"/>
+              <circle class="thin" cx="205" cy="496" r="12"/>
+              <circle class="thin" cx="77" cy="450" r="12"/>
+              <circle class="thin" cx="253" cy="450" r="12"/>
+              <rect class="thin" x="48" y="508" width="16" height="36" rx="3"/>
+              <circle class="hair" cx="56" cy="532" r="4"/>
+              <path class="hair" d="M72,514 q9,12 0,24 M82,506 q14,20 0,40"/>
+    
+              <!-- front step + garden -->
+              <rect class="hair dashed" x="222" y="568" width="52" height="14" rx="2"/>
+              <ellipse class="hair" cx="248" cy="606" rx="12" ry="7"/>
+              <ellipse class="hair" cx="240" cy="632" rx="12" ry="7"/>
+              <ellipse class="hair" cx="250" cy="658" rx="12" ry="7"/>
+              <ellipse class="hair" cx="242" cy="684" rx="12" ry="7"/>
+              <path class="thin" d="M70,646 a20,20 0 0 1 20,-30 a20,20 0 0 1 40,0 a20,20 0 0 1 20,30 a20,20 0 0 1 -20,30 a20,20 0 0 1 -40,0 a20,20 0 0 1 -20,-30 z"/>
+              <circle class="hair" cx="110" cy="646" r="12"/>
+              <rect class="thin" x="372" y="604" width="176" height="64" rx="6"/>
+              <path class="hair" d="M392,630v-9 M392,625q-6,-1 -8,-8 M392,625q6,-1 8,-8 M412,630v-9 M412,625q-6,-1 -8,-8 M412,625q6,-1 8,-8 M432,630v-9 M432,625q-6,-1 -8,-8 M432,625q6,-1 8,-8 M452,630v-9 M452,625q-6,-1 -8,-8 M452,625q6,-1 8,-8 M472,630v-9 M472,625q-6,-1 -8,-8 M472,625q6,-1 8,-8 M492,630v-9 M492,625q-6,-1 -8,-8 M492,625q6,-1 8,-8 M512,630v-9 M512,625q-6,-1 -8,-8 M512,625q6,-1 8,-8 M532,630v-9 M532,625q-6,-1 -8,-8 M532,625q6,-1 8,-8 M392,656v-9 M392,651q-6,-1 -8,-8 M392,651q6,-1 8,-8 M412,656v-9 M412,651q-6,-1 -8,-8 M412,651q6,-1 8,-8 M432,656v-9 M432,651q-6,-1 -8,-8 M432,651q6,-1 8,-8 M452,656v-9 M452,651q-6,-1 -8,-8 M452,651q6,-1 8,-8 M472,656v-9 M472,651q-6,-1 -8,-8 M472,651q6,-1 8,-8 M492,656v-9 M492,651q-6,-1 -8,-8 M492,651q6,-1 8,-8 M512,656v-9 M512,651q-6,-1 -8,-8 M512,651q6,-1 8,-8 M532,656v-9 M532,651q-6,-1 -8,-8 M532,651q6,-1 8,-8"/>
+              <circle class="thin sun" cx="590" cy="636" r="12"/>
+              <path class="hair" d="M590,616 v-6 M590,656 v6 M570,636 h-6 M610,636 h6 M576,622 l-4,-4 M604,622 l4,-4 M576,650 l-4,4 M604,650 l4,4"/>
+            </g>
+    
+            <!-- people (the dots) -->
+            <g class="plan__people" aria-hidden="true">
+              <circle cx="124" cy="262" r="7"/>
+              <circle cx="253" cy="262" r="7"/>
+              <circle cx="531" cy="158" r="7"/>
+              <circle cx="456" cy="424" r="7"/>
+              <circle cx="532" cy="470" r="7"/>
+              <circle cx="420" cy="516" r="7"/>
+              <circle cx="125" cy="404" r="7"/>
+              <circle cx="165" cy="404" r="7"/>
+              <circle cx="125" cy="496" r="7"/>
+              <circle cx="165" cy="496" r="7"/>
+              <circle cx="205" cy="496" r="7"/>
+              <circle cx="77" cy="450" r="7"/>
+              <circle cx="253" cy="450" r="7"/>
+              <circle cx="112" cy="652" r="7"/>
+            </g>
+    
+            <!-- labels -->
+            <g class="plan__labels" aria-hidden="true">
+              <g class="tag"><circle cx="348" cy="372" r="13"/><text x="348" y="378" text-anchor="middle">1</text><text class="tag__name" x="369" y="379">Kitchen</text></g>
+              <g class="tag"><circle cx="68" cy="372" r="13"/><text x="68" y="378" text-anchor="middle">2</text><text class="tag__name" x="89" y="379">Living room</text></g>
+              <g class="tag"><circle cx="348" cy="268" r="13"/><text x="348" y="274" text-anchor="middle">3</text><text class="tag__name" x="369" y="275">Bedroom</text></g>
+              <g class="tag"><circle cx="78" cy="186" r="13"/><text x="78" y="192" text-anchor="middle">4</text><text class="tag__name" x="99" y="193">Library</text></g>
+              <text class="scrawl" x="64" y="22" text-anchor="middle">N</text>
+              <text class="scrawl scrawl--big" x="98" y="62">north star</text>
+              <text class="scrawl" x="232" y="388">yours</text>
+              <path class="scrawl-line" d="M230,384 C219,382 213,388 215,394"/>
+              <text class="scrawl" x="430" y="214" transform="rotate(-12 430 214)">z z z</text>
+              <text class="scrawl scrawl--big" x="286" y="582">front door</text>
+              <text class="scrawl scrawl--big" x="372" y="694">garden</text>
+              <text class="scrawl scrawl--muted" x="610" y="62" text-anchor="end">plan · not to scale</text>
+            </g>
+    
+          </g>
+    
+          <!-- clickable parts of the house -->
+          <a class="spot" href="#library" data-spot="library" aria-label="4. Library: a living library"><rect class="spot__area" x="44" y="114" width="272" height="217" rx="4"/></a>
+          <a class="spot" href="#bedroom" data-spot="bedroom" aria-label="3. Bedroom: a shelter"><rect class="spot__area" x="324" y="114" width="272" height="217" rx="4"/></a>
+          <a class="spot" href="#living" data-spot="living" aria-label="2. Living room: a seat at the table"><rect class="spot__area" x="44" y="339" width="272" height="217" rx="4"/></a>
+          <a class="spot" href="#kitchen" data-spot="kitchen" aria-label="1. Kitchen: a laboratory"><rect class="spot__area" x="324" y="339" width="272" height="217" rx="4"/></a>
+          <a class="spot" href="#garden" data-spot="garden" aria-label="Garden: room to flourish"><rect class="spot__area" x="22" y="590" width="596" height="118" rx="4"/></a>
+          <a class="spot" href="#door" data-spot="door" aria-label="Front door: come in"><rect class="spot__area" x="206" y="546" width="84" height="44" rx="4"/></a>
+          <a class="spot" href="#north" data-spot="north" aria-label="North star"><rect class="spot__area" x="30" y="4" width="176" height="88" rx="4"/></a>
+    
+          <!-- you are here -->
+          <circle class="here" cx="248" cy="575" r="7" aria-hidden="true"/>
+        </svg>
+        <div class="titleblock">
+          <dl>
+            <div><dt>Project</dt><dd>Normal</dd></div>
+            <div><dt>Drawing</dt><dd>A home built for us to be human</dd></div>
+            <div><dt>Drawn by</dt><dd>The youth of Singapore</dd></div>
+            <div><dt>Scale</dt><dd>1 : 1 human</dd></div>
+          </dl>
+          <img class="titleblock__house" src="assets/house.png" alt="" width="370" height="356">
+        </div>
       </div>
-      <a class="next" href="#kitchen">Next: the kitchen →</a>
-    </article>
+    </div>
+  </section>
 
-    <!-- 1. kitchen -->
-    <article class="note" id="kitchen" data-panel aria-labelledby="kitchen-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker"><span class="badge">1</span> a laboratory</p>
-      <h2 id="kitchen-title" tabindex="-1">Kitchen</h2>
-      <p class="lede">A place for experimentation and adventure. A place to challenge the status quo with unabashed authenticity, boldness and openness to being <em>different</em>, where <em>trying</em> is celebrated and <em>failure</em> isn't feared.</p>
-      <p>Because seeking a better future should feel less like a dream and more like an exploration in motion.</p>
-      <section class="principle">
-        <h3 class="label">Principle</h3>
-        <p class="principle__name"><span>Adventure</span> <s>Fear</s></p>
-        <p>We explore ordinary life with fun, risk, boldness and <mark>openness to the unexpected</mark>, and keep a safe place for experimentation, failure and unabashed authenticity.</p>
-      </section>
-      <section class="value">
-        <h3 class="label">How we build</h3>
-        <p class="value__name">Courage to explore</p>
-        <p>Offering different perspectives and challenging the status quo. Trying new things, even into uncharted territory. We don't have to solve everything at once; we create something different and make whatever impact we can.</p>
-      </section>
-      <a class="next" href="#living">Next: the living room →</a>
-    </article>
+  <!-- ═════════════════════════ Front door ═════════════════════════ -->
+  <section class="room" id="door" aria-labelledby="door-title">
+    <div class="wrap room__grid">
+      <div class="detail detail--door reveal">
+        <button class="door" type="button" aria-pressed="false" aria-label="Open the door">
+          <span class="door__light" aria-hidden="true"></span>
+          <span class="door__leaf" aria-hidden="true"><span class="door__knob"></span></span>
+          <img class="door__frame" src="assets/mark-frame.svg" alt="" width="275" height="292">
+        </button>
+        <p class="detail__caption">go on, open it</p>
+      </div>
+      <div class="room__text reveal">
+        <p class="kicker">front door</p>
+        <h2 id="door-title">Come in.</h2>
+        <p class="lede">Normal stands for the quiet majority of our society: the many currently disengaged from the greater community, who feel paralysed, or uninvited.</p>
+        <p>Consider this your invitation.</p>
+        <p>We believe progress itself demands that humans find better ways to love and serve one another. This house is where we're trying.</p>
+        <p class="actions">
+          <!-- TODO: swap in Normal's real Instagram handle and email -->
+          <a class="btn" href="https://instagram.com/" rel="noopener">Follow on Instagram</a>
+          <a class="btn btn--ghost" href="mailto:hello@example.com">Email us</a>
+        </p>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- 2. living room -->
-    <article class="note" id="living" data-panel aria-labelledby="living-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker"><span class="badge">2</span> a seat at the table</p>
-      <h2 id="living-title" tabindex="-1">Living room</h2>
-      <p class="lede">A space where every individual is considered and has a seat at the table. Where every person feels recognised for who they are, and heard even in a room full of noise.</p>
-      <section class="principle">
-        <h3 class="label">Principle</h3>
-        <p class="principle__name"><span>Considered</span> <s>Dismissed</s></p>
-        <p>We champion a culture of care for our fellow humans, where every individual is <mark>considered</mark> and left a seat at the table.</p>
-      </section>
-      <section class="value">
-        <h3 class="label">How we build</h3>
-        <p class="value__name">Authenticity &amp; intention</p>
-        <p>Care, intention and precision in everything we do. Beyond novelty and hype, value is what keeps people coming back. We build for depth, centred on each individual we serve, not just "the audience".</p>
-      </section>
-      <a class="next" href="#bedroom">Next: the bedroom →</a>
-    </article>
+  <!-- ═════════════════════════ 1. Kitchen ═════════════════════════ -->
+  <section class="room room--flip" id="kitchen" aria-labelledby="kitchen-title">
+    <div class="wrap room__grid">
+      <figure class="detail reveal">
+        <div class="detail__frame"><svg class="detail__art" viewBox="312 327 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="320" y="335" width="280" height="225"/></svg></div>
+        <figcaption class="detail__caption">detail 1 · kitchen</figcaption>
+      </figure>
+      <div class="room__text reveal">
+        <p class="kicker"><span class="badge">1</span> a laboratory</p>
+        <h2 id="kitchen-title">Kitchen</h2>
+        <p class="lede">A place for experimentation and adventure. A place to challenge the status quo with unabashed authenticity, boldness and openness to being <em>different</em>, where <em>trying</em> is celebrated and <em>failure</em> isn't feared.</p>
+        <p>Because seeking a better future should feel less like a dream and more like an exploration in motion.</p>
+        <div class="principle">
+          <h3 class="label">Principle</h3>
+          <p class="principle__name"><span>Adventure</span> <s>Fear</s></p>
+          <p>We explore ordinary life with fun, risk, boldness and <mark>openness to the unexpected</mark>, and keep a safe place for experimentation, failure and unabashed authenticity.</p>
+        </div>
+        <div class="value">
+          <h3 class="label">How we build</h3>
+          <p class="value__name">Courage to explore</p>
+          <p>Offering different perspectives and challenging the status quo. Trying new things, even into uncharted territory. We don't have to solve everything at once; we create something different and make whatever impact we can.</p>
+        </div>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- 3. bedroom -->
-    <article class="note" id="bedroom" data-panel aria-labelledby="bedroom-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker"><span class="badge">3</span> a shelter</p>
-      <h2 id="bedroom-title" tabindex="-1">Bedroom</h2>
-      <p class="lede">Where space is held for <mark>real rest</mark>. Not just your recommended eight hours of sleep, but time to reconnect with ourselves, away from the constant rush and structure of everyday life.</p>
-      <p>A place where you feel happy, and in touch with the things you love.</p>
-      <section class="principle">
-        <h3 class="label">Principle</h3>
-        <p class="principle__name"><span>Dwelling</span> <s>Rushing</s></p>
-        <p>Within the constant momentum of school, work and structure, we hold space to disconnect, and to reconnect with ourselves.</p>
-      </section>
-      <a class="next" href="#library">Next: the library →</a>
-    </article>
+  <!-- ═════════════════════════ 2. Living room ═════════════════════════ -->
+  <section class="room" id="living" aria-labelledby="living-title">
+    <div class="wrap room__grid">
+      <figure class="detail reveal">
+        <div class="detail__frame"><svg class="detail__art" viewBox="32 327 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="40" y="335" width="280" height="225"/></svg></div>
+        <figcaption class="detail__caption">detail 2 · living room</figcaption>
+      </figure>
+      <div class="room__text reveal">
+        <p class="kicker"><span class="badge">2</span> a seat at the table</p>
+        <h2 id="living-title">Living room</h2>
+        <p class="lede">A space where every individual is considered and has a seat at the table. Where every person feels recognised for who they are, and heard even in a room full of noise.</p>
+        <div class="principle">
+          <h3 class="label">Principle</h3>
+          <p class="principle__name"><span>Considered</span> <s>Dismissed</s></p>
+          <p>We champion a culture of care for our fellow humans, where every individual is <mark>considered</mark> and left a seat at the table.</p>
+        </div>
+        <div class="value">
+          <h3 class="label">How we build</h3>
+          <p class="value__name">Authenticity &amp; intention</p>
+          <p>Care, intention and precision in everything we do. Beyond novelty and hype, value is what keeps people coming back. We build for depth, centred on each individual we serve, not just "the audience".</p>
+        </div>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- 4. library -->
-    <article class="note" id="library" data-panel aria-labelledby="library-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker"><span class="badge">4</span> a living library</p>
-      <h2 id="library-title" tabindex="-1">Library</h2>
-      <p class="lede">In the end, Normal hopes to be a living library filled with pieces of a better society, each one individually curated, and demonstrated rather than merely described.</p>
-      <p>A tangible glimpse of what could be <em>normal</em>, through our activations, cultural works and gatherings.</p>
-      <section class="shelf">
-        <h3 class="label">On the shelves</h3>
-        <div class="events" id="events" aria-live="polite"></div>
-      </section>
-      <section class="value">
-        <h3 class="label">How we build</h3>
-        <p class="value__name">Staying curious</p>
-        <p>Our drive and sense of ownership come from a never-ceasing excitement and passion.</p>
-      </section>
-      <a class="next" href="#garden">Next: the garden →</a>
-    </article>
+  <!-- ═════════════════════════ 3. Bedroom ═════════════════════════ -->
+  <section class="room room--flip" id="bedroom" aria-labelledby="bedroom-title">
+    <div class="wrap room__grid">
+      <figure class="detail reveal">
+        <div class="detail__frame"><svg class="detail__art" viewBox="312 102 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="320" y="110" width="280" height="225"/></svg></div>
+        <figcaption class="detail__caption">detail 3 · bedroom</figcaption>
+      </figure>
+      <div class="room__text reveal">
+        <p class="kicker"><span class="badge">3</span> a shelter</p>
+        <h2 id="bedroom-title">Bedroom</h2>
+        <p class="lede">Where space is held for <mark>real rest</mark>. Not just your recommended eight hours of sleep, but time to reconnect with ourselves, away from the constant rush and structure of everyday life.</p>
+        <p>A place where you feel happy, and in touch with the things you love.</p>
+        <div class="principle">
+          <h3 class="label">Principle</h3>
+          <p class="principle__name"><span>Dwelling</span> <s>Rushing</s></p>
+          <p>Within the constant momentum of school, work and structure, we hold space to disconnect, and to reconnect with ourselves.</p>
+        </div>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- garden -->
-    <article class="note" id="garden" data-panel aria-labelledby="garden-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker">garden</p>
-      <h2 id="garden-title" tabindex="-1">Room to flourish</h2>
-      <section class="principle">
-        <h3 class="label">Principle</h3>
-        <p class="principle__name"><span>Flourish</span> <s>Bare survival</s></p>
-        <p>We want people to have the space, time and stability to be whole, and to reach a <mark>fullness</mark> where they feel in touch with themselves. It's the foundation that future growth is built on.</p>
-      </section>
-      <section class="principle principle--sun">
-        <h3 class="label">Principle</h3>
-        <p class="principle__name"><span>Fulfilled</span> <small>in pursuit of purpose</small></p>
-        <p>We want Normal to feel like a warm ray of sunshine after a cold day of thunderstorms. A quiet warmth you can't get enough of, that you come back to again and again, and that helps you find your purpose.</p>
-      </section>
-      <a class="next" href="#north">Next: our north star →</a>
-    </article>
+  <!-- ═════════════════════════ 4. Library ═════════════════════════ -->
+  <section class="room" id="library" aria-labelledby="library-title">
+    <div class="wrap room__grid">
+      <figure class="detail reveal">
+        <div class="detail__frame"><svg class="detail__art" viewBox="32 102 296 241" style="aspect-ratio: 296 / 241" data-crop aria-hidden="true"><rect class="detail__hl" x="40" y="110" width="280" height="225"/></svg></div>
+        <figcaption class="detail__caption">detail 4 · library</figcaption>
+      </figure>
+      <div class="room__text reveal">
+        <p class="kicker"><span class="badge">4</span> a living library</p>
+        <h2 id="library-title">Library</h2>
+        <p class="lede">In the end, Normal hopes to be a living library filled with pieces of a better society, each one individually curated, and demonstrated rather than merely described.</p>
+        <p>A tangible glimpse of what could be <em>normal</em>, through our activations, cultural works and gatherings.</p>
+        <div class="shelf">
+          <h3 class="label">On the shelves</h3>
+          <div class="events" id="events" aria-live="polite"></div>
+        </div>
+        <div class="value">
+          <h3 class="label">How we build</h3>
+          <p class="value__name">Staying curious</p>
+          <p>Our drive and sense of ownership come from a never-ceasing excitement and passion.</p>
+        </div>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- north star -->
-    <article class="note" id="north" data-panel aria-labelledby="north-title">
-      <a class="back" href="#">← whole house</a>
-      <p class="kicker">north star</p>
-      <h2 id="north-title" class="sticky" tabindex="-1">To make people happier, and to see people loved.</h2>
-      <p>Every room in this house points here.</p>
-      <a class="next" href="#">Back to the whole house →</a>
-    </article>
+  <!-- ═════════════════════════ Garden ═════════════════════════ -->
+  <section class="room room--wide" id="garden" aria-labelledby="garden-title">
+    <div class="wrap room__grid">
+      <figure class="detail reveal">
+        <div class="detail__frame"><svg class="detail__art" viewBox="16 588 608 126" style="aspect-ratio: 608 / 126" data-crop aria-hidden="true"><rect class="detail__hl" x="22" y="590" width="596" height="118"/></svg></div>
+        <figcaption class="detail__caption">detail 5 · garden</figcaption>
+      </figure>
+      <div class="room__text reveal">
+        <p class="kicker">garden</p>
+        <h2 id="garden-title">Room to flourish</h2>
+        <div class="cards">
+          <div class="principle">
+            <h3 class="label">Principle</h3>
+            <p class="principle__name"><span>Flourish</span> <s>Bare survival</s></p>
+            <p>We want people to have the space, time and stability to be whole, and to reach a <mark>fullness</mark> where they feel in touch with themselves. It's the foundation that future growth is built on.</p>
+          </div>
+          <div class="principle principle--sun">
+            <h3 class="label">Principle</h3>
+            <p class="principle__name"><span>Fulfilled</span> <small>in pursuit of purpose</small></p>
+            <p>We want Normal to feel like a warm ray of sunshine after a cold day of thunderstorms. A quiet warmth you can't get enough of, that you come back to again and again, and that helps you find your purpose.</p>
+          </div>
+        </div>
+        <a class="to-plan" href="#plan">↑ back to the plan</a>
+      </div>
+    </div>
+  </section>
 
-    <footer class="colophon">© <span id="year">2026</span> Normal · Singapore</footer>
-  </aside>
-</div>
+  <!-- ═════════════════════════ North star ═════════════════════════ -->
+  <section class="north" id="north" aria-labelledby="north-title">
+    <div class="wrap">
+      <p class="kicker reveal">our north star</p>
+      <h2 id="north-title" class="sticky reveal">To make people happier, and to see people loved.</h2>
+      <p class="reveal">Every room in this house points here.</p>
+      <a class="to-plan reveal" href="#plan">↑ back to the plan</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <img class="footer__mark" src="assets/wordmark.svg" alt="Normal" width="1979" height="582">
+    <p>A ground-up youth movement in Singapore.</p>
+    <p class="footer__small">© <span id="year">2026</span> Normal</p>
+  </div>
+</footer>
 
 <script src="events.js"></script>
 <script src="main.js"></script>

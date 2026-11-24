@@ -1,6 +1,6 @@
 # Normal: website
 
-A home built for us to be human. The site is one hand-drawn floor plan. Click a room to step inside.
+A home built for us to be human. It's a scrolling page with a hand-drawn floor plan in the middle. Click a room on the plan to jump to its section below.
 
 | Part of the plan | What's in it |
 |---|---|
@@ -34,17 +34,16 @@ Edit `events.js`. Events show up on the Library's shelves. Upcoming events are l
 
 ## Files
 
-- `index.html`: the plan (inline SVG) and each room's notes (`<article id="kitchen">` etc.)
-- `styles.css`: paper, ink and layout (side panel on desktop, bottom sheet on phones)
-- `main.js`: room navigation (`#kitchen` links work), zoom, the door, events
+- `index.html`: hero, the plan (inline SVG), then one `<section>` per room (`#door`, `#kitchen`…)
+- `styles.css`: paper, ink and layout
+- `main.js`: copies the plan drawing into each room's "detail" crop, plus the door, events and scroll-in
 - `assets/`: wordmark and door mark (traced to SVG from the hand-drawn originals), house sketch
 
 To add a part of the house:
 
-1. Draw it inside `.plan__ink`.
+1. Draw it inside `#plan-art` in the plan.
 2. Add an `<a class="spot" href="#id">` hit area.
-3. Add an `<article class="note" id="id" data-panel>`.
-4. Add its zoom box to `ZOOM` in `main.js`.
+3. Add a `<section class="room" id="id">`. Its detail is an `<svg data-crop viewBox="…">` framing that part of the plan.
 
 ## To do
 
