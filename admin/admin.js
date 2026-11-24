@@ -656,6 +656,9 @@
   async function orgChart() {
     fail("");
     show("org");
+    // never show the last chart (possibly someone else's view of it) while this one loads
+    $("#org-chart").replaceChildren(el("p", "db-empty", "Loading the org chart…"));
+    $("#org-unplaced").hidden = true;
     $("#org-actions").replaceChildren(memberViews("chart"), ...(isAdmin() ? [linkButton("Import from Team Map", "#/org/import"), linkButton("+ add division", "#/org/new/division", "primary")] : []));
     const legend = ORG_ROLES.map((r) => {
       const s = el("span", `org-person org-person--${roleKey(r)} is-key`);
@@ -780,6 +783,9 @@
       chart.replaceChildren(top, el("p", "db-empty", isAdmin() ? "No divisions yet. Import the Team Map, or add a division to start." : "The org chart hasn't been set up yet."));
     }
     chart.classList.toggle("hide-leaning-no", Boolean($("#hide-leaning-no") && $("#hide-leaning-no").checked));
+    // wider than the screen: start the tree at the left, where the view opens, instead of centring it
+    chart.classList.remove("is-wide");
+    requestAnimationFrame(() => chart.classList.toggle("is-wide", chart.offsetWidth > chart.parentElement.clientWidth + 1));
 
     // hover a director to light up what they oversee
     chart.querySelectorAll(".org-person[data-person]").forEach((chip) => {

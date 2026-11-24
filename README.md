@@ -42,12 +42,17 @@ One place for Normal's people and admin.
 
 | Section | What's in it | Who sees it |
 |---|---|---|
-| members | Everyone in Normal: name, title, role, seat on the org chart, Telegram, phone, email, birthday, school, joined, status, notes. A table (search, filter by division or team, export) and an **org chart**. | Everyone. Members see only name, title, role, seat and Telegram of others, edit only their own contact details, and can't change the chart. |
+| members | Everyone in Normal: name, title, seats on the org chart (role + division, domain or team), Telegram, phone, email, birthday, school, joined, recruitment round, status, notes. A table (search, filter by division or team, export) and an **org chart**. | Everyone. Members see only name, title, seats and Telegram of others, see recruits as "joining", edit only their own contact details, and can't change the chart. |
 | applications | Join-page applications: full answers, status (new, interviewing, accepted, declined), "accept" adds them to members. Export. | Admins |
 | what's on | The IPs and events on the what's on page | Admins |
 | accounts | Who can sign in, and as what | Master Admins |
 
-**The org chart** (members → Org chart) follows the Team Map: Normal → divisions → domains → teams, each with a code like FL or FL.1. Admins add and rename them on the chart (+ add division, + domain, + team; click a name to edit). A domain can be "overseen by" Founders, Chiefs of Staff or Directors. To place someone, open their member record and set their **role in Normal** (Founder, Chief of Staff, Director, Team Lead, Member, Fellow, Volunteer) and **seat**. Founders and Chiefs of Staff without a seat sit at the top; anyone else without a seat is listed under "not on the chart". Hover a Director to see what they oversee. A division, domain or team can only be deleted once it's empty.
+**The org chart** (members → Org chart) follows the Team Map: Normal → divisions → domains → teams, each with a code like PB or PB.1. Admins add and rename them on the chart (+ add division, + domain, + team; click a name to edit). A domain can be "overseen by" Founders, Chiefs of Staff or Directors.
+
+- **Seats.** Someone sits on the chart through seats on their member record: a division, domain or team (or "Normal", the top) and a role (Founder, Chief of Staff, Director, Team Lead, Member, Fellow, Volunteer), with an optional note only admins see. People can hold more than one seat. Anyone without a seat is listed under "not on the chart".
+- **Recruits.** Status "leaning in" / "leaning no" marks people who haven't confirmed. Admins see which (and can hide leaning-no on the chart); members just see "joining".
+- **Import from Team Map** (on the chart): in the Team Map, Export CSV, then choose that file. The portal shows what's in it, then adds any new divisions, domains, teams and people and gives everyone in the file their seats, status and round from it. People are matched by name, so importing again adds nothing twice; nobody is deleted.
+- A domain that is just one team of the same name shows as one card. Hover a Director to see what they oversee. A division, domain or team can only be deleted once it's empty.
 
 **Roles.** Master Admin: everything, plus accounts. Admin: everything except accounts. Member: the members directory and their own profile.
 
