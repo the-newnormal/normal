@@ -42,10 +42,12 @@ One place for Normal's people and admin.
 
 | Section | What's in it | Who sees it |
 |---|---|---|
-| members | Everyone in Normal: name, title, team, Telegram, phone, email, birthday, school, joined, status, notes. Search, filter, export. | Everyone. Members see only name, title, team and Telegram of others, and edit only their own contact details. |
+| members | Everyone in Normal: name, title, role, seat on the org chart, Telegram, phone, email, birthday, school, joined, status, notes. A table (search, filter by division or team, export) and an **org chart**. | Everyone. Members see only name, title, role, seat and Telegram of others, edit only their own contact details, and can't change the chart. |
 | applications | Join-page applications: full answers, status (new, interviewing, accepted, declined), "accept" adds them to members. Export. | Admins |
 | what's on | The IPs and events on the what's on page | Admins |
 | accounts | Who can sign in, and as what | Master Admins |
+
+**The org chart** (members → Org chart) follows the Team Map: Normal → divisions → domains → teams, each with a code like FL or FL.1. Admins add and rename them on the chart (+ add division, + domain, + team; click a name to edit). A domain can be "overseen by" Founders, Chiefs of Staff or Directors. To place someone, open their member record and set their **role in Normal** (Founder, Chief of Staff, Director, Team Lead, Member, Fellow, Volunteer) and **seat**. Founders and Chiefs of Staff without a seat sit at the top; anyone else without a seat is listed under "not on the chart". Hover a Director to see what they oversee. A division, domain or team can only be deleted once it's empty.
 
 **Roles.** Master Admin: everything, plus accounts. Admin: everything except accounts. Member: the members directory and their own profile.
 
@@ -60,8 +62,8 @@ One place for Normal's people and admin.
 | Portal | `admin/index.html`, `admin/admin.js`, `admin/admin.css` (served at admin.newnormal.sg, also at `/admin/`). It has its own plain records-office look, separate from the public site's `styles.css`. |
 | Setup-link page | `admin/welcome.html` (admin.newnormal.sg/welcome) |
 | First Master Admin's login line | `admin/setup.html` (admin.newnormal.sg/setup) |
-| Vercel functions (8 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js` |
-| Shared code | `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/form.js` (questions) |
+| Vercel functions (9 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `org.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js` |
+| Shared code | `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/org.js` (org chart roles and shape), `lib/form.js` (questions) |
 
 ### Switching it on (once)
 

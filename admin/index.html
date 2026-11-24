@@ -84,6 +84,26 @@
       </div>
     </section>
 
+    <!-- the org chart -->
+    <section id="org" data-view hidden>
+      <header class="db-head">
+        <div>
+          <p class="db-crumb">records</p>
+          <h1 class="db-title">members</h1>
+        </div>
+        <div class="db-actions" id="org-actions"></div>
+      </header>
+      <div class="db-panel">
+        <div class="db-toolbar org-legend" id="org-legend"></div>
+        <div class="db-scroll"><div class="org" id="org-chart"></div></div>
+        <footer class="db-foot"><span id="org-count"></span><span id="org-note"></span></footer>
+      </div>
+      <div class="db-panel" id="org-unplaced" hidden>
+        <div class="db-panel__head"><h2>not on the chart</h2><span class="db-note" id="org-unplaced-note"></span></div>
+        <div class="db-panel__body"><div class="org-chips" id="org-unplaced-list"></div></div>
+      </div>
+    </section>
+
     <!-- one record -->
     <article id="detail" data-view hidden>
       <header class="db-head">

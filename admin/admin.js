@@ -55,6 +55,11 @@
     bad_image: "Images must be a full https:// address or a file in assets/.",
     not_allowed: "You don't have access to that.",
     not_configured: "The database isn't connected yet (add Neon in Vercel → Storage).",
+    bad_role: "Pick a role from the list.",
+    bad_unit: "That part of the org chart doesn't exist any more.",
+    bad_parent: "Pick where this sits on the org chart.",
+    bad_overseer: "Only Founders, Chiefs of Staff and Directors can oversee a domain.",
+    unit_not_empty: "Move its people and teams out first.",
   };
   const errText = (r, fallback) => ERRORS[r && r.data && r.data.error] || fallback || "Couldn't save that. Try again.";
 
@@ -208,7 +213,20 @@
     if (onClick) b.addEventListener("click", onClick);
     return b;
   }
-  const confirmButton = (text, question, onYes) => button(text, "danger", () => { if (confirm(question)) onYes(); });
+  // asks for a second click instead of a confirm() box
+  function confirmButton(text, warning, onYes) {
+    const b = button(text, "danger");
+    let armed = null;
+    const reset = () => { clearTimeout(armed); armed = null; b.textContent = text; b.classList.remove("is-armed"); };
+    b.addEventListener("click", () => {
+      if (armed) { reset(); onYes(); return; }
+      b.textContent = `Click again to ${text.toLowerCase()}`;
+      b.classList.add("is-armed");
+      if (warning) toast(warning);
+      armed = setTimeout(reset, 5000);
+    });
+    return b;
+  }
   const linkButton = (text, href, kind) => {
     const a = el("a", `db-btn${kind ? " db-btn--" + kind : ""}`, text);
     a.href = href;
@@ -231,6 +249,23 @@
         input.checked = values ? values[d.key] !== false : true;
         lab.append(input, d.label);
         wrap.append(lab);
+      } else if (d.type === "checks") {
+        wrap.append(el("p", "db-label", d.label));
+        input = el("div", "db-checks");
+        input.dataset.checks = "1";
+        const picked = (values && values[d.key]) || [];
+        for (const [v, t] of d.options) {
+          const lab = el("label", "db-check");
+          const box = el("input");
+          box.type = "checkbox";
+          box.value = v;
+          box.checked = picked.includes(v);
+          lab.append(box, t);
+          input.append(lab);
+        }
+        if (!d.options.length) input.append(el("span", "db-note", "No one to pick yet."));
+        wrap.append(input);
+        if (d.hint) wrap.append(el("p", "db-hint", d.hint));
       } else {
         const lab = el("label", "db-label", d.label);
         lab.htmlFor = id;
@@ -265,7 +300,10 @@
       e.preventDefault();
       status.textContent = "";
       const vals = {};
-      for (const [k, input] of Object.entries(inputs)) vals[k] = input.type === "checkbox" ? input.checked : input.value.trim();
+      for (const [k, input] of Object.entries(inputs)) {
+        vals[k] = input.dataset.checks ? [...input.querySelectorAll("input:checked")].map((i) => i.value)
+          : input.type === "checkbox" ? input.checked : input.value.trim();
+      }
       const missing = defs.find((d) => d.required && !vals[d.key]);
       if (missing) {
         status.textContent = `${missing.label} is needed.`;
@@ -344,63 +382,108 @@
   const params = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v)).toString();
 
   /* ───────────── members ───────────── */
-  const MEMBER_FIELDS = [
-    { key: "name", label: "Full name", required: true },
-    { key: "title", label: "Title", hint: "e.g. head of events" },
-    { key: "team", label: "Team", list: "team-list" },
-    { key: "telegram", label: "Telegram" },
-    { key: "phone", label: "Phone (WhatsApp)", type: "tel" },
-    { key: "email", label: "Email", type: "email" },
-    { key: "dob", label: "Birthday", type: "date" },
-    { key: "school", label: "School / organisation" },
-    { key: "joined_on", label: "Joined Normal", type: "date" },
-    { key: "status", label: "Status", type: "select", options: ["active", "on break", "alumni"] },
-    { key: "notes", label: "Notes", hint: "Only admins see these.", type: "textarea", wide: true },
-  ];
-  let teams = [];
-  function teamList() {
-    let dl = $("#team-list");
-    if (!dl) { dl = el("datalist"); dl.id = "team-list"; document.body.append(dl); }
-    dl.replaceChildren(...teams.map((t) => new Option(t)));
+  // the org chart's shape (matches lib/org.js)
+  const ORG_ROLES = ["Founder", "Chief of Staff", "Director", "Team Lead", "Member", "Fellow", "Volunteer"];
+  const LEADERSHIP = ["Founder", "Chief of Staff"];
+  const OVERSEER_ROLES = ["Founder", "Chief of Staff", "Director"];
+  const PARENT_KINDS = { division: [null], domain: ["division"], team: ["division", "domain"] };
+  const roleKey = (r) => ({ "Founder": "founder", "Chief of Staff": "cos", "Director": "director", "Team Lead": "lead", "Fellow": "fellow", "Volunteer": "volunteer" }[r] || "member");
+  const roleRank = (r) => { const i = ORG_ROLES.indexOf(r); return i < 0 ? 99 : i; };
+  const unitLabel = (u) => [u.code, u.name].filter(Boolean).join(" ");
+  const seatOf = (m) => (m.unit_id ? [m.unit_code, m.unit_name].filter(Boolean).join(" ") : "");
+
+  const getOrg = async () => {
+    const r = await get("/api/admin/org");
+    return r && r.ok ? r.data : null;
+  };
+  // units in tree order, with depth, for menus
+  function unitTree(units) {
+    const kids = new Map();
+    for (const u of units) {
+      const k = u.parent_id ?? null;
+      if (!kids.has(k)) kids.set(k, []);
+      kids.get(k).push(u);
+    }
+    const out = [];
+    const walk = (parent, depth) => (kids.get(parent) || []).forEach((u) => { out.push({ ...u, depth }); walk(u.id, depth + 1); });
+    walk(null, 0);
+    return out;
+  }
+  const unitOptions = (units, filter = () => true) =>
+    unitTree(units).filter(filter).map((u) => [String(u.id), `${" ".repeat(u.depth)}${unitLabel(u)}`]);
+
+  function memberFields(org) {
+    return [
+      { key: "name", label: "Full name", required: true },
+      { key: "title", label: "Title", hint: "e.g. head of events" },
+      { key: "org_role", label: "Role in Normal", type: "select", options: [["", "No role yet"], ...ORG_ROLES] },
+      { key: "unit_id", label: "Seat on the org chart", type: "select", options: [["", "Not on the chart"], ...unitOptions(org ? org.units : [])], hint: "The division, domain or team they sit in." },
+      { key: "telegram", label: "Telegram" },
+      { key: "phone", label: "Phone (WhatsApp)", type: "tel" },
+      { key: "email", label: "Email", type: "email" },
+      { key: "dob", label: "Birthday", type: "date" },
+      { key: "school", label: "School / organisation" },
+      { key: "joined_on", label: "Joined Normal", type: "date" },
+      { key: "status", label: "Status", type: "select", options: ["active", "on break", "alumni"] },
+      { key: "notes", label: "Notes", hint: "Only admins see these.", type: "textarea", wide: true },
+    ];
+  }
+
+  // Table | Org chart
+  function memberViews(active) {
+    const seg = el("div", "db-seg");
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", "View");
+    for (const [key, text, href] of [["table", "Table", "#/members"], ["chart", "Org chart", "#/members/chart"]]) {
+      const a = el("a", "", text);
+      a.href = href;
+      if (key === active) a.setAttribute("aria-current", "page");
+      seg.append(a);
+    }
+    return seg;
   }
 
   function membersList() {
     openList("members", () => {
       $("#list-title").textContent = "members";
-      const q = searchBox(isAdmin() ? "Search names, teams, contacts…" : "Search names, titles, teams…");
+      const q = searchBox(isAdmin() ? "Search names, roles, teams, contacts…" : "Search names, roles, teams…");
       q.id = "f-q";
-      const team = select("Team", [["", "All teams"]]);
+      const unit = select("Division, domain or team", [["", "Whole org"]]);
+      unit.id = "f-unit";
       const status = select("Status", [["", "All statuses"], "active", "on break", "alumni"]);
-      filterInputs([q, team, status]);
+      filterInputs([q, unit, status]);
+      // the chart can change between visits, so its menu is refreshed with every load
+      const refreshUnits = () => getOrg().then((org) => {
+        if (!org) return;
+        const keep = unit.value;
+        unit.replaceChildren(new Option("Whole org", ""), ...unitOptions(org.units).map(([v, t]) => new Option(t, v)));
+        unit.value = keep;
+      });
+      $("#list-actions").append(memberViews("table"));
       if (isAdmin()) {
         $("#list-actions").append(
-          button("Export CSV", "", () => { location.href = "/api/admin/members?" + params({ format: "csv", q: q.value.trim(), team: team.value, status: status.value }); }),
+          button("Export CSV", "", () => { location.href = "/api/admin/members?" + params({ format: "csv", q: q.value.trim(), unit: unit.value, status: status.value }); }),
           linkButton("+ add member", "#/m/new", "primary"),
         );
       }
       const columns = [
         { label: "ID", cls: "is-id", cell: (m) => rid("M", m.id) },
-        { label: "Name", cls: "is-name is-nowrap", link: true, cell: (m) => m.name },
+        { label: "Name", cls: "is-name", link: true, cell: (m) => m.name },
+        { label: "Role", cell: (m) => m.org_role && el("span", `org-role org-role--${roleKey(m.org_role)}`, m.org_role) },
+        { label: "Seat", cell: (m) => seatOf(m) },
         { label: "Title", cell: (m) => m.title },
-        { label: "Team", cls: "is-nowrap", cell: (m) => m.team },
-        { label: "Telegram", cls: "is-nowrap", cell: (m) => m.telegram && "@" + handleOf(m.telegram) },
+        { label: "Telegram", cell: (m) => m.telegram && "@" + handleOf(m.telegram) },
         ...(isAdmin() ? [
-          { label: "Phone", cls: "is-nowrap", cell: (m) => m.phone },
-          { label: "Login", cls: "is-nowrap", cell: (m) => m.login_role && pill(ROLE_NAMES[m.login_role], m.login_role) },
+          { label: "Phone", cell: (m) => m.phone },
+          { label: "Login", cell: (m) => m.login_role && pill(ROLE_NAMES[m.login_role], m.login_role) },
         ] : []),
-        { label: "Status", cls: "is-nowrap", cell: (m) => nodes(pill(m.status, m.status), Number(m.id) === me.memberId && pill("you", "you")) },
+        { label: "Status", cell: (m) => nodes(pill(m.status, m.status), Number(m.id) === me.memberId && pill("you", "you")) },
       ];
       loadRows = async () => {
         fail("");
-        const r = await get("/api/admin/members?" + params({ q: q.value.trim(), team: team.value, status: status.value }));
+        const [r] = await Promise.all([get("/api/admin/members?" + params({ q: q.value.trim(), unit: unit.value, status: status.value })), refreshUnits()]);
         if (!r) return;
         if (!r.ok) return fail(errText(r, "Couldn't load members."));
-        teams = r.data.teams;
-        if (team.options.length !== teams.length + 1) {
-          const keep = team.value;
-          team.replaceChildren(new Option("All teams", ""), ...teams.map((t) => new Option(t)));
-          team.value = keep;
-        }
         fillList(columns, r.data.members, (m) => `#/m/${m.id}`, r.data.total,
           isAdmin() ? "No members yet. Add people, or accept them from applications." : "No members yet.",
           "No members match those filters.",
@@ -412,9 +495,9 @@
   async function memberProfile(id) {
     fail("");
     if (id === "new") {
+      const org = await getOrg();
       const body = detail("#/members", "members", "new", "add member");
-      teamList();
-      const { form: f } = buildForm(MEMBER_FIELDS, { status: "active", joined_on: new Date().toISOString().slice(0, 10) }, {
+      const { form: f } = buildForm(memberFields(org), { status: "active", joined_on: new Date().toISOString().slice(0, 10) }, {
         submit: "Save record",
         extra: [linkButton("Cancel", "#/members")],
         onSubmit: async (vals, status) => {
@@ -428,7 +511,7 @@
       return;
     }
 
-    const r = await get(`/api/admin/members?id=${encodeURIComponent(id)}`);
+    const [r, org] = await Promise.all([get(`/api/admin/members?id=${encodeURIComponent(id)}`), isAdmin() ? getOrg() : null]);
     if (!r) return;
     if (!r.ok) {
       detail("#/members", "members", rid("M", id), "not found");
@@ -437,7 +520,8 @@
     const { member: m, canEdit } = r.data;
     const mine = Number(m.id) === me.memberId;
     const body = detail("#/members", "members", rid("M", m.id), m.name, [
-      [m.title, m.team].filter(Boolean).join(" · "),
+      m.org_role && el("span", `org-role org-role--${roleKey(m.org_role)}`, m.org_role),
+      [m.title, seatOf(m)].filter(Boolean).join(" · "),
       pill(m.status, m.status),
       mine && pill("you", "you"),
     ]);
@@ -445,9 +529,10 @@
 
     const tg = handleOf(m.telegram);
     main.append(panel("details", fields([
-      ["Telegram", m.telegram ? "@" + tg : "", /^\w{3,}$/.test(tg) ? `https://t.me/${tg}` : null],
+      ["Role in Normal", m.org_role || ""],
+      ["Seat", seatOf(m), m.unit_id ? (isAdmin() ? `#/org/${m.unit_id}` : "#/members/chart") : null],
       ["Title", m.title || ""],
-      ["Team", m.team || ""],
+      ["Telegram", m.telegram ? "@" + tg : "", /^\w{3,}$/.test(tg) ? `https://t.me/${tg}` : null],
       ["WhatsApp", "phone" in m ? m.phone || "" : undefined, waOf(m.phone)],
       ["Email", "email" in m ? m.email || "" : undefined, m.email ? `mailto:${m.email}` : null],
       ["Birthday", "dob" in m ? day(m.dob) : undefined],
@@ -457,8 +542,7 @@
     if (isAdmin()) main.append(panel("notes", m.notes ? el("p", "db-notes", m.notes) : el("p", "db-note", "No notes.")));
 
     if (canEdit.length) {
-      teamList();
-      const { form: f } = buildForm(MEMBER_FIELDS.filter((d) => canEdit.includes(d.key)), m, {
+      const { form: f } = buildForm(memberFields(org).filter((d) => canEdit.includes(d.key)), m, {
         submit: "Save changes",
         onSubmit: async (vals, status) => {
           const s = await api("/api/admin/members", { method: "PATCH", json: { id: m.id, ...vals } }).catch(() => null);
@@ -468,7 +552,7 @@
         },
       });
       const editPanel = panel(mine && !isAdmin() ? "update your details" : "edit record", nodes(
-        mine && !isAdmin() && el("p", "db-note", "Other members see your name, title, team and Telegram. Only admins see the rest."),
+        mine && !isAdmin() && el("p", "db-note", "Other members see your name, title, role, seat and Telegram. Only admins see the rest."),
         f,
       ));
       if (mine && !isAdmin()) f.style.marginTop = "12px";
@@ -485,7 +569,7 @@
       ], true);
       const acts = el("div", "db-stack");
       if (!m.login && me.role === "master") acts.append(linkButton("Create login", `#/accounts/new/${m.id}`));
-      acts.append(confirmButton("Delete record", `Delete ${m.name} from the members directory? Their login (if any) stays, but loses its profile.`, async () => {
+      acts.append(confirmButton("Delete record", "Their login (if any) stays, but loses its profile.", async () => {
         const d = await api(`/api/admin/members?id=${m.id}`, { method: "DELETE" }).catch(() => null);
         if (d && d.ok) { toast("Deleted."); location.hash = "#/members"; } else fail(errText(d));
       }));
@@ -493,6 +577,190 @@
     } else {
       aside.append(panel("record", fields([["Record", rid("M", m.id)], ["Status", m.status]], true)));
     }
+  }
+
+  /* ───────────── the org chart ───────────── */
+  function personChip(p) {
+    const a = el("a", `org-person org-person--${roleKey(p.org_role)}`);
+    a.href = `#/m/${p.id}`;
+    a.dataset.person = p.id;
+    a.title = [p.org_role, p.title].filter(Boolean).join(" · ") || p.name;
+    a.append(el("span", "org-av", p.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()), el("span", "org-nm", p.name));
+    if (p.org_role) a.append(el("span", "org-rl", p.org_role));
+    return a;
+  }
+  function chips(list, empty) {
+    const box = el("div", "org-chips");
+    if (list.length) box.append(...list.map(personChip));
+    else if (empty) box.append(el("span", "org-empty", empty));
+    return box;
+  }
+
+  async function orgChart() {
+    fail("");
+    show("org");
+    $("#org-actions").replaceChildren(memberViews("chart"), ...(isAdmin() ? [linkButton("+ add division", "#/org/new/division", "primary")] : []));
+    $("#org-legend").replaceChildren(...ORG_ROLES.map((r) => {
+      const s = el("span", `org-person org-person--${roleKey(r)} is-key`);
+      s.append(el("span", "org-av"), el("span", "org-nm", r));
+      return s;
+    }));
+    const org = await getOrg();
+    if (!org) return fail("Couldn't load the org chart.");
+    const { units, people } = org;
+    const kids = new Map();
+    for (const u of units) {
+      const k = u.parent_id ?? null;
+      if (!kids.has(k)) kids.set(k, []);
+      kids.get(k).push(u);
+    }
+    const seated = new Map();
+    for (const p of people) {
+      if (p.unit_id === null) continue;
+      if (!seated.has(p.unit_id)) seated.set(p.unit_id, []);
+      seated.get(p.unit_id).push(p);
+    }
+    const byRole = (a, b) => roleRank(a.org_role) - roleRank(b.org_role) || a.name.localeCompare(b.name);
+    seated.forEach((l) => l.sort(byRole));
+    const names = new Map(people.map((p) => [p.id, p.name]));
+
+    const head = (u) => {
+      const h = el("div", "org-unit__head");
+      if (u.code) h.append(el("span", "org-code", u.code));
+      if (isAdmin()) {
+        const a = el("a", "org-name", u.name);
+        a.href = `#/org/${u.id}`;
+        h.append(a);
+      } else {
+        h.append(el("span", "org-name", u.name));
+      }
+      h.append(el("span", "org-kind", u.kind));
+      return h;
+    };
+    const addLink = (text, href) => {
+      const a = el("a", "org-add", text);
+      a.href = href;
+      return a;
+    };
+    function unitNode(u) {
+      const box = el("div", `org-unit org-unit--${u.kind}`);
+      box.dataset.unit = u.id;
+      if (u.overseers.length) box.dataset.overseers = u.overseers.join(" ");
+      const bodyEl = el("div", "org-unit__body");
+      if (u.kind === "domain" && u.overseers.length) {
+        bodyEl.append(el("p", "org-over", `Overseen by ${u.overseers.map((id) => names.get(id)).filter(Boolean).join(", ")}`));
+      }
+      const here = seated.get(u.id) || [];
+      const children = kids.get(u.id) || [];
+      if (here.length || u.kind === "team" || !children.length) bodyEl.append(chips(here, u.kind === "team" ? "No one yet" : children.length ? "" : "No one yet"));
+      if (children.length) {
+        const list = el("div", "org-kids");
+        list.append(...children.map(unitNode));
+        bodyEl.append(list);
+      }
+      if (isAdmin() && u.kind !== "team") {
+        const adds = el("div", "org-adds");
+        if (u.kind === "division") adds.append(addLink("+ domain", `#/org/new/domain/${u.id}`));
+        adds.append(addLink("+ team", `#/org/new/team/${u.id}`));
+        bodyEl.append(adds);
+      }
+      box.append(head(u), bodyEl);
+      return box;
+    }
+
+    const chart = $("#org-chart");
+    const top = el("div", "org-top");
+    const leaders = people.filter((p) => p.unit_id === null && LEADERSHIP.includes(p.org_role)).sort(byRole);
+    const topCard = el("div", "org-unit org-unit--root");
+    const topHead = el("div", "org-unit__head");
+    topHead.append(el("span", "org-name", "Normal"), el("span", "org-kind", "leadership"));
+    const topBody = el("div", "org-unit__body");
+    topBody.append(chips(leaders, "Give someone the Founder or Chief of Staff role to show them here."));
+    topCard.append(topHead, topBody);
+    top.append(topCard);
+    const divisions = kids.get(null) || [];
+    if (divisions.length) {
+      const row = el("div", "org-row");
+      row.append(...divisions.map((d) => {
+        const col = el("div", "org-col");
+        col.append(unitNode(d));
+        return col;
+      }));
+      chart.replaceChildren(top, el("div", "org-stem"), row);
+    } else {
+      chart.replaceChildren(top, el("p", "db-empty", isAdmin() ? "No divisions yet. Add one to start the chart." : "The org chart hasn't been set up yet."));
+    }
+
+    // hover a director to light up what they oversee
+    chart.querySelectorAll(".org-person[data-person]").forEach((chip) => {
+      const lit = () => chart.querySelectorAll(".org-unit[data-overseers]").forEach((u) => u.classList.toggle("is-lit", u.dataset.overseers.split(" ").includes(chip.dataset.person)));
+      chip.addEventListener("mouseenter", lit);
+      chip.addEventListener("focus", lit);
+      const off = () => chart.querySelectorAll(".is-lit").forEach((u) => u.classList.remove("is-lit"));
+      chip.addEventListener("mouseleave", off);
+      chip.addEventListener("blur", off);
+    });
+
+    const onChart = people.filter((p) => p.unit_id !== null || LEADERSHIP.includes(p.org_role));
+    const unplaced = people.filter((p) => p.unit_id === null && !LEADERSHIP.includes(p.org_role)).sort(byRole);
+    const count = (k) => { const n = units.filter((u) => u.kind === k).length; return `${n} ${k}${n === 1 ? "" : "s"}`; };
+    $("#org-count").textContent = `${onChart.length} ${onChart.length === 1 ? "person" : "people"} on the chart · ${count("division")} · ${count("domain")} · ${count("team")}`;
+    $("#org-note").textContent = isAdmin() ? "Seat people from their member record." : "";
+    $("#org-unplaced").hidden = !unplaced.length;
+    $("#org-unplaced-note").textContent = isAdmin() ? "Open someone and set their seat to place them." : "";
+    $("#org-unplaced-list").replaceChildren(...unplaced.map(personChip));
+  }
+
+  async function unitForm(id, kindArg, parentArg) {
+    fail("");
+    const org = await getOrg();
+    if (!org) return fail("Couldn't load the org chart.");
+    const isNew = id === "new";
+    const unit = isNew ? { kind: kindArg, parent_id: parentArg ? Number(parentArg) : null, overseers: [] } : org.units.find((u) => String(u.id) === id);
+    const kind = unit ? unit.kind : kindArg;
+    const body = detail("#/members/chart", "org chart", isNew ? "new" : unit ? unit.code || `#${unit.id}` : "", isNew ? `add ${kind}` : unit ? unit.name : "not found", unit && !isNew ? [el("span", "db-pill", kind)] : []);
+    if (!unit) return fail("That part of the org chart isn't there any more.");
+
+    const defs = [
+      { key: "name", label: "Name", required: true },
+      { key: "code", label: "Code", hint: "Short reference, e.g. FL or FL.1" },
+    ];
+    if (kind !== "division") {
+      const allowed = PARENT_KINDS[kind];
+      defs.push({ key: "parent_id", label: kind === "domain" ? "Division" : "Sits under", type: "select", options: unitOptions(org.units, (u) => allowed.includes(u.kind)) });
+    }
+    if (kind === "domain") {
+      const eligible = org.people.filter((p) => OVERSEER_ROLES.includes(p.org_role)).sort((a, b) => a.name.localeCompare(b.name));
+      defs.push({ key: "overseers", label: "Overseen by", type: "checks", wide: true, options: eligible.map((p) => [String(p.id), `${p.name} (${p.org_role})`]),
+        hint: eligible.length ? "" : "Give someone the Director role on their record to pick them here." });
+    }
+    defs.push({ key: "note", label: "Note", type: "textarea", wide: true });
+
+    const values = { ...unit, parent_id: unit.parent_id === null ? "" : String(unit.parent_id), overseers: (unit.overseers || []).map(String) };
+    const extra = [linkButton("Cancel", "#/members/chart")];
+    if (!isNew) extra.push(confirmButton(`Delete ${kind}`, "Only empty ones can be deleted: move its people and teams first.", async () => {
+      const d = await api(`/api/admin/org?id=${unit.id}`, { method: "DELETE" }).catch(() => null);
+      if (d && d.ok) { toast("Deleted."); location.hash = "#/members/chart"; }
+      else fail(d && d.data && d.data.error === "unit_not_empty" ? `Move its people and ${kind === "division" ? "domains and teams" : "teams"} out first.` : errText(d));
+    }));
+    const { form: f } = buildForm(defs, values, {
+      submit: isNew ? `Save ${kind}` : "Save changes",
+      extra,
+      onSubmit: async (vals, status) => {
+        const json = { ...vals, ...(isNew ? { kind } : { id: unit.id }) };
+        if (kind === "division") json.parent_id = null;
+        const s = await api("/api/admin/org", { method: isNew ? "POST" : "PATCH", json }).catch(() => null);
+        if (!s || !s.ok) { status.textContent = errText(s); return; }
+        toast(isNew ? `${kind[0].toUpperCase() + kind.slice(1)} added.` : "Saved.");
+        location.hash = "#/members/chart";
+      },
+    });
+
+    if (isNew) { body.append(panel(`${kind} record`, f)); return; }
+    const { main, aside } = recordLayout(body);
+    main.append(panel(`${kind} record`, f));
+    const here = org.people.filter((p) => p.unit_id === unit.id);
+    aside.append(panel("seated here", here.length ? chips(here) : el("p", "db-note", "No one is seated here. Set someone's seat on their member record.")));
   }
 
   /* ───────────── applications ───────────── */
@@ -734,7 +1002,7 @@
     const body = detail("#/whats-on", "what's on", code, isNew ? `add ${noun}` : item ? item.name || item.title : "not found", item && !isNew ? [visiblePill(item)] : []);
     if (!item) return fail("That isn't there any more.");
     const extra = [linkButton("Cancel", "#/whats-on")];
-    if (!isNew) extra.push(confirmButton(`Delete ${noun}`, `Delete "${item.name || item.title}" from the what's on page?`, async () => {
+    if (!isNew) extra.push(confirmButton(`Delete ${noun}`, "It comes off the public page straight away.", async () => {
       const d = await api(`/api/admin/whats-on?kind=${kind}&id=${item.id}`, { method: "DELETE" }).catch(() => null);
       if (d && d.ok) { toast("Deleted."); location.hash = "#/whats-on"; } else fail(errText(d));
     }));
@@ -900,7 +1168,7 @@
       toast(a.disabled ? "Re-enabled." : "Disabled. They're signed out.");
       accountDetail(id);
     }, "toggle-account");
-    const del = confirmButton("Delete account", `Delete ${a.name}'s login? Their member record stays.`, async () => {
+    const del = confirmButton("Delete account", "Their member record stays.", async () => {
       const s = await api(`/api/admin/accounts?id=${a.id}`, { method: "DELETE" }).catch(() => null);
       if (!s || !s.ok) return fail(errText(s));
       listKey = null;
@@ -915,6 +1183,9 @@
   const ROUTES = [
     [/^#\/(members)?$/, () => membersList(), "members"],
     [/^#\/m\/(new|\d+)$/, (m) => memberProfile(m[1]), "members"],
+    [/^#\/members\/chart$/, () => orgChart(), "members"],
+    [/^#\/org\/new\/(division|domain|team)(?:\/(\d+))?$/, (m) => unitForm("new", m[1], m[2]), "members", ["master", "admin"]],
+    [/^#\/org\/(\d+)$/, (m) => unitForm(m[1]), "members", ["master", "admin"]],
     [/^#\/applications$/, () => applicationsList(), "applications", ["master", "admin"]],
     [/^#\/a\/(\d+)$/, (m) => applicationDetail(m[1]), "applications", ["master", "admin"]],
     [/^#\/whats-on$/, () => whatsOn(), "whats-on", ["master", "admin"]],

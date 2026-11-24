@@ -221,6 +221,77 @@ textarea.db-input { height: auto; min-height: 96px; padding: 8px 10px; resize: v
 .db-steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
 .db-steps code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1px 4px; border: 1px solid var(--line); border-radius: 4px; }
 
+/* ───────────── two-click delete, view switch, checkbox lists ───────────── */
+.db-btn--danger.is-armed { color: #fff; background: var(--danger); border-color: var(--danger); }
+.db-seg { display: inline-flex; padding: 2px; background: #ebe8e4; border-radius: 8px; }
+.db-seg a { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; font-weight: 500; color: var(--muted); text-decoration: none; border-radius: 6px; }
+.db-seg a:hover { color: var(--text); }
+.db-seg a[aria-current] { color: var(--text); background: var(--surface); box-shadow: 0 1px 2px rgba(29, 27, 26, .1); }
+.db-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--surface); }
+
+/* ───────────── org chart ───────────── */
+:root {
+  --role-founder: #532213;
+  --role-cos: #8a4a2b;
+  --role-director: #24527a;
+  --role-lead: #1f6b3a;
+  --role-member: #6c6560;
+  --role-fellow: #8a5a00;
+  --role-volunteer: #a29a93;
+}
+.org-role { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.org-role::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--role, var(--role-member)); }
+.org-role--founder, .org-person--founder { --role: var(--role-founder); }
+.org-role--cos, .org-person--cos { --role: var(--role-cos); }
+.org-role--director, .org-person--director { --role: var(--role-director); }
+.org-role--lead, .org-person--lead { --role: var(--role-lead); }
+.org-role--member, .org-person--member { --role: var(--role-member); }
+.org-role--fellow, .org-person--fellow { --role: var(--role-fellow); }
+.org-role--volunteer, .org-person--volunteer { --role: var(--role-volunteer); }
+
+.org-legend { gap: 6px 10px; align-items: center; }
+.org { padding: 24px; min-width: min-content; display: flex; flex-direction: column; align-items: center; }
+.org-top { display: flex; justify-content: center; }
+.org-unit--root { min-width: 280px; max-width: 520px; border-top: 3px solid var(--brand); }
+.org-stem { width: 1px; height: 20px; background: var(--line-2); }
+.org-row { display: flex; justify-content: center; align-items: flex-start; }
+.org-col { position: relative; flex: none; width: 320px; padding: 20px 8px 0; }
+.org-col::before { content: ""; position: absolute; top: 0; left: 50%; height: 20px; border-left: 1px solid var(--line-2); }
+.org-col::after { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: 1px solid var(--line-2); }
+.org-col:first-child::after { left: 50%; }
+.org-col:last-child::after { right: 50%; }
+.org-col:only-child::after { display: none; }
+
+.org-unit { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; transition: box-shadow .15s ease, border-color .15s ease; }
+.org-unit--division { border-top: 3px solid var(--role-director); }
+.org-unit--domain { background: var(--surface-2); }
+.org-unit.is-lit { border-color: var(--role-director); box-shadow: 0 0 0 3px rgba(36, 82, 122, .18); }
+.org-unit__head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.org-unit--team > .org-unit__head, .org-unit--domain > .org-unit__head { padding: 7px 10px; }
+.org-name { min-width: 0; font-weight: 600; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
+a.org-name:hover { color: var(--brand); text-decoration: underline; }
+.org-code { flex: none; padding: 1px 5px; font: 500 11px/1.4 var(--mono); color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; }
+.org-kind { margin-left: auto; font: 600 10px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.org-unit__body { display: grid; gap: 10px; padding: 10px 12px; }
+.org-unit--team > .org-unit__body, .org-unit--domain > .org-unit__body { padding: 8px 10px; }
+.org-over { margin: 0; font-size: 12px; color: var(--role-director); }
+.org-kids { display: grid; gap: 8px; padding-left: 10px; border-left: 1px dashed var(--line-2); }
+.org-adds { display: flex; gap: 12px; }
+.org-add { font-size: 12px; color: var(--muted); text-decoration: none; }
+.org-add:hover { color: var(--brand); text-decoration: underline; }
+.org-empty { font-size: 12px; color: var(--faint); }
+
+.org-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.org-chips:empty { display: none; }
+.org-person { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 2px 9px 2px 2px; font-size: 12.5px; color: var(--text); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: var(--role); box-shadow: 0 0 0 2px color-mix(in srgb, var(--role) 22%, transparent); }
+.org-av { display: grid; place-items: center; flex: none; width: 20px; height: 20px; font: 600 9px/1 var(--sans); color: #fff; background: var(--role, var(--role-member)); border-radius: 50%; }
+.org-person--volunteer .org-av { color: var(--text); background: transparent; border: 1.5px dashed var(--role); }
+.org-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.org-rl { flex: none; font-size: 11px; color: var(--muted); }
+.org-person.is-key { padding-right: 8px; }
+.org-person.is-key .org-av { width: 12px; height: 12px; }
+
 /* ───────────── phones and tablets ───────────── */
 @media (max-width: 900px) {
   .db-app.is-in { display: block; }
