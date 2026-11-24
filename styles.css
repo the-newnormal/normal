@@ -296,7 +296,7 @@ g.spot { cursor: default; }
 .plan-art .floor--kitchen { fill: #eaefe0; }
 .plan-art .floor--garden  { fill: #e5ecd3; }
 
-/* people: a dot for a head (like the knob in the n), a coloured body, a shadow on the floor */
+/* people: a black dot for a head (like the knob in the n), a white body, a contact shadow on the floor */
 .person {
   position: absolute;
   left: var(--x); top: var(--y);
@@ -307,10 +307,10 @@ g.spot { cursor: default; }
 .person::before {
   content: "";
   position: absolute;
-  left: -14px; top: -7px;
-  width: 28px; height: 14px;
+  left: -11px; top: -5px;
+  width: 22px; height: 10px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(58, 24, 13, .42), rgba(58, 24, 13, 0));
+  background: radial-gradient(closest-side, rgba(20, 20, 20, .5), rgba(20, 20, 20, 0));
 }
 .person__fig {
   position: absolute;
@@ -321,15 +321,10 @@ g.spot { cursor: default; }
   transform-origin: 50% 100%;
   transform: rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx)));
 }
-.person__body { fill: var(--c, var(--brown-2)); }
-.person__shade { fill: rgba(40, 16, 8, .18); }
+.person__body { fill: #fffdf8; }
+.person__shade { fill: rgba(20, 20, 20, .12); }
 .person__line { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
 .person__head { fill: var(--ink); }
-.person__shine { fill: rgba(255, 255, 255, .4); }
-.person.is-hopping .person__fig { animation: hop .45s ease-in-out infinite alternate; }
-.person.is-hopping::before { animation: hop-shadow .45s ease-in-out infinite alternate; }
-@keyframes hop { to { translate: 0 0 10px; } }
-@keyframes hop-shadow { to { scale: .7; opacity: .55; } }
 
 .anchor { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; transform: translateZ(var(--z)); }
 
