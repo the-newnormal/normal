@@ -380,6 +380,8 @@
     $("#empty").textContent = total === 0 ? emptyAll : emptyFiltered;
   }
   const params = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v)).toString();
+  // spreadsheets come straight from the server as a file
+  const download = (url) => { location.href = url; };
 
   /* ───────────── members ───────────── */
   // the org chart's shape (matches lib/org.js)
@@ -462,7 +464,7 @@
       $("#list-actions").append(memberViews("table"));
       if (isAdmin()) {
         $("#list-actions").append(
-          button("Export CSV", "", () => { location.href = "/api/admin/members?" + params({ format: "csv", q: q.value.trim(), unit: unit.value, status: status.value }); }),
+          button("Export CSV", "", () => download("/api/admin/members?" + params({ format: "csv", q: q.value.trim(), unit: unit.value, status: status.value }))),
           linkButton("+ add member", "#/m/new", "primary"),
         );
       }
@@ -789,7 +791,7 @@
       q.id = "f-q"; stage.id = "f-stage"; role.id = "f-role"; status.id = "f-status";
       filterInputs([q, stage, role, status]);
       const vals = () => ({ q: q.value.trim(), stage: stage.value, role: role.value, status: status.value });
-      $("#list-actions").append(button("Export CSV", "", () => { location.href = "/api/admin/export?" + params(vals()); }, "export"));
+      $("#list-actions").append(button("Export CSV", "", () => download("/api/admin/export?" + params(vals())), "export"));
       const columns = [
         { label: "ID", cls: "is-id", cell: (a) => rid("A", a.id) },
         { label: "Name", cls: "is-name is-nowrap", link: true, cell: (a) => a.name },
