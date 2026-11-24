@@ -5,49 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <title>welcome · Normal admin</title>
-  <meta name="theme-color" content="#fbf7ee">
+  <title>Set up your login · Normal admin</title>
+  <meta name="theme-color" content="#faf9f7">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="/assets/fonts/bookmania-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body class="admin">
+<body>
 
-<header class="nav is-scrolled">
-  <div class="wrap admin__bar">
-    <span class="admin__brand">
-      <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369">
-      <span class="admin__tag">admin</span>
-    </span>
-  </div>
-</header>
+<main class="db-gate">
+  <div class="db-card" id="w-form-card">
+    <span class="db-brand"><img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369"><span>admin</span></span>
 
-<main class="wrap admin__main">
-  <section class="admin__login">
-    <form class="join__sheet admin__login-sheet" id="w-form" novalidate hidden>
-      <p class="kicker">come in</p>
-      <h1 class="admin__h1">welcome, <span id="w-name"></span></h1>
-      <p>your username is <strong id="w-username"></strong>. choose a password to finish setting up your login.</p>
-      <div class="q">
-        <label class="q__label" for="w-pass">password <span class="q__opt">10 characters or more</span></label>
-        <input type="password" id="w-pass" autocomplete="new-password" minlength="10" required>
-      </div>
-      <div class="q">
-        <label class="q__label" for="w-pass2">same password again</label>
-        <input type="password" id="w-pass2" autocomplete="new-password" required>
-      </div>
+    <form id="w-form" novalidate hidden>
+      <h1>Welcome, <span id="w-name"></span></h1>
+      <p>Your username is <strong class="mono" id="w-username"></strong>. Choose a password to finish setting up your login.</p>
       <input type="text" id="w-user" autocomplete="username" hidden>
-      <p class="join__status is-error" id="w-error" role="alert"></p>
-      <button class="btn" type="submit" id="w-go">set password and sign in</button>
+      <div class="db-field">
+        <label class="db-label" for="w-pass">Password <small>10 characters or more</small></label>
+        <input class="db-input" type="password" id="w-pass" autocomplete="new-password" minlength="10" required>
+      </div>
+      <div class="db-field">
+        <label class="db-label" for="w-pass2">Confirm password</label>
+        <input class="db-input" type="password" id="w-pass2" autocomplete="new-password" required>
+      </div>
+      <p class="db-error" id="w-error" role="alert"></p>
+      <button class="db-btn db-btn--primary" type="submit" id="w-go">Set password and sign in</button>
     </form>
 
-    <div class="join__sheet admin__login-sheet" id="w-dead" hidden>
-      <p class="kicker">hmm</p>
-      <h1 class="admin__h1">this link doesn't work</h1>
-      <p>setup links work once and last 7 days. ask a Master Admin for a new one.</p>
-      <p><a class="link" href="/">go to sign in →</a></p>
+    <div id="w-dead" hidden>
+      <h1>This link doesn't work</h1>
+      <p>Setup links work once and last 7 days. Ask a Master Admin for a new one.</p>
+      <a class="db-btn" href="/">Go to sign in</a>
     </div>
-  </section>
+  </div>
 </main>
 
 <script src="/admin/welcome.js"></script>

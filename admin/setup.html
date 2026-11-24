@@ -4,50 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>make a login · Normal admin</title>
-  <meta name="theme-color" content="#fbf7ee">
+  <title>First Master Admin · Normal admin</title>
+  <meta name="theme-color" content="#faf9f7">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body class="admin">
-<header class="nav is-scrolled">
-  <div class="wrap admin__bar">
-    <a class="admin__brand" href="/admin/"><img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369"><span class="admin__tag">admin</span></a>
+<body>
+
+<main class="db-gate">
+  <div class="db-card db-card--wide">
+    <a class="db-brand" href="/admin/"><img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369"><span>admin</span></a>
+    <h1>First Master Admin login</h1>
+    <p>Only for the first Master Admin or two. Everyone else gets a login from the portal (accounts → create account). This page scrambles your password <strong>in your browser</strong> (nothing is sent) and gives you one line for Vercel.</p>
+
+    <form id="setup" novalidate>
+      <div class="db-field">
+        <label class="db-label" for="s-name">Username <small>lowercase, no spaces, e.g. ashton</small></label>
+        <input class="db-input" type="text" id="s-name" autocapitalize="none" spellcheck="false" pattern="[a-z0-9._-]{2,32}" required>
+      </div>
+      <div class="db-field">
+        <label class="db-label" for="s-pass">Password <small>at least 12 characters</small></label>
+        <input class="db-input" type="password" id="s-pass" autocomplete="new-password" minlength="12" required>
+      </div>
+      <div class="db-field">
+        <label class="db-label" for="s-pass2">Confirm password</label>
+        <input class="db-input" type="password" id="s-pass2" autocomplete="new-password" required>
+      </div>
+      <p class="db-error" id="s-error" role="alert"></p>
+      <button class="db-btn db-btn--primary" type="submit">Make my login line</button>
+
+      <div class="db-stack-form" id="s-out" hidden>
+        <label class="db-label" for="s-line">Your login line</label>
+        <textarea class="db-input mono" id="s-line" rows="3" readonly></textarea>
+        <div><button class="db-btn" type="button" id="s-copy">Copy</button></div>
+        <ol class="db-steps">
+          <li>In Vercel → Project → Settings → Environment Variables, add this line to <code>ADMIN_USERS</code>. It's safe to share: it can't be turned back into your password.</li>
+          <li>Redeploy, then sign in at admin.newnormal.sg with this username and password.</li>
+        </ol>
+      </div>
+    </form>
   </div>
-</header>
-
-<main class="wrap admin__main">
-  <form class="join__sheet admin__login-sheet" id="setup" novalidate>
-    <p class="kicker">the first login</p>
-    <h1 class="admin__h1">Master Admin login</h1>
-    <p>Pick a name and password. This page scrambles the password <strong>in your browser</strong> (nothing is sent anywhere) and gives you one line to pass to whoever runs Normal's Vercel project. This is only for the first Master Admin or two: everyone else gets a login from the portal (accounts → create an account).</p>
-    <div class="q">
-      <label class="q__label" for="s-name">name <span class="q__opt">(lowercase, no spaces, e.g. ashton)</span></label>
-      <input type="text" id="s-name" autocapitalize="none" spellcheck="false" pattern="[a-z0-9._-]{2,32}" required>
-    </div>
-    <div class="q">
-      <label class="q__label" for="s-pass">password <span class="q__opt">(at least 12 characters)</span></label>
-      <input type="password" id="s-pass" autocomplete="new-password" minlength="12" required>
-    </div>
-    <div class="q">
-      <label class="q__label" for="s-pass2">password again</label>
-      <input type="password" id="s-pass2" autocomplete="new-password" required>
-    </div>
-    <p class="join__status is-error" id="s-error" role="alert"></p>
-    <button class="btn" type="submit">make my login line</button>
-
-    <div id="s-out" hidden>
-      <h2 class="adetail__h2">your login line</h2>
-      <textarea id="s-line" class="admin__line" rows="3" readonly></textarea>
-      <p><button class="btn btn--ghost btn--sm" type="button" id="s-copy">copy</button></p>
-      <ol class="admin__steps">
-        <li>Send this line to whoever runs the Vercel project (it's safe to send: it can't be turned back into your password).</li>
-        <li>In Vercel → Project → Settings → Environment Variables, they add it to <code>ADMIN_USERS</code>. Several people go on separate lines, or separated by commas.</li>
-        <li>After the next deploy, sign in at admin.newnormal.sg with that name and password.</li>
-      </ol>
-    </div>
-  </form>
 </main>
+
 <script src="/admin/setup.js"></script>
 </body>
 </html>

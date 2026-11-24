@@ -5,94 +5,120 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <title>admin · Normal</title>
-  <meta name="theme-color" content="#fbf7ee">
+  <title>Normal admin</title>
+  <meta name="theme-color" content="#faf9f7">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="/assets/fonts/bookmania-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body class="admin">
+<body>
 
-<header class="nav is-scrolled">
-  <div class="wrap admin__bar">
-    <a class="admin__brand" href="#/" aria-label="Admin home">
-      <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369">
-      <span class="admin__tag">admin</span>
+<div class="db-app" id="app">
+  <aside class="db-side" id="side" hidden>
+    <a class="db-brand" href="#/" aria-label="Normal admin home">
+      <img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369"><span>admin</span>
     </a>
-    <div class="admin__who" id="who" hidden>
-      <a class="link" id="who-name" href="#/"></a>
-      <span class="admin__role" id="who-role"></span>
-      <button class="link" type="button" id="sign-out">sign out</button>
+    <p class="db-side__label">records</p>
+    <nav class="db-nav" id="tabs" aria-label="Sections">
+      <a href="#/members" data-tab="members">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="5.5" r="2.5"/><path d="M1.5 13.5c.6-2.4 2.3-3.5 4.5-3.5s3.9 1.1 4.5 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6M12.2 10.3c1.2.5 2 1.6 2.3 3.2"/></svg>members</a>
+      <a href="#/applications" data-tab="applications" data-roles="master admin">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h3.5"/></svg>applications</a>
+      <a href="#/whats-on" data-tab="whats-on" data-roles="master admin">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" rx="1.5"/><path d="M1.5 6h13M5 1v3M11 1v3"/></svg>what's on</a>
+      <a href="#/accounts" data-tab="accounts" data-roles="master">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="5" cy="10.5" r="3"/><path d="M7.2 8.4 13.5 2M11 4.5l2 2M9.5 6l1.5 1.5"/></svg>accounts</a>
+    </nav>
+    <div class="db-user" id="who">
+      <span class="db-avatar" id="who-initials" aria-hidden="true"></span>
+      <a class="db-user__name" id="who-name" href="#/"></a>
+      <span class="db-user__role" id="who-role"></span>
+      <button class="db-link" type="button" id="sign-out">sign out</button>
     </div>
-  </div>
-  <nav class="wrap admin__tabs" id="tabs" aria-label="Sections" hidden>
-    <a href="#/members" data-tab="members">members</a>
-    <a href="#/applications" data-tab="applications" data-roles="master admin">applications</a>
-    <a href="#/whats-on" data-tab="whats-on" data-roles="master admin">what's on</a>
-    <a href="#/accounts" data-tab="accounts" data-roles="master">accounts</a>
-  </nav>
-</header>
+  </aside>
 
-<main id="main" class="wrap admin__main">
+  <main class="db-main" id="main">
 
-  <!-- signed out -->
-  <section class="admin__login" id="login" data-view hidden>
-    <form class="join__sheet admin__login-sheet" id="login-form" novalidate>
-      <p class="kicker">the house, behind the scenes</p>
-      <h1 class="admin__h1">sign in</h1>
-      <div class="q">
-        <label class="q__label" for="login-name">username</label>
-        <input type="text" id="login-name" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <!-- signed out -->
+    <section class="db-gate" id="login" data-view hidden>
+      <div class="db-card">
+        <span class="db-brand"><img src="/assets/wordmark.svg" alt="Normal" width="1538" height="369"><span>admin</span></span>
+        <h1>Sign in</h1>
+        <p>Normal's records: members, applications, what's on and accounts.</p>
+        <form id="login-form" novalidate>
+          <div class="db-field">
+            <label class="db-label" for="login-name">Username</label>
+            <input class="db-input" type="text" id="login-name" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+          </div>
+          <div class="db-field">
+            <label class="db-label" for="login-password">Password</label>
+            <input class="db-input" type="password" id="login-password" autocomplete="current-password" required>
+          </div>
+          <p class="db-error" id="login-error" role="alert"></p>
+          <button class="db-btn db-btn--primary" type="submit" id="login-go">Sign in</button>
+        </form>
+        <p class="db-fine">No login yet, or forgot your password? Ask a Master Admin for a setup link.</p>
       </div>
-      <div class="q">
-        <label class="q__label" for="login-password">password</label>
-        <input type="password" id="login-password" autocomplete="current-password" required>
+    </section>
+
+    <p class="db-alert" id="error" role="alert"></p>
+
+    <!-- a table of records: members, applications, accounts -->
+    <section id="list" data-view hidden>
+      <header class="db-head">
+        <div>
+          <p class="db-crumb">records</p>
+          <h1 class="db-title" id="list-title"></h1>
+        </div>
+        <div class="db-actions" id="list-actions"></div>
+      </header>
+      <div class="db-panel">
+        <div class="db-toolbar" id="filters"></div>
+        <div class="db-scroll">
+          <table class="db-table">
+            <thead id="thead"></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="db-empty" id="empty" hidden></p>
+        <footer class="db-foot"><span id="count"></span><span id="count-note"></span></footer>
       </div>
-      <p class="join__status is-error" id="login-error" role="alert"></p>
-      <button class="btn" type="submit" id="login-go">sign in</button>
-      <p class="admin__fine">no login yet, or forgot your password? ask a Master Admin for a setup link.</p>
-    </form>
-  </section>
+    </section>
 
-  <!-- any list: members, applications, accounts -->
-  <section id="list" data-view hidden>
-    <div class="admin__head">
-      <h1 class="admin__h1"><span id="list-title"></span> <span class="admin__count" id="count"></span></h1>
-      <div class="admin__actions" id="list-actions"></div>
-    </div>
-    <div class="admin__filters" id="filters"></div>
-    <ol class="admin__rows" id="rows" aria-live="polite"></ol>
-    <p class="admin__empty" id="empty" hidden></p>
-  </section>
+    <!-- one record -->
+    <article id="detail" data-view hidden>
+      <header class="db-head">
+        <div>
+          <p class="db-crumb"><a id="back" href="#/"></a> / <span class="mono" id="crumb-id"></span></p>
+          <h1 class="db-title" id="detail-title"></h1>
+          <div class="db-sub" id="detail-sub"></div>
+        </div>
+      </header>
+      <div id="detail-body"></div>
+    </article>
 
-  <!-- one thing: an application, a member, an IP or event, a new account -->
-  <article id="detail" data-view hidden>
-    <a class="admin__back" id="back" href="#/">←</a>
-    <div id="detail-body"></div>
-  </article>
+    <!-- what's on: IPs and events -->
+    <section id="whats-on" data-view hidden>
+      <header class="db-head">
+        <div>
+          <p class="db-crumb">records</p>
+          <h1 class="db-title">what's on</h1>
+        </div>
+        <div class="db-actions"><a class="db-btn" href="/events.html" target="_blank" rel="noopener">view public page ↗</a></div>
+      </header>
+      <div class="db-panel">
+        <div class="db-panel__head"><h2>our IPs</h2><a class="db-btn db-btn--sm" href="#/w/ip/new">+ add IP</a></div>
+        <div class="db-scroll"><table class="db-table"><thead id="ip-head"></thead><tbody id="ip-rows"></tbody></table></div>
+      </div>
+      <div class="db-panel">
+        <div class="db-panel__head"><h2>events</h2><a class="db-btn db-btn--sm" href="#/w/event/new">+ add event</a></div>
+        <div class="db-scroll"><table class="db-table"><thead id="event-head"></thead><tbody id="event-rows"></tbody></table></div>
+      </div>
+    </section>
 
-  <!-- what's on: IPs and events together -->
-  <section id="whats-on" data-view hidden>
-    <div class="admin__head">
-      <h1 class="admin__h1">what's on</h1>
-      <a class="link" href="/events.html" target="_blank" rel="noopener">see the page ↗</a>
-    </div>
-    <div class="admin__head admin__head--sub">
-      <h2 class="adetail__h2">our IPs</h2>
-      <a class="btn btn--ghost btn--sm" href="#/w/ip/new">add an IP</a>
-    </div>
-    <ol class="admin__rows" id="ip-rows"></ol>
-    <div class="admin__head admin__head--sub">
-      <h2 class="adetail__h2">events</h2>
-      <a class="btn btn--ghost btn--sm" href="#/w/event/new">add an event</a>
-    </div>
-    <ol class="admin__rows" id="event-rows"></ol>
-  </section>
+  </main>
+</div>
 
-  <p class="join__status is-error" id="error" role="alert"></p>
-  <p class="admin__toast" id="toast" role="status" aria-live="polite"></p>
-</main>
-
+<p class="db-toast" id="toast" role="status" aria-live="polite"></p>
 <script src="/admin/admin.js"></script>
 </body>
 </html>

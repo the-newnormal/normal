@@ -57,7 +57,7 @@ One place for Normal's people and admin.
 
 | Piece | Where |
 |---|---|
-| Portal | `admin/index.html`, `admin/admin.js` (served at admin.newnormal.sg, also at `/admin/`) |
+| Portal | `admin/index.html`, `admin/admin.js`, `admin/admin.css` (served at admin.newnormal.sg, also at `/admin/`). It has its own plain records-office look, separate from the public site's `styles.css`. |
 | Setup-link page | `admin/welcome.html` (admin.newnormal.sg/welcome) |
 | First Master Admin's login line | `admin/setup.html` (admin.newnormal.sg/setup) |
 | Vercel functions (8 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js` |

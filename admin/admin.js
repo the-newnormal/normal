@@ -14,7 +14,6 @@
     if (text !== undefined && text !== null) n.textContent = text;
     return n;
   };
-  const show = (id) => $$("[data-view]").forEach((v) => { v.hidden = v.id !== id; });
   const fail = (msg) => { $("#error").textContent = msg || ""; };
   let toastTimer;
   const toast = (msg) => {
@@ -24,11 +23,17 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove("is-on"), 2600);
   };
+  function show(id) {
+    $$("[data-view]").forEach((v) => { v.hidden = v.id !== id; });
+    $("#side").hidden = id === "login";
+    $("#app").classList.toggle("is-in", id !== "login");
+  }
 
   let me = null;
   let form = null; // join-form.json, loaded the first time applications are opened
   const isAdmin = () => me && (me.role === "master" || me.role === "admin");
   const ROLE_NAMES = { master: "Master Admin", admin: "Admin", member: "Member" };
+  const rid = (prefix, id) => `${prefix}-${String(id).padStart(4, "0")}`;
 
   const day = (d) => d ? new Date(String(d).slice(0, 10) + "T00:00:00").toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" }) : "";
   const when = (d) => d ? new Date(d).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Singapore" }) : "";
@@ -38,20 +43,20 @@
     return d ? `https://wa.me/${d.length === 8 ? "65" + d : d}` : null;
   };
   const ERRORS = {
-    username_taken: "that username is taken.",
-    member_has_login: "that profile already has a login.",
-    cant_change_self: "you can't change your own account here.",
-    name_required: "a name is needed.",
-    title_required: "a title is needed.",
-    bad_date: "pick a date.",
-    bad_email: "that email doesn't look right.",
-    bad_link: "links must start with https:// (or be a page here, like backyard.html).",
-    bad_recap: "links must start with https:// (or be a page here, like backyard.html).",
-    bad_image: "images must be a full https:// address or a file in assets/.",
-    not_allowed: "you don't have access to that.",
-    not_configured: "the database isn't connected yet (add Neon in Vercel → Storage).",
+    username_taken: "That username is taken.",
+    member_has_login: "That profile already has a login.",
+    cant_change_self: "You can't change your own account here.",
+    name_required: "A name is needed.",
+    title_required: "A title is needed.",
+    bad_date: "Pick a date.",
+    bad_email: "That email doesn't look right.",
+    bad_link: "Links must start with https:// (or be a page here, like backyard.html).",
+    bad_recap: "Links must start with https:// (or be a page here, like backyard.html).",
+    bad_image: "Images must be a full https:// address or a file in assets/.",
+    not_allowed: "You don't have access to that.",
+    not_configured: "The database isn't connected yet (add Neon in Vercel → Storage).",
   };
-  const errText = (r, fallback) => ERRORS[r && r.data && r.data.error] || fallback || "couldn't save that. try again.";
+  const errText = (r, fallback) => ERRORS[r && r.data && r.data.error] || fallback || "Couldn't save that. Try again.";
 
   async function api(path, opts = {}) {
     const init = { method: opts.method || "GET", credentials: "same-origin", headers: { "X-Requested-With": "normal-admin" } };
@@ -69,9 +74,8 @@
   /* ───────────── signing in and out ───────────── */
   function signedOut() {
     me = null;
-    $("#who").hidden = true;
-    $("#tabs").hidden = true;
     show("login");
+    fail("");
     $("#login-name").focus();
   }
 
@@ -80,9 +84,8 @@
     $("#who-name").textContent = user.name;
     $("#who-name").href = user.memberId ? `#/m/${user.memberId}` : "#/";
     $("#who-role").textContent = ROLE_NAMES[user.role] || user.role;
-    $("#who").hidden = false;
+    $("#who-initials").textContent = user.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
     $$("#tabs [data-roles]").forEach((a) => { a.hidden = !a.dataset.roles.split(" ").includes(user.role); });
-    $("#tabs").hidden = false;
     listKey = null;
     route();
   }
@@ -100,10 +103,10 @@
     $("#login-password").value = "";
     if (r.ok) return signedIn(r.data.user);
     err.textContent =
-      r.status === 401 ? "that username and password don't match." :
-      r.status === 429 ? "too many tries. wait 15 minutes and try again." :
-      r.status === 503 ? "no logins are set up yet (ADMIN_USERS in Vercel)." :
-      "couldn't sign in just now. try again.";
+      r.status === 401 ? "That username and password don't match." :
+      r.status === 429 ? "Too many tries. Wait 15 minutes and try again." :
+      r.status === 503 ? "No logins are set up yet (ADMIN_USERS in Vercel)." :
+      "Couldn't sign in just now. Try again.";
   });
 
   $("#sign-out").addEventListener("click", async () => {
@@ -112,74 +115,131 @@
   });
 
   /* ───────────── building blocks ───────────── */
-  const chip = (text, kind) => el("span", `achip${kind ? " achip--" + kind.replace(/\s+/g, "-") : ""}`, text);
+  const pill = (text, kind) => el("span", `db-pill${kind ? " db-pill--" + kind.replace(/\s+/g, "-") : ""}`, text);
+  const nodes = (...xs) => xs.flat().filter((x) => x !== null && x !== undefined && x !== false && x !== "");
 
-  function row(href, name, meta, side) {
-    const li = el("li");
-    const a = el(href ? "a" : "div", "arow");
-    if (href) a.href = href;
-    const main = el("div", "arow__main");
-    main.append(el("p", "arow__name", name), el("p", "arow__meta", meta));
-    const right = el("div", "arow__side");
-    right.append(...side.filter(Boolean));
-    a.append(main, right);
-    li.append(a);
-    return li;
+  // columns: [{ label, cell: item => node | string, cls }]; hrefOf: item => "#/…" (the row opens it)
+  function renderTable(thead, tbody, columns, items, hrefOf) {
+    const hr = el("tr");
+    for (const c of columns) {
+      const th = el("th", c.cls && c.cls.includes("is-right") ? "is-right" : "", c.label);
+      th.scope = "col";
+      hr.append(th);
+    }
+    thead.replaceChildren(hr);
+    tbody.replaceChildren(...items.map((item) => {
+      const tr = el("tr");
+      const href = hrefOf ? hrefOf(item) : null;
+      if (href) tr.dataset.href = href;
+      for (const c of columns) {
+        const td = el("td", c.cls || "");
+        let v = c.cell(item);
+        if (c.link && href) {
+          const a = el("a", "", typeof v === "string" ? v : null);
+          a.href = href;
+          if (typeof v !== "string") a.append(v);
+          v = a;
+        }
+        if (Array.isArray(v)) td.append(...nodes(v));
+        else if (v === null || v === undefined || v === "") td.append(el("span", "muted", "—"));
+        else td.append(v);
+        tr.append(td);
+      }
+      return tr;
+    }));
   }
+  // clicking anywhere on a row opens it (links and buttons inside still work as themselves)
+  document.addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-href]");
+    if (!tr || e.target.closest("a, button, input, select") || getSelection().toString()) return;
+    location.hash = tr.dataset.href;
+  });
 
-  function facts(items) {
-    const ul = el("ul", "adetail__facts");
+  function fields(items, stack) {
+    const dl = el("dl", `db-fields${stack ? " db-fields--stack" : ""}`);
     for (const [label, text, href] of items) {
-      if (!text) continue;
-      const li = el("li");
-      li.append(el("span", "adetail__fact-label", label));
-      if (href) {
+      if (text === undefined) continue;
+      const div = el("div");
+      div.append(el("dt", "", label));
+      const dd = el("dd", text ? "" : "is-empty");
+      if (text && href) {
         const a = el("a", "", text);
         a.href = href;
         if (/^https?:/.test(href)) { a.target = "_blank"; a.rel = "noopener"; }
-        li.append(a);
+        dd.append(a);
+      } else if (text instanceof Node) {
+        dd.append(text);
       } else {
-        li.append(el("span", "", text));
+        dd.textContent = text || "—";
       }
-      ul.append(li);
+      div.append(dd);
+      dl.append(div);
     }
-    return ul;
+    return dl;
   }
 
-  function select(label, options, value) {
-    const s = el("select");
+  function panel(title, content, headExtra) {
+    const p = el("section", "db-panel");
+    if (title) {
+      const head = el("div", "db-panel__head");
+      head.append(el("h2", "", title), ...nodes(headExtra));
+      p.append(head);
+    }
+    if (content) {
+      const body = el("div", "db-panel__body");
+      body.append(...nodes(content));
+      p.append(body);
+    }
+    return p;
+  }
+
+  function select(label, options, value, cls = "db-select") {
+    const s = el("select", cls);
     s.setAttribute("aria-label", label);
     for (const o of options) s.append(new Option(Array.isArray(o) ? o[1] : o, Array.isArray(o) ? o[0] : o));
     if (value !== undefined) s.value = value;
     return s;
   }
 
+  function button(text, kind, onClick, id) {
+    const b = el("button", `db-btn${kind ? " db-btn--" + kind : ""}`, text);
+    b.type = "button";
+    if (id) b.id = id;
+    if (onClick) b.addEventListener("click", onClick);
+    return b;
+  }
+  const confirmButton = (text, question, onYes) => button(text, "danger", () => { if (confirm(question)) onYes(); });
+  const linkButton = (text, href, kind) => {
+    const a = el("a", `db-btn${kind ? " db-btn--" + kind : ""}`, text);
+    a.href = href;
+    return a;
+  };
+
   // defs: [{ key, label, type, options, hint, required, wide }]; values: current values
   function buildForm(defs, values, { submit, onSubmit, extra }) {
-    const f = el("form", "admin__form");
+    const f = el("form", "db-form");
     f.noValidate = true;
     const inputs = {};
     for (const d of defs) {
-      const wrap = el("div", `q${d.wide ? " q--wide" : ""}`);
+      const wrap = el("div", `db-field${d.wide ? " db-field--wide" : ""}`);
       const id = `fld-${d.key}`;
       let input;
       if (d.type === "checkbox") {
-        const lab = el("label", "consent");
+        const lab = el("label", "db-check");
         input = el("input");
         input.type = "checkbox";
         input.checked = values ? values[d.key] !== false : true;
-        lab.append(input, el("span", "", d.label));
+        lab.append(input, d.label);
         wrap.append(lab);
       } else {
-        const lab = el("label", "q__label", d.label);
+        const lab = el("label", "db-label", d.label);
         lab.htmlFor = id;
-        if (!d.required && d.type !== "select") lab.append(el("span", "q__opt", "optional"));
+        if (!d.required && d.type !== "select") lab.append(el("small", "", "optional"));
         wrap.append(lab);
-        if (d.hint) wrap.append(el("p", "q__hint", d.hint));
-        if (d.type === "textarea") input = el("textarea");
-        else if (d.type === "select") input = select(d.label, d.options);
+        if (d.type === "textarea") input = el("textarea", "db-input");
+        else if (d.type === "select") input = select(d.label, d.options, undefined, "db-input");
         else {
-          input = el("input");
+          input = el("input", "db-input");
           input.type = d.type || "text";
           if (d.type === "text" || !d.type) input.autocomplete = "off";
         }
@@ -187,18 +247,19 @@
         const v = values ? values[d.key] : undefined;
         if (v !== undefined && v !== null) input.value = d.type === "date" ? String(v).slice(0, 10) : v;
         wrap.append(input);
+        if (d.hint) wrap.append(el("p", "db-hint", d.hint));
       }
       input.id = id;
       input.name = d.key;
       inputs[d.key] = input;
       f.append(wrap);
     }
-    const status = el("p", "join__status is-error");
+    const status = el("p", "db-error");
     status.setAttribute("role", "alert");
-    const bar = el("div", "admin__formbar");
-    const go = el("button", "btn", submit);
+    const bar = el("div", "db-formbar");
+    const go = el("button", "db-btn db-btn--primary", submit);
     go.type = "submit";
-    bar.append(go, ...(extra || []));
+    bar.append(go, ...nodes(extra));
     f.append(status, bar);
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -217,24 +278,29 @@
     return { form: f, inputs };
   }
 
-  function confirmButton(text, question, onYes) {
-    const b = el("button", "btn btn--ghost btn--sm btn--danger", text);
-    b.type = "button";
-    b.addEventListener("click", () => { if (confirm(question)) onYes(); });
-    return b;
-  }
-
-  function detail(backHref, backText) {
+  // a record page: crumb, title, small status line; returns the body to fill
+  function detail(backHref, backText, idText, title, sub) {
     show("detail");
     window.scrollTo(0, 0);
     $("#back").href = backHref;
-    $("#back").textContent = `← ${backText}`;
+    $("#back").textContent = backText;
+    $("#crumb-id").textContent = idText || "";
+    $("#detail-title").textContent = title || "";
+    $("#detail-sub").replaceChildren(...nodes(sub || []));
     const body = $("#detail-body");
     body.replaceChildren();
     return body;
   }
+  function recordLayout(body) {
+    const grid = el("div", "db-record");
+    const main = el("div");
+    const aside = el("aside", "db-record__aside");
+    grid.append(main, aside);
+    body.append(grid);
+    return { main, aside };
+  }
 
-  // Lists keep their filters while you open an item and come back.
+  // Lists keep their filters while you open a record and come back.
   let listKey = null;
   let loadRows = () => {};
   function openList(key, setup) {
@@ -243,17 +309,19 @@
       listKey = key;
       $("#filters").replaceChildren();
       $("#list-actions").replaceChildren();
+      $("#thead").replaceChildren();
       $("#rows").replaceChildren();
       $("#count").textContent = "";
+      $("#count-note").textContent = "";
       $("#empty").hidden = true;
       setup();
     }
     loadRows();
   }
   let filterTimer;
-  function filterInputs(nodes) {
-    $("#filters").replaceChildren(...nodes);
-    nodes.forEach((n) => n.addEventListener("input", () => {
+  function filterInputs(list) {
+    $("#filters").replaceChildren(...list);
+    list.forEach((n) => n.addEventListener("input", () => {
       clearTimeout(filterTimer);
       filterTimer = setTimeout(() => loadRows(), 250);
     }));
@@ -265,9 +333,11 @@
     i.setAttribute("aria-label", "Search");
     return i;
   };
-  function fillRows(items, total, emptyAll, emptyFiltered) {
-    $("#count").textContent = items.length !== total ? `${items.length} of ${total}` : String(total);
-    $("#rows").replaceChildren(...items);
+  function fillList(columns, items, hrefOf, total, emptyAll, emptyFiltered, note) {
+    renderTable($("#thead"), $("#rows"), columns, items, hrefOf);
+    const noun = total === 1 ? "record" : "records";
+    $("#count").textContent = items.length !== total ? `Showing ${items.length} of ${total} ${noun}` : `${total} ${noun}`;
+    $("#count-note").textContent = note || "";
     $("#empty").hidden = items.length > 0;
     $("#empty").textContent = total === 0 ? emptyAll : emptyFiltered;
   }
@@ -275,17 +345,17 @@
 
   /* ───────────── members ───────────── */
   const MEMBER_FIELDS = [
-    { key: "name", label: "full name", required: true },
-    { key: "title", label: "title", hint: "e.g. head of events" },
-    { key: "team", label: "team", list: "team-list" },
-    { key: "telegram", label: "telegram" },
-    { key: "phone", label: "phone (WhatsApp)", type: "tel" },
-    { key: "email", label: "email", type: "email" },
-    { key: "dob", label: "birthday", type: "date" },
-    { key: "school", label: "school / organisation" },
-    { key: "joined_on", label: "joined Normal", type: "date" },
-    { key: "status", label: "status", type: "select", options: ["active", "on break", "alumni"] },
-    { key: "notes", label: "notes", hint: "only admins see these.", type: "textarea", wide: true },
+    { key: "name", label: "Full name", required: true },
+    { key: "title", label: "Title", hint: "e.g. head of events" },
+    { key: "team", label: "Team", list: "team-list" },
+    { key: "telegram", label: "Telegram" },
+    { key: "phone", label: "Phone (WhatsApp)", type: "tel" },
+    { key: "email", label: "Email", type: "email" },
+    { key: "dob", label: "Birthday", type: "date" },
+    { key: "school", label: "School / organisation" },
+    { key: "joined_on", label: "Joined Normal", type: "date" },
+    { key: "status", label: "Status", type: "select", options: ["active", "on break", "alumni"] },
+    { key: "notes", label: "Notes", hint: "Only admins see these.", type: "textarea", wide: true },
   ];
   let teams = [];
   function teamList() {
@@ -297,117 +367,131 @@
   function membersList() {
     openList("members", () => {
       $("#list-title").textContent = "members";
-      const q = searchBox(isAdmin() ? "search names, teams, contacts…" : "search names, titles, teams…");
-      const team = select("Team", [["", "every team"]]);
-      const status = select("Status", [["", "everyone"], "active", "on break", "alumni"]);
+      const q = searchBox(isAdmin() ? "Search names, teams, contacts…" : "Search names, titles, teams…");
+      q.id = "f-q";
+      const team = select("Team", [["", "All teams"]]);
+      const status = select("Status", [["", "All statuses"], "active", "on break", "alumni"]);
       filterInputs([q, team, status]);
       if (isAdmin()) {
-        const add = el("a", "btn btn--sm", "add someone");
-        add.href = "#/m/new";
-        const exp = el("button", "btn btn--ghost btn--sm", "export spreadsheet");
-        exp.type = "button";
-        exp.addEventListener("click", () => { location.href = "/api/admin/members?" + params({ format: "csv", q: q.value.trim(), team: team.value, status: status.value }); });
-        $("#list-actions").append(exp, add);
+        $("#list-actions").append(
+          button("Export CSV", "", () => { location.href = "/api/admin/members?" + params({ format: "csv", q: q.value.trim(), team: team.value, status: status.value }); }),
+          linkButton("+ add member", "#/m/new", "primary"),
+        );
       }
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (m) => rid("M", m.id) },
+        { label: "Name", cls: "is-name is-nowrap", link: true, cell: (m) => m.name },
+        { label: "Title", cell: (m) => m.title },
+        { label: "Team", cls: "is-nowrap", cell: (m) => m.team },
+        { label: "Telegram", cls: "is-nowrap", cell: (m) => m.telegram && "@" + handleOf(m.telegram) },
+        ...(isAdmin() ? [
+          { label: "Phone", cls: "is-nowrap", cell: (m) => m.phone },
+          { label: "Login", cls: "is-nowrap", cell: (m) => m.login_role && pill(ROLE_NAMES[m.login_role], m.login_role) },
+        ] : []),
+        { label: "Status", cls: "is-nowrap", cell: (m) => nodes(pill(m.status, m.status), Number(m.id) === me.memberId && pill("you", "you")) },
+      ];
       loadRows = async () => {
         fail("");
         const r = await get("/api/admin/members?" + params({ q: q.value.trim(), team: team.value, status: status.value }));
         if (!r) return;
-        if (!r.ok) return fail(errText(r, "couldn't load members."));
+        if (!r.ok) return fail(errText(r, "Couldn't load members."));
         teams = r.data.teams;
         if (team.options.length !== teams.length + 1) {
           const keep = team.value;
-          team.replaceChildren(new Option("every team", ""), ...teams.map((t) => new Option(t)));
+          team.replaceChildren(new Option("All teams", ""), ...teams.map((t) => new Option(t)));
           team.value = keep;
         }
-        fillRows(r.data.members.map((m) => row(`#/m/${m.id}`, m.name, [m.title, m.team].filter(Boolean).join(" · ") || "—", [
-          m.telegram && el("span", "arow__date", "@" + handleOf(m.telegram)),
-          m.status !== "active" && chip(m.status, m.status),
-          m.login_role && chip(ROLE_NAMES[m.login_role], m.login_role),
-          Number(m.id) === me.memberId && chip("you", "you"),
-        ])), r.data.total, isAdmin() ? "no one here yet. add people, or accept them from applications." : "no one here yet.", "no one matches that.");
+        fillList(columns, r.data.members, (m) => `#/m/${m.id}`, r.data.total,
+          isAdmin() ? "No members yet. Add people, or accept them from applications." : "No members yet.",
+          "No members match those filters.",
+          isAdmin() ? "" : "Contact details are visible to admins only.");
       };
     });
   }
 
   async function memberProfile(id) {
     fail("");
-    const body = detail("#/members", "members");
     if (id === "new") {
-      body.append(el("h1", "admin__h1", "add someone"));
+      const body = detail("#/members", "members", "new", "add member");
       teamList();
       const { form: f } = buildForm(MEMBER_FIELDS, { status: "active", joined_on: new Date().toISOString().slice(0, 10) }, {
-        submit: "add to members",
+        submit: "Save record",
+        extra: [linkButton("Cancel", "#/members")],
         onSubmit: async (vals, status) => {
           const r = await api("/api/admin/members", { method: "POST", json: vals }).catch(() => null);
           if (!r || !r.ok) { status.textContent = errText(r); return; }
-          toast("added.");
+          toast("Member added.");
           location.hash = `#/m/${r.data.id}`;
         },
       });
-      body.append(f);
+      body.append(panel("member record", f));
       return;
     }
 
     const r = await get(`/api/admin/members?id=${encodeURIComponent(id)}`);
     if (!r) return;
-    if (!r.ok) return fail(r.status === 404 ? "that person isn't in the directory." : errText(r, "couldn't load that profile."));
+    if (!r.ok) {
+      detail("#/members", "members", rid("M", id), "not found");
+      return fail(r.status === 404 ? "That person isn't in the directory." : errText(r, "Couldn't load that profile."));
+    }
     const { member: m, canEdit } = r.data;
     const mine = Number(m.id) === me.memberId;
+    const body = detail("#/members", "members", rid("M", m.id), m.name, [
+      [m.title, m.team].filter(Boolean).join(" · "),
+      pill(m.status, m.status),
+      mine && pill("you", "you"),
+    ]);
+    const { main, aside } = recordLayout(body);
 
-    const head = el("header", "adetail__head");
-    head.append(el("p", "kicker", [m.title, m.team].filter(Boolean).join(" · ") || "member"), el("h1", "admin__h1", m.name));
     const tg = handleOf(m.telegram);
-    head.append(facts([
-      ["telegram", m.telegram && "@" + tg, /^\w{3,}$/.test(tg) ? `https://t.me/${tg}` : null],
-      ["WhatsApp", m.phone, waOf(m.phone)],
-      ["email", m.email, m.email ? `mailto:${m.email}` : null],
-      ["born", day(m.dob)],
-      ["school / org", m.school],
-      ["joined", day(m.joined_on)],
-      ["status", m.status],
-      ["login", m.login && `${m.login} (${ROLE_NAMES[m.login_role]})`],
-    ]));
-    if (m.notes) head.append(el("p", "adetail__notes", m.notes));
-    body.append(head);
-
-    if (m.application_id && isAdmin()) {
-      const p = el("p", "admin__fine");
-      const a = el("a", "", "read their application →");
-      a.href = `#/a/${m.application_id}`;
-      p.append(a);
-      body.append(p);
-    }
+    main.append(panel("details", fields([
+      ["Telegram", m.telegram ? "@" + tg : "", /^\w{3,}$/.test(tg) ? `https://t.me/${tg}` : null],
+      ["Title", m.title || ""],
+      ["Team", m.team || ""],
+      ["WhatsApp", "phone" in m ? m.phone || "" : undefined, waOf(m.phone)],
+      ["Email", "email" in m ? m.email || "" : undefined, m.email ? `mailto:${m.email}` : null],
+      ["Birthday", "dob" in m ? day(m.dob) : undefined],
+      ["School / org", "school" in m ? m.school || "" : undefined],
+      ["Joined", "joined_on" in m ? day(m.joined_on) : undefined],
+    ])));
+    if (isAdmin()) main.append(panel("notes", m.notes ? el("p", "db-notes", m.notes) : el("p", "db-note", "No notes.")));
 
     if (canEdit.length) {
-      const sec = el("section", "adetail__section");
-      sec.append(el("h2", "adetail__h2", mine && !isAdmin() ? "update your details" : "edit"));
-      if (mine && !isAdmin()) sec.append(el("p", "q__hint", "other members see your name, title, team and Telegram. only admins see the rest."));
       teamList();
-      const extra = [];
-      if (isAdmin() && !m.login && me.role === "master") {
-        const login = el("a", "btn btn--ghost btn--sm", "make them a login");
-        login.href = `#/accounts/new/${m.id}`;
-        extra.push(login);
-      }
-      if (isAdmin()) {
-        extra.push(confirmButton("remove from directory", `remove ${m.name} from the members directory? their login (if any) stays, but loses its profile.`, async () => {
-          const d = await api(`/api/admin/members?id=${m.id}`, { method: "DELETE" }).catch(() => null);
-          if (d && d.ok) { toast("removed."); location.hash = "#/members"; } else fail(errText(d));
-        }));
-      }
       const { form: f } = buildForm(MEMBER_FIELDS.filter((d) => canEdit.includes(d.key)), m, {
-        submit: "save",
-        extra,
+        submit: "Save changes",
         onSubmit: async (vals, status) => {
           const s = await api("/api/admin/members", { method: "PATCH", json: { id: m.id, ...vals } }).catch(() => null);
           if (!s || !s.ok) { status.textContent = errText(s); return; }
-          toast("saved.");
+          toast("Saved.");
           memberProfile(id);
         },
       });
-      sec.append(f);
-      body.append(sec);
+      const editPanel = panel(mine && !isAdmin() ? "update your details" : "edit record", nodes(
+        mine && !isAdmin() && el("p", "db-note", "Other members see your name, title, team and Telegram. Only admins see the rest."),
+        f,
+      ));
+      if (mine && !isAdmin()) f.style.marginTop = "12px";
+      main.append(editPanel);
+    }
+
+    if (isAdmin()) {
+      const meta = fields([
+        ["Record", rid("M", m.id)],
+        ["Login", m.login ? `${m.login} (${ROLE_NAMES[m.login_role]})` : ""],
+        ["Application", m.application_id ? rid("A", m.application_id) : "", m.application_id ? `#/a/${m.application_id}` : null],
+        ["Created", when(m.created_at)],
+        ["Last updated", when(m.updated_at)],
+      ], true);
+      const acts = el("div", "db-stack");
+      if (!m.login && me.role === "master") acts.append(linkButton("Create login", `#/accounts/new/${m.id}`));
+      acts.append(confirmButton("Delete record", `Delete ${m.name} from the members directory? Their login (if any) stays, but loses its profile.`, async () => {
+        const d = await api(`/api/admin/members?id=${m.id}`, { method: "DELETE" }).catch(() => null);
+        if (d && d.ok) { toast("Deleted."); location.hash = "#/members"; } else fail(errText(d));
+      }));
+      aside.append(panel("record", [meta]), panel("actions", acts));
+    } else {
+      aside.append(panel("record", fields([["Record", rid("M", m.id)], ["Status", m.status]], true)));
     }
   }
 
@@ -427,193 +511,212 @@
   }
 
   async function applicationsList() {
-    try { await loadForm(); } catch { return fail("couldn't load the form questions. refresh the page."); }
+    try { await loadForm(); } catch { return fail("Couldn't load the form questions. Refresh the page."); }
     openList("applications", () => {
       $("#list-title").textContent = "applications";
-      const q = searchBox("search names, handles, answers…");
-      const stage = select("Life stage", [["", "every life stage"], ...formQs().find((x) => x.column === "life_stage").options]);
-      const role = select("Role", [["", "every role"], ...formQs().find((x) => x.roles).rows.map((r) => [r, roleName(r)])]);
-      const status = select("Status", [["", "any status"], "new", "interviewing", "accepted", "declined"]);
+      const q = searchBox("Search names, handles, answers…");
+      const stage = select("Life stage", [["", "All life stages"], ...formQs().find((x) => x.column === "life_stage").options]);
+      const role = select("Role", [["", "All roles"], ...formQs().find((x) => x.roles).rows.map((r) => [r, roleName(r)])]);
+      const status = select("Status", [["", "All statuses"], "new", "interviewing", "accepted", "declined"]);
       q.id = "f-q"; stage.id = "f-stage"; role.id = "f-role"; status.id = "f-status";
       filterInputs([q, stage, role, status]);
       const vals = () => ({ q: q.value.trim(), stage: stage.value, role: role.value, status: status.value });
-      const exp = el("button", "btn btn--ghost btn--sm", "export spreadsheet");
-      exp.type = "button";
-      exp.id = "export";
-      exp.addEventListener("click", () => { location.href = "/api/admin/export?" + params(vals()); });
-      $("#list-actions").append(exp);
+      $("#list-actions").append(button("Export CSV", "", () => { location.href = "/api/admin/export?" + params(vals()); }, "export"));
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (a) => rid("A", a.id) },
+        { label: "Name", cls: "is-name is-nowrap", link: true, cell: (a) => a.name },
+        { label: "Life stage", cell: (a) => a.life_stage },
+        { label: "School / org", cell: (a) => a.school },
+        { label: "Telegram", cls: "is-nowrap", cell: (a) => a.telegram },
+        { label: "1st choice role", cell: (a) => {
+          const roles = topRoles(a.roles);
+          if (!roles.length) return "";
+          const s = el("span", "db-roles", roles[0].role);
+          s.title = roles.map((t) => `${t.n}. ${t.role}`).join("\n");
+          return s;
+        } },
+        { label: "Status", cls: "is-nowrap", cell: (a) => pill(a.status, a.status) },
+        { label: "Submitted", cls: "is-nowrap is-muted", cell: (a) => new Date(a.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" }) },
+      ];
       loadRows = async () => {
         fail("");
         const r = await get("/api/admin/applications?" + params(vals()));
         if (!r) return;
-        if (!r.ok) return fail(errText(r, "couldn't load applications."));
-        fillRows(r.data.applications.map((a) => {
-          const roles = el("span", "arow__roles");
-          for (const t of topRoles(a.roles)) {
-            const c = el("span", "arow__role");
-            c.append(el("span", "badge", String(t.n)), t.role);
-            roles.append(c);
-          }
-          return row(`#/a/${a.id}`, a.name, [a.telegram, a.life_stage, a.school].filter(Boolean).join(" · "), [
-            roles, chip(a.status, a.status), el("span", "arow__date", when(a.created_at)),
-          ]);
-        }), r.data.total, "no applications yet. they'll appear here as people apply on the join page.", "nothing matches those filters.");
+        if (!r.ok) return fail(errText(r, "Couldn't load applications."));
+        fillList(columns, r.data.applications, (a) => `#/a/${a.id}`, r.data.total,
+          "No applications yet. They appear here as people apply on the join page.", "No applications match those filters.");
       };
     });
   }
 
   function answerNode(q, v) {
-    if (v === undefined || v === null || v === "") return el("p", "a__none", "—");
+    if (v === undefined || v === null || v === "") return null;
     if (q.type === "matrix") {
       const order = q.roles ? (r) => q.columns.indexOf(v[r]) : (r) => q.rows.indexOf(r);
-      const ul = el("ul", "a__grid");
+      const ul = el("ul", "db-grid");
       Object.keys(v).sort((a, b) => order(a) - order(b)).forEach((r) => {
         const li = el("li");
-        li.append(el("span", "a__grid-row", q.roles ? roleName(r) : r), el("span", "a__grid-col", v[r]));
+        li.append(el("span", "", q.roles ? roleName(r) : r), el("span", "", v[r]));
         ul.append(li);
       });
       return ul;
     }
-    if (q.type === "consent") return el("p", "a__text", v ? "✓ agreed to the notice" : "—");
-    if (q.type === "date") return el("p", "a__text", new Date(v + "T00:00:00").toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" }));
-    return el("p", "a__text", String(v));
+    if (q.type === "consent") return v ? "✓ agreed to the notice" : null;
+    if (q.type === "date") return new Date(v + "T00:00:00").toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" });
+    return String(v);
   }
 
   async function applicationDetail(id) {
     fail("");
-    try { await loadForm(); } catch { return fail("couldn't load the form questions. refresh the page."); }
+    try { await loadForm(); } catch { return fail("Couldn't load the form questions. Refresh the page."); }
     const r = await get(`/api/admin/applications?id=${encodeURIComponent(id)}`);
     if (!r) return;
-    const body = detail("#/applications", "applications");
-    if (!r.ok) return fail(r.status === 404 ? "that application doesn't exist." : errText(r, "couldn't load that application."));
+    if (!r.ok) {
+      detail("#/applications", "applications", rid("A", id), "not found");
+      return fail(r.status === 404 ? "That application doesn't exist." : errText(r, "Couldn't load that application."));
+    }
     const a = r.data.application;
     const ans = typeof a.answers === "string" ? JSON.parse(a.answers) : a.answers;
+    const body = detail("#/applications", "applications", rid("A", a.id), a.name, [pill(a.status, a.status), `submitted ${when(a.created_at)}`]);
+    const { main, aside } = recordLayout(body);
 
-    const head = el("header", "adetail__head");
-    head.append(el("p", "kicker", `#${a.id} · applied ${when(a.created_at)}`), el("h1", "admin__h1", a.name));
     const handle = handleOf(a.telegram);
     let born = "";
     if (a.dob) {
       const dob = new Date(String(a.dob).slice(0, 10) + "T00:00:00");
-      born = `${day(a.dob)} (${Math.floor((Date.now() - dob) / (365.25 * 864e5))})`;
+      born = `${day(a.dob)} (age ${Math.floor((Date.now() - dob) / (365.25 * 864e5))})`;
     }
-    head.append(facts([
-      ["WhatsApp", a.phone, waOf(a.phone)],
-      ["Telegram", a.telegram, /^\w{3,}$/.test(handle) ? `https://t.me/${handle}` : null],
-      ["born", born],
-      ["life stage", a.life_stage],
-      ["school / org", a.school],
-    ]));
+    main.append(panel("applicant", fields([
+      ["WhatsApp", a.phone || "", waOf(a.phone)],
+      ["Telegram", a.telegram || "", /^\w{3,}$/.test(handle) ? `https://t.me/${handle}` : null],
+      ["Born", born],
+      ["Life stage", a.life_stage || ""],
+      ["School / org", a.school || ""],
+    ])));
 
-    // status, and accepting into members
-    const bar = el("div", "adetail__bar");
-    const status = select("Status", r.data.statuses, a.status);
+    const skip = new Set(["name", "phone", "telegram", "dob", "life_stage", "school"]);
+    form.steps.forEach((step) => {
+      const qsInStep = step.questions.filter((q) => !(q.column && skip.has(q.column)));
+      if (!qsInStep.length) return;
+      const p = el("section", "db-panel");
+      const head = el("div", "db-panel__head");
+      head.append(el("h2", "", step.heading));
+      const dl = el("dl", "db-qa");
+      for (const q of qsInStep) {
+        const row = el("div");
+        const v = answerNode(q, ans[q.id]);
+        const dd = el("dd", v ? "" : "is-empty");
+        if (v instanceof Node) dd.append(v); else dd.textContent = v || "—";
+        row.append(el("dt", "", q.label), dd);
+        dl.append(row);
+      }
+      p.append(head, dl);
+      main.append(p);
+    });
+
+    // review: status, and accepting into members
+    const review = el("div", "db-stack");
+    const lab = el("label", "db-label", "Status");
+    lab.htmlFor = "app-status";
+    const status = select("Status", r.data.statuses, a.status, "db-input");
     status.id = "app-status";
     status.addEventListener("change", async () => {
       const s = await api("/api/admin/applications", { method: "PATCH", json: { id: a.id, status: status.value } }).catch(() => null);
-      if (s && s.ok) toast(`marked ${status.value}.`); else fail(errText(s));
+      if (s && s.ok) { toast(`Marked ${status.value}.`); $("#detail-sub .db-pill").replaceWith(pill(status.value, status.value)); } else fail(errText(s));
     });
-    const lab = el("label", "adetail__bar-label", "status");
-    lab.htmlFor = "app-status";
-    bar.append(lab, status);
+    review.append(lab, status);
     if (a.member_id) {
-      const link = el("a", "btn btn--ghost btn--sm", "open their member profile →");
-      link.href = `#/m/${a.member_id}`;
-      bar.append(link);
+      review.append(linkButton("Open member record", `#/m/${a.member_id}`));
     } else {
-      const accept = el("button", "btn btn--sm", "accept, and add to members");
-      accept.type = "button";
-      accept.id = "accept";
-      accept.addEventListener("click", async () => {
+      const accept = button("Accept → add to members", "primary", async () => {
         accept.disabled = true;
         const s = await api("/api/admin/applications", { method: "POST", json: { action: "accept", id: a.id } }).catch(() => null);
         accept.disabled = false;
         if (!s || !s.ok) return fail(errText(s));
         toast(`${a.name} is now in members.`);
         location.hash = `#/m/${s.data.memberId}`;
-      });
-      bar.append(accept);
+      }, "accept");
+      review.append(accept);
     }
-    head.append(bar);
-    body.append(head);
-
-    const skip = new Set(["name", "phone", "telegram", "dob", "life_stage", "school"]);
-    form.steps.forEach((step) => {
-      const qsInStep = step.questions.filter((q) => !(q.column && skip.has(q.column)));
-      if (!qsInStep.length) return;
-      const sec = el("section", "adetail__section");
-      sec.append(el("h2", "adetail__h2", step.heading));
-      for (const q of qsInStep) {
-        const item = el("div", "a__item");
-        item.append(el("p", "a__q", q.label), answerNode(q, ans[q.id]));
-        sec.append(item);
-      }
-      body.append(sec);
-    });
+    aside.append(
+      panel("review", review),
+      panel("record", fields([["Record", rid("A", a.id)], ["Submitted", when(a.created_at)], ["Member record", a.member_id ? rid("M", a.member_id) : "", a.member_id ? `#/m/${a.member_id}` : null]], true)),
+    );
   }
 
   /* ───────────── what's on ───────────── */
   const IP_FIELDS = [
-    { key: "name", label: "name", required: true },
-    { key: "theme", label: "card style", type: "select", options: [["", "plain Normal card"], ["backyard", "Backyard (backyard.sg colours)"], ["youthday", "Youth Day (youthday.sg colours)"]] },
-    { key: "kicker", label: "small line above the name", hint: "e.g. we invite you to our" },
-    { key: "blurb", label: "line below the name", hint: "a year at the end (… 2027) gets its own colour on themed cards." },
-    { key: "link", label: "link", hint: "its own site, e.g. https://youthday.sg. leave empty for \"page coming soon\"." },
-    { key: "image", label: "image", hint: "a full https:// address, or a file in assets/ips/." },
-    { key: "visible", label: "show on the what's on page", type: "checkbox" },
+    { key: "name", label: "Name", required: true },
+    { key: "theme", label: "Card style", type: "select", options: [["", "Plain Normal card"], ["backyard", "Backyard (backyard.sg colours)"], ["youthday", "Youth Day (youthday.sg colours)"]] },
+    { key: "kicker", label: "Line above the name", hint: "e.g. we invite you to our" },
+    { key: "blurb", label: "Line below the name", hint: "A year at the end (… 2027) gets its own colour on themed cards." },
+    { key: "link", label: "Link", hint: "Its own site, e.g. https://youthday.sg. Empty shows \"page coming soon\"." },
+    { key: "image", label: "Image", hint: "A full https:// address, or a file in assets/ips/." },
+    { key: "visible", label: "Show on the what's on page", type: "checkbox", wide: true },
   ];
   const EVENT_FIELDS = [
-    { key: "title", label: "title", required: true },
-    { key: "date", label: "date", type: "date", required: true },
-    { key: "time", label: "time", hint: "e.g. 7–10pm" },
-    { key: "place", label: "place" },
-    { key: "blurb", label: "a line or two about it", type: "textarea", wide: true },
-    { key: "link", label: "sign-up link", hint: "shown while it's upcoming." },
-    { key: "recap", label: "recap link", hint: "shown once it's past: photos, a post, a video." },
-    { key: "image", label: "photo", hint: "a full https:// address, or a file in assets/events/." },
-    { key: "visible", label: "show on the what's on page", type: "checkbox" },
+    { key: "title", label: "Title", required: true },
+    { key: "date", label: "Date", type: "date", required: true },
+    { key: "time", label: "Time", hint: "e.g. 7–10pm" },
+    { key: "place", label: "Place" },
+    { key: "blurb", label: "Description", type: "textarea", wide: true },
+    { key: "link", label: "Sign-up link", hint: "Shown while it's upcoming." },
+    { key: "recap", label: "Recap link", hint: "Shown once it's past: photos, a post, a video." },
+    { key: "image", label: "Photo", hint: "A full https:// address, or a file in assets/events/." },
+    { key: "visible", label: "Show on the what's on page", type: "checkbox", wide: true },
   ];
+  const visiblePill = (x) => (x.visible ? pill("shown", "shown") : pill("hidden", "hidden"));
 
   async function whatsOn() {
     fail("");
     show("whats-on");
     const r = await get("/api/admin/whats-on");
     if (!r) return;
-    if (!r.ok) return fail(errText(r, "couldn't load what's on."));
+    if (!r.ok) return fail(errText(r, "Couldn't load what's on."));
     const { ips, events } = r.data;
 
     const move = async (id, by) => {
       const s = await api("/api/admin/whats-on", { method: "PATCH", json: { kind: "ip", id, move: by } }).catch(() => null);
       if (s && s.ok) whatsOn(); else fail(errText(s));
     };
-    $("#ip-rows").replaceChildren(...ips.map((ip, i) => {
-      const li = row(null, ip.name, [ip.kicker, ip.blurb].filter(Boolean).join(" · ") || "—", [
-        !ip.visible && chip("hidden", "hidden"),
-        ip.theme && chip(ip.theme, "theme"),
-      ]);
-      const card = $(".arow", li);
-      card.classList.add("arow--static");
-      const ctl = el("span", "arow__ctl");
-      const up = el("button", "arow__btn", "↑");
-      up.type = "button"; up.disabled = i === 0; up.setAttribute("aria-label", `move ${ip.name} up`);
-      up.addEventListener("click", () => move(ip.id, -1));
-      const down = el("button", "arow__btn", "↓");
-      down.type = "button"; down.disabled = i === ips.length - 1; down.setAttribute("aria-label", `move ${ip.name} down`);
-      down.addEventListener("click", () => move(ip.id, 1));
-      const edit = el("a", "link", "edit");
-      edit.href = `#/w/ip/${ip.id}`;
-      ctl.append(up, down, edit);
-      $(".arow__side", li).append(ctl);
-      return li;
-    }));
-    if (!ips.length) $("#ip-rows").append(el("li", "admin__empty", "no IPs yet. the section stays hidden on the page until there's one."));
+    const arrow = (ip, i, by) => {
+      const b = el("button", "db-icon-btn", by < 0 ? "↑" : "↓");
+      b.type = "button";
+      b.disabled = by < 0 ? i === 0 : i === ips.length - 1;
+      b.setAttribute("aria-label", `move ${ip.name} ${by < 0 ? "up" : "down"}`);
+      b.addEventListener("click", () => move(ip.id, by));
+      return b;
+    };
+    const STYLE = { backyard: "Backyard", youthday: "Youth Day" };
+    renderTable($("#ip-head"), $("#ip-rows"), [
+      { label: "Order", cls: "is-id", cell: (ip) => String(ips.indexOf(ip) + 1) },
+      { label: "Name", cls: "is-name is-nowrap", link: true, cell: (ip) => ip.name },
+      { label: "Card style", cls: "is-nowrap", cell: (ip) => STYLE[ip.theme] || "plain" },
+      { label: "Lines", cell: (ip) => [ip.kicker, ip.blurb].filter(Boolean).join(" / ") },
+      { label: "Link", cls: "is-muted", cell: (ip) => ip.link },
+      { label: "Status", cls: "is-nowrap", cell: visiblePill },
+      { label: "Move", cls: "is-nowrap is-right", cell: (ip) => { const c = el("span", "db-row-ctl"); c.append(arrow(ip, ips.indexOf(ip), -1), arrow(ip, ips.indexOf(ip), 1)); return c; } },
+    ], ips, (ip) => `#/w/ip/${ip.id}`);
+    if (!ips.length) $("#ip-rows").append(emptyRow(7, "No IPs yet. The section stays hidden on the public page until there's one."));
 
     const today = new Date().toISOString().slice(0, 10);
-    $("#event-rows").replaceChildren(...events.map((e) => row(`#/w/event/${e.id}`, e.title, [day(e.date), e.time, e.place].filter(Boolean).join(" · "), [
-      chip(e.date >= today ? "coming up" : "so far", e.date >= today ? "new" : "past"),
-      !e.visible && chip("hidden", "hidden"),
-    ])));
-    if (!events.length) $("#event-rows").append(el("li", "admin__empty", "no events yet. add one and it shows under \"coming up\", then moves to \"so far\" once the day passes."));
+    renderTable($("#event-head"), $("#event-rows"), [
+      { label: "ID", cls: "is-id", cell: (e) => rid("E", e.id) },
+      { label: "Date", cls: "is-nowrap", cell: (e) => day(e.date) },
+      { label: "Title", cls: "is-name", link: true, cell: (e) => e.title },
+      { label: "Time", cls: "is-nowrap is-muted", cell: (e) => e.time },
+      { label: "Place", cell: (e) => e.place },
+      { label: "When", cls: "is-nowrap", cell: (e) => (e.date >= today ? pill("upcoming", "upcoming") : pill("past", "past")) },
+      { label: "Status", cls: "is-nowrap", cell: visiblePill },
+    ], events, (e) => `#/w/event/${e.id}`);
+    if (!events.length) $("#event-rows").append(emptyRow(7, "No events yet. Add one: it shows under \"coming up\", then moves to \"so far\" once the day passes."));
+  }
+  function emptyRow(span, text) {
+    const tr = el("tr");
+    const td = el("td", "db-empty", text);
+    td.colSpan = span;
+    tr.append(td);
+    return tr;
   }
 
   async function whatsOnForm(kind, id) {
@@ -626,25 +729,26 @@
       if (!r.ok) return fail(errText(r));
       item = (kind === "ip" ? r.data.ips : r.data.events).find((x) => String(x.id) === id);
     }
-    const body = detail("#/whats-on", "what's on");
-    if (!item) return fail("that isn't there any more.");
     const noun = kind === "ip" ? "IP" : "event";
-    body.append(el("h1", "admin__h1", isNew ? `add an ${noun}` : item.name || item.title));
-    const extra = isNew ? [] : [confirmButton(`delete this ${noun}`, `delete "${item.name || item.title}" from the what's on page?`, async () => {
+    const code = isNew ? "new" : kind === "ip" ? rid("IP", id) : rid("E", id);
+    const body = detail("#/whats-on", "what's on", code, isNew ? `add ${noun}` : item ? item.name || item.title : "not found", item && !isNew ? [visiblePill(item)] : []);
+    if (!item) return fail("That isn't there any more.");
+    const extra = [linkButton("Cancel", "#/whats-on")];
+    if (!isNew) extra.push(confirmButton(`Delete ${noun}`, `Delete "${item.name || item.title}" from the what's on page?`, async () => {
       const d = await api(`/api/admin/whats-on?kind=${kind}&id=${item.id}`, { method: "DELETE" }).catch(() => null);
-      if (d && d.ok) { toast("deleted."); location.hash = "#/whats-on"; } else fail(errText(d));
-    })];
+      if (d && d.ok) { toast("Deleted."); location.hash = "#/whats-on"; } else fail(errText(d));
+    }));
     const { form: f } = buildForm(kind === "ip" ? IP_FIELDS : EVENT_FIELDS, item, {
-      submit: isNew ? `add ${noun}` : "save",
+      submit: isNew ? `Save ${noun}` : "Save changes",
       extra,
       onSubmit: async (vals, status) => {
         const s = await api("/api/admin/whats-on", { method: isNew ? "POST" : "PATCH", json: { kind, ...(isNew ? {} : { id: item.id }), ...vals } }).catch(() => null);
         if (!s || !s.ok) { status.textContent = errText(s); return; }
-        toast(isNew ? "added. it's on the page within a minute." : "saved. the page updates within a minute.");
+        toast(isNew ? "Added. It's on the public page within a minute." : "Saved. The public page updates within a minute.");
         location.hash = "#/whats-on";
       },
     });
-    body.append(f);
+    body.append(panel(`${noun} record`, f));
   }
 
   /* ───────────── accounts (Master Admins) ───────────── */
@@ -654,60 +758,62 @@
     openList("accounts", () => {
       $("#list-title").textContent = "accounts";
       $("#filters").replaceChildren();
-      const add = el("a", "btn btn--sm", "create an account");
-      add.href = "#/accounts/new";
+      const add = linkButton("+ create account", "#/accounts/new", "primary");
       add.id = "new-account";
       $("#list-actions").append(add);
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (a) => (a.fixed ? "env" : rid("U", a.id)) },
+        { label: "Name", cls: "is-name is-nowrap", link: true, cell: (a) => a.name },
+        { label: "Username", cls: "is-nowrap", cell: (a) => el("span", "mono", a.username) },
+        { label: "Role", cls: "is-nowrap", cell: (a) => pill(ROLE_NAMES[a.role], a.role) },
+        { label: "Status", cls: "is-nowrap", cell: (a) => nodes(a.fixed ? pill("set in Vercel", "active") : pill(STATE_NAMES[a.state], a.state), a.username === me.username && pill("you", "you")) },
+        { label: "Member record", cls: "is-nowrap", cell: (a) => (a.member_id ? `${a.member_name} (${rid("M", a.member_id)})` : "") },
+        { label: "Last sign-in", cls: "is-nowrap is-muted", cell: (a) => (a.fixed ? "" : a.last_login ? when(a.last_login) : "never") },
+      ];
       loadRows = async () => {
         fail("");
         const r = await get("/api/admin/accounts");
         if (!r) return;
-        if (!r.ok) return fail(errText(r, "couldn't load accounts."));
-        const fixed = r.data.fixed.map((u) => row(null, u, "set in Vercel (ADMIN_USERS) · can't be changed here", [
-          chip("Master Admin", "master"), u === me.username && chip("you", "you"),
-        ]));
-        const rows = r.data.accounts.map((a) => row(`#/accounts/${a.id}`, a.name, [`@${a.username}`, a.member_name && `profile: ${a.member_name}`, a.last_login ? `last in ${when(a.last_login)}` : "never signed in"].filter(Boolean).join(" · "), [
-          chip(ROLE_NAMES[a.role], a.role),
-          a.state !== "active" && chip(STATE_NAMES[a.state], a.state),
-          a.username === me.username && chip("you", "you"),
-        ]));
-        fillRows([...fixed, ...rows], fixed.length + r.data.accounts.length, "no accounts yet.", "");
+        if (!r.ok) return fail(errText(r, "Couldn't load accounts."));
+        const fixed = r.data.fixed.map((u) => ({ fixed: true, username: u, name: u, role: "master" }));
+        const all = [...fixed, ...r.data.accounts];
+        fillList(columns, all, (a) => (a.fixed ? null : `#/accounts/${a.id}`), all.length, "No accounts yet.", "",
+          fixed.length ? "“env” logins are set in Vercel (ADMIN_USERS) and can't be changed here." : "");
       };
     });
   }
 
   function linkPanel(name, link, expires) {
-    const box = el("div", "admin__linkbox");
-    box.append(el("h2", "adetail__h2", `send this to ${name}`));
-    box.append(el("p", "q__hint", `it works once, until ${when(expires)}. they'll choose their own password. don't post it in a group chat.`));
-    const input = el("input", "admin__line");
+    const box = el("div", "db-stack admin__linkbox");
+    box.append(el("p", "db-note", `Send this to ${name}. It works once, until ${when(expires)}, and they choose their own password. Send it privately, not in a group chat.`));
+    const input = el("input", "db-input mono");
     input.type = "text";
     input.readOnly = true;
     input.value = link;
     input.id = "setup-link";
+    input.setAttribute("aria-label", "Setup link");
     input.addEventListener("focus", () => input.select());
-    const msg = `hi ${name.split(" ")[0]}! here's your login for the Normal admin portal. open it to set your password (works once, for 7 days): ${link}`;
-    const copy = el("button", "btn btn--sm", "copy link");
-    copy.type = "button";
-    copy.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(link); toast("copied."); } catch { input.select(); }
-    });
-    const wa = el("a", "btn btn--ghost btn--sm", "send on WhatsApp");
+    const first = name.split(" ")[0];
+    const msg = `hi ${first}! here's your login for the Normal admin portal. open it to set your password (works once, for 7 days): ${link}`;
+    const wa = el("a", "db-btn", "Send on WhatsApp");
     wa.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     wa.target = "_blank"; wa.rel = "noopener noreferrer";
-    const tg = el("a", "btn btn--ghost btn--sm", "send on Telegram");
-    tg.href = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`hi ${name.split(" ")[0]}! here's your login for the Normal admin portal. open it to set your password (works once, for 7 days).`)}`;
+    const tg = el("a", "db-btn", "Send on Telegram");
+    tg.href = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`hi ${first}! here's your login for the Normal admin portal. open it to set your password (works once, for 7 days).`)}`;
     tg.target = "_blank"; tg.rel = "noopener noreferrer";
-    const btns = el("div", "admin__formbar");
+    const copy = button("Copy link", "primary", async () => {
+      try { await navigator.clipboard.writeText(link); toast("Copied."); } catch { input.select(); }
+    });
+    const btns = el("div", "db-actions");
     btns.append(copy, wa, tg);
     box.append(input, btns);
-    return box;
+    return panel("setup link", box);
   }
 
   const ROLE_OPTIONS = [
-    ["member", "Member: sees the members directory, edits only their own details"],
-    ["admin", "Admin: sees and edits members, applications and what's on"],
-    ["master", "Master Admin: everything, plus creating and managing accounts"],
+    ["member", "Member: members directory, edits own details"],
+    ["admin", "Admin: members, applications, what's on"],
+    ["master", "Master Admin: everything, plus accounts"],
   ];
   const usernameFrom = (name) => name.toLowerCase().normalize("NFKD").replace(/[^\w\s.-]/g, "").trim().split(/\s+/).join(".").replace(/[^a-z0-9._-]/g, "").slice(0, 32);
 
@@ -715,27 +821,27 @@
     fail("");
     const r = await get("/api/admin/accounts");
     if (!r) return;
-    const body = detail("#/accounts", "accounts");
+    const body = detail("#/accounts", "accounts", "new", "create account");
     if (!r.ok) return fail(errText(r));
-    body.append(el("h1", "admin__h1", "create an account"));
-    body.append(el("p", "q__hint", "you'll get a one-time setup link to send them on WhatsApp or Telegram."));
     const pre = forMember ? r.data.unlinked.find((m) => String(m.id) === forMember) : null;
     const defs = [
-      { key: "name", label: "their name", required: true },
-      { key: "username", label: "username", hint: "what they sign in with. lowercase letters, numbers, dots.", required: true },
-      { key: "role", label: "role", type: "select", options: ROLE_OPTIONS },
-      { key: "member", label: "member profile", type: "select", options: [["new", "make a new profile in members"], ...r.data.unlinked.map((m) => [String(m.id), `link to ${m.name}`]), ["none", "no profile"]] },
+      { key: "name", label: "Name", required: true },
+      { key: "username", label: "Username", hint: "What they sign in with: lowercase letters, numbers, dots.", required: true },
+      { key: "role", label: "Role", type: "select", options: ROLE_OPTIONS },
+      { key: "member", label: "Member record", type: "select", options: [["new", "Create a new member record"], ...r.data.unlinked.map((m) => [String(m.id), `${m.name} (${rid("M", m.id)})`]), ["none", "No member record"]] },
     ];
     const { form: f, inputs } = buildForm(defs, { name: pre ? pre.name : "", username: pre ? usernameFrom(pre.name) : "", role: "member", member: pre ? String(pre.id) : "new" }, {
-      submit: "create account",
+      submit: "Create account",
+      extra: [linkButton("Cancel", "#/accounts")],
       onSubmit: async (vals, status) => {
         const s = await api("/api/admin/accounts", { method: "POST", json: vals }).catch(() => null);
         if (!s || !s.ok) { status.textContent = errText(s); return; }
         listKey = null;
-        $("h1", body).textContent = "account created";
-        $(".q__hint", body).remove();
-        f.replaceWith(linkPanel(s.data.account.name, s.data.link, s.data.expires));
-        toast("account created.");
+        $("#detail-title").textContent = s.data.account.name;
+        $("#crumb-id").textContent = rid("U", s.data.account.id);
+        $("#detail-sub").replaceChildren(pill(ROLE_NAMES[s.data.account.role], s.data.account.role), pill("link sent", "invited"));
+        accountPanel.replaceWith(linkPanel(s.data.account.name, s.data.link, s.data.expires));
+        toast("Account created.");
       },
     });
     let touched = Boolean(pre);
@@ -745,75 +851,64 @@
       const m = r.data.unlinked.find((x) => String(x.id) === inputs.member.value);
       if (m && !inputs.name.value) { inputs.name.value = m.name; if (!touched) inputs.username.value = usernameFrom(m.name); }
     });
-    body.append(f);
+    const accountPanel = panel("account record", [el("p", "db-note", "You'll get a one-time setup link to send them on WhatsApp or Telegram."), f]);
+    f.style.marginTop = "12px";
+    body.append(accountPanel);
   }
 
   async function accountDetail(id) {
     fail("");
     const r = await get("/api/admin/accounts");
     if (!r) return;
-    const body = detail("#/accounts", "accounts");
     if (!r.ok) return fail(errText(r));
     const a = r.data.accounts.find((x) => String(x.id) === id);
-    if (!a) return fail("that account doesn't exist.");
-    const head = el("header", "adetail__head");
-    head.append(el("p", "kicker", `@${a.username}`), el("h1", "admin__h1", a.name));
-    head.append(facts([
-      ["role", ROLE_NAMES[a.role]],
-      ["status", STATE_NAMES[a.state]],
-      ["member profile", a.member_name, a.member_id ? `#/m/${a.member_id}` : null],
-      ["created", `${when(a.created_at)}${a.created_by ? ` by ${a.created_by}` : ""}`],
-      ["last signed in", a.last_login ? when(a.last_login) : "never"],
-    ]));
-    body.append(head);
+    if (!a) { detail("#/accounts", "accounts", rid("U", id), "not found"); return fail("That account doesn't exist."); }
+    const body = detail("#/accounts", "accounts", rid("U", a.id), a.name, [pill(ROLE_NAMES[a.role], a.role), pill(STATE_NAMES[a.state], a.state), a.username === me.username && pill("you", "you")]);
+    const { main, aside } = recordLayout(body);
+    main.append(panel("details", fields([
+      ["Username", el("span", "mono", a.username)],
+      ["Role", ROLE_NAMES[a.role]],
+      ["Status", STATE_NAMES[a.state]],
+      ["Member record", a.member_name ? `${a.member_name} (${rid("M", a.member_id)})` : "", a.member_id ? `#/m/${a.member_id}` : null],
+      ["Created", `${when(a.created_at)}${a.created_by ? ` by ${a.created_by}` : ""}`],
+      ["Last sign-in", a.last_login ? when(a.last_login) : "never"],
+    ])));
 
     if (a.username === me.username) {
-      body.append(el("p", "admin__fine", "this is you. another Master Admin can change your role or access."));
+      aside.append(panel("access", el("p", "db-note", "This is you. Another Master Admin can change your role or access.")));
       return;
     }
-    const sec = el("section", "adetail__section");
-    const roleBar = el("div", "adetail__bar");
-    const role = select("Role", ROLE_OPTIONS, a.role);
-    role.id = "acct-role";
-    const lab = el("label", "adetail__bar-label", "role");
+    const acts = el("div", "db-stack");
+    const lab = el("label", "db-label", "Role");
     lab.htmlFor = "acct-role";
+    const role = select("Role", ROLE_OPTIONS.map(([v]) => [v, ROLE_NAMES[v]]), a.role, "db-input");
+    role.id = "acct-role";
     role.addEventListener("change", async () => {
       const s = await api("/api/admin/accounts", { method: "PATCH", json: { id: a.id, role: role.value } }).catch(() => null);
-      if (s && s.ok) { listKey = null; toast(`now ${ROLE_NAMES[role.value]}. they'll need to sign in again.`); } else { role.value = a.role; fail(errText(s)); }
+      if (s && s.ok) { listKey = null; toast(`Now ${ROLE_NAMES[role.value]}. They'll need to sign in again.`); } else { role.value = a.role; fail(errText(s)); }
     });
-    roleBar.append(lab, role);
-    sec.append(roleBar);
-
-    const btns = el("div", "admin__formbar");
-    const link = el("button", "btn btn--sm", a.state === "active" ? "new password link" : "new setup link");
-    link.type = "button";
-    link.id = "new-link";
-    link.addEventListener("click", async () => {
+    const link = button(a.state === "active" ? "New password link" : "New setup link", "", async () => {
       const s = await api("/api/admin/accounts", { method: "POST", json: { action: "link", id: a.id } }).catch(() => null);
       if (!s || !s.ok) return fail(errText(s));
-      $(".admin__linkbox", body)?.remove();
-      body.append(linkPanel(a.name, s.data.link, s.data.expires));
-    });
-    const toggle = el("button", "btn btn--ghost btn--sm", a.disabled ? "re-enable" : "disable");
-    toggle.type = "button";
-    toggle.id = "toggle-account";
-    toggle.addEventListener("click", async () => {
+      $(".admin__linkbox", main)?.closest(".db-panel").remove();
+      main.append(linkPanel(a.name, s.data.link, s.data.expires));
+    }, "new-link");
+    const toggle = button(a.disabled ? "Re-enable account" : "Disable account", "", async () => {
       const s = await api("/api/admin/accounts", { method: "PATCH", json: { id: a.id, disabled: !a.disabled } }).catch(() => null);
       if (!s || !s.ok) return fail(errText(s));
       listKey = null;
-      toast(a.disabled ? "re-enabled." : "disabled. they're signed out.");
+      toast(a.disabled ? "Re-enabled." : "Disabled. They're signed out.");
       accountDetail(id);
-    });
-    const del = confirmButton("delete login", `delete ${a.name}'s login? their member profile stays.`, async () => {
+    }, "toggle-account");
+    const del = confirmButton("Delete account", `Delete ${a.name}'s login? Their member record stays.`, async () => {
       const s = await api(`/api/admin/accounts?id=${a.id}`, { method: "DELETE" }).catch(() => null);
       if (!s || !s.ok) return fail(errText(s));
       listKey = null;
-      toast("deleted.");
+      toast("Deleted.");
       location.hash = "#/accounts";
     });
-    btns.append(link, toggle, del);
-    sec.append(btns);
-    body.append(sec);
+    acts.append(lab, role, link, toggle, del, el("p", "db-note", "Changing the role or disabling signs them out straight away."));
+    aside.append(panel("access", acts));
   }
 
   /* ───────────── which view ───────────── */
