@@ -38,7 +38,7 @@ Admins edit the "what's on" page (`events.html`) in the portal: **admin.newnorma
 
 ## The admin portal (admin.newnormal.sg)
 
-Normal's admin suite: people, meetings, partners and finance in one place. The sidebar has three hats, each opening with its sections as tabs across the top: **people** (members, org chart, applications), **partners & meetings**, and **finance** (claims, budgets, disbursements, bank, setup). Admins also get what's on, accounts, the activity log and privacy. Everyone signs in to **home**, which shows what needs them (their meetings and claims; claims waiting for their review; for Finance, claims to disburse; for admins, new applications and the latest activity). **Search** (top left, or press `/`) looks across everything they're allowed to see.
+Normal's admin suite: people, meetings, partners and finance in one place. The sidebar has three hats; the open one shows its sections underneath it: **people** (members, org chart, applications), **partners & meetings**, and **finance** (claims, budgets, disbursements, bank, setup). Admins also get what's on, accounts, the activity log and privacy. Everyone signs in to **home**, which shows what needs them (their meetings and claims; claims waiting for their review; for Finance, claims to disburse; for admins, new applications and the latest activity). **Search** (top left, or press `/`) looks across everything they're allowed to see.
 
 | Section | What's in it | Who sees it |
 |---|---|---|
@@ -55,7 +55,7 @@ Normal's admin suite: people, meetings, partners and finance in one place. The s
 
 **Every record works the same way.** A record number (MT-0012, PT-0003…), a table with search, filters and CSV export, a page with its details and a **history & notes** timeline: every change is logged there automatically, and anyone who can see the record can leave a note (a call, a decision, an update). Admins can archive a record (hidden, not deleted) or delete it.
 
-**Adding a module.** The modules are defined in one file, `lib/collections.js`: their fields, which appear as columns and filters, and what Members may see, add and change. Add an entry there and it appears as a tab under its `group`'s hat in the sidebar (a new group makes a new hat), with all of the above. No other code changes.
+**Adding a module.** The modules are defined in one file, `lib/collections.js`: their fields, which appear as columns and filters, and what Members may see, add and change. Add an entry there and it appears under its `group`'s hat in the sidebar (a new group makes a new hat), with all of the above. No other code changes.
 
 **The org chart** (members → Org chart) follows the Team Map: Normal → divisions → domains → teams, each with a code like PB or PB.1. Admins add and rename them on the chart (+ add division, + domain, + team; click a name to edit). A domain can be "overseen by" Founders, Chiefs of Staff or Directors.
 

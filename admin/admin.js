@@ -26,7 +26,6 @@
   function show(id) {
     $$("[data-view]").forEach((v) => { v.hidden = v.id !== id; });
     $("#side").hidden = id === "login";
-    if (id === "login") $("#hat").hidden = true;
     $("#app").classList.toggle("is-in", id !== "login");
   }
 
@@ -1423,6 +1422,7 @@
     send: '<path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5z"/>',
     bank: '<path d="M2 6 8 2.5 14 6M3 6.5v6M6.3 6.5v6M9.7 6.5v6M13 6.5v6M2 13.5h12"/>',
     sliders: '<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/>',
+    chev: '<path d="m6 4 4 4-4 4"/>',
   };
   // the icons are fixed strings above, never anything people typed
   function icon(name) {
@@ -1431,19 +1431,21 @@
     return t.content.firstChild;
   }
 
-  // the sidebar: home, then each group's sections the person can open
-  // the sidebar: one entry per hat (people; the modules, by group; finance), each hat's sections as tabs on its pages
+  // the sidebar: home; one entry per hat (people; the modules, by group; finance), the open hat showing its sections
+  // underneath; then the admin pages
   let hatList = [];
   function buildNav() {
     const nav = $("#tabs");
     nav.replaceChildren();
-    const add = (tab, label, href, ic) => {
+    const link = (tab, label, href, ic) => {
       const a = el("a");
       a.href = href;
       a.dataset.tab = tab;
-      a.append(icon(ic), label);
-      nav.append(a);
+      if (ic) a.append(icon(ic));
+      a.append(label);
+      return a;
     };
+    const add = (...args) => nav.append(link(...args));
     hatList = [];
     const people = [["members", "members", "#/members"], ["chart", "org chart", "#/members/chart"]];
     if (isAdmin()) people.push(["applications", "applications", "#/applications"]);
@@ -1460,7 +1462,23 @@
     hatList.push({ key: "finance", label: "finance", icon: "coin", items: money });
 
     add("home", "home", "#/", "home");
-    for (const h of hatList) add(h.key, h.label, h.items[0][2], h.icon);
+    for (const h of hatList) {
+      const grp = el("div", "db-hatgrp");
+      grp.dataset.hat = h.key;
+      const head = link(h.key, h.label, h.items[0][2], h.icon);
+      grp.append(head);
+      if (h.items.length > 1) {
+        const chev = icon("chev");
+        chev.classList.add("db-chev");
+        head.append(chev);
+        const sub = el("div", "db-subnav");
+        sub.setAttribute("role", "group");
+        sub.setAttribute("aria-label", h.label);
+        sub.append(...h.items.map(([key, label, href]) => link(key, label, href)));
+        grp.append(sub);
+      }
+      nav.append(grp);
+    }
     const admin = [];
     if (isAdmin()) admin.push(["whats-on", "what's on", "#/whats-on", "globe"]);
     if (me.role === "master") admin.push(["accounts", "accounts", "#/accounts", "key"]);
@@ -1471,19 +1489,22 @@
       admin.forEach((i) => add(...i));
     }
   }
-  // the open hat's sections, as tabs across the top (hidden outside a hat, or when it has only one)
-  function showHat(hat, tab) {
-    const bar = $("#hat");
-    bar.hidden = !hat || hat.items.length < 2;
-    if (bar.hidden) return bar.replaceChildren();
-    bar.setAttribute("aria-label", hat.label);
-    bar.replaceChildren(...hat.items.map(([key, label, href]) => {
-      const a = el("a", "", label);
-      a.href = href;
-      a.dataset.tab = key;
-      if (key === tab) a.setAttribute("aria-current", "page");
-      return a;
-    }));
+  // where you are: the open hat shows its sections (a hat with one section is that section)
+  function markNav(hat, tab) {
+    const nav = $("#tabs");
+    const target = hat && hat.items.length === 1 ? hat.key : tab;
+    $$("#tabs a").forEach((a) => (a.dataset.tab === target ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    $$("#tabs .db-hatgrp").forEach((g) => g.classList.toggle("is-open", Boolean(hat) && g.dataset.hat === hat.key));
+    // on phones the sidebar is a scrolling strip: bring where you are into view, once it's showing
+    requestAnimationFrame(() => {
+      if (nav.scrollWidth <= nav.clientWidth + 1) return;
+      const head = nav.querySelector(".is-open") || nav.querySelector("a[aria-current]");
+      const cur = nav.querySelector("a[aria-current]") || head;
+      if (!head) return;
+      let left = head.offsetLeft - 12;
+      if (cur.offsetLeft + cur.offsetWidth > left + nav.clientWidth) left = cur.offsetLeft + cur.offsetWidth - nav.clientWidth + 12;
+      nav.scrollLeft = Math.max(0, left);
+    });
   }
 
   $("#search-form").addEventListener("submit", (e) => {
@@ -2920,10 +2941,8 @@
     const m = hash.match(hit[0]);
     const tab = typeof hit[2] === "function" ? hit[2](m) : hit[2];
     const hat = hatList.find((h) => h.items.some(([key]) => key === tab));
-    const side = hat ? hat.key : tab;
-    $$("#tabs a").forEach((a) => (a.dataset.tab === side ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    markNav(hat, tab);
     $$("[data-area]").forEach((p) => { p.textContent = hat ? hat.label : "admin"; });
-    showHat(hat, tab);
     hit[1](m);
   }
   addEventListener("hashchange", route);
