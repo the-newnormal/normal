@@ -3,7 +3,7 @@
 //   POST   { name, username, role, member }         → new account; answers with its one-time setup link
 //          member: "new" (make a profile), "none", or a member id
 //   POST   { action: "link", id }                   → a fresh setup link (to reset a forgotten password)
-//   PATCH  { id, role?, disabled? }                 → change role, or disable / re-enable
+//   PATCH  { id, role?, disabled?, finance? }       → change role, disable / re-enable, or put on the Finance team
 //   DELETE ?id=                                     → remove the login (their member profile stays)
 
 const { db } = require("../../lib/db");
@@ -29,7 +29,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     const accounts = await q(
-      `select a.id, a.username, a.name, a.role, a.disabled, a.member_id, m.name as member_name,
+      `select a.id, a.username, a.name, a.role, a.disabled, a.finance, a.member_id, m.name as member_name,
               a.created_by, a.created_at, a.last_login, a.setup_expires, ${STATE} as state
          from accounts a left join members m on m.id = a.member_id
         order by a.disabled, a.role, lower(a.name)`
@@ -76,9 +76,9 @@ module.exports = async function handler(req, res) {
 
     const t = auth.newSetupToken();
     const [a] = await q(
-      `insert into accounts (username, name, role, member_id, setup_token_hash, setup_expires, created_by)
-       values ($1, $2, $3, $4, $5, $6, $7) returning id, username, name, role, member_id`,
-      [username, name, role, memberId, t.hash, t.expires, me.username]
+      `insert into accounts (username, name, role, member_id, setup_token_hash, setup_expires, created_by, finance)
+       values ($1, $2, $3, $4, $5, $6, $7, $8) returning id, username, name, role, member_id, finance`,
+      [username, name, role, memberId, t.hash, t.expires, me.username, b.finance === true]
     );
     await log(q, me, "created", "account", a.id, a.name, [{ field: "Role", from: null, to: role }, { field: "Username", from: null, to: username }]);
     return res.status(201).json({ account: a, link: auth.setupLink(req, t.token), expires: t.expires });
@@ -86,16 +86,17 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "PATCH") {
     const id = idOf(b.id);
-    const [a] = id ? await q(`select id, username, name, role, disabled from accounts where id = $1`, [id]) : [];
+    const [a] = id ? await q(`select id, username, name, role, disabled, finance from accounts where id = $1`, [id]) : [];
     if (!a) return res.status(404).json({ error: "not_found" });
     if (a.username === me.username) return res.status(409).json({ error: "cant_change_self" });
     if (b.role !== undefined && !auth.ROLES.includes(b.role)) return res.status(400).json({ error: "bad_request" });
     const [updated] = await q(
-      `update accounts set role = coalesce($2, role), disabled = coalesce($3, disabled) where id = $1 returning id, role, disabled`,
-      [id, b.role ?? null, typeof b.disabled === "boolean" ? b.disabled : null]
+      `update accounts set role = coalesce($2, role), disabled = coalesce($3, disabled), finance = coalesce($4, finance) where id = $1 returning id, role, disabled, finance`,
+      [id, b.role ?? null, typeof b.disabled === "boolean" ? b.disabled : null, typeof b.finance === "boolean" ? b.finance : null]
     );
     const changes = [];
     if (updated.role !== a.role) changes.push({ field: "Role", from: a.role, to: updated.role });
+    if (updated.finance !== a.finance) changes.push({ field: "Finance team", from: a.finance ? "yes" : "no", to: updated.finance ? "yes" : "no" });
     if (updated.disabled !== a.disabled) changes.push({ field: "Access", from: a.disabled ? "disabled" : "active", to: updated.disabled ? "disabled" : "active" });
     if (changes.length) await log(q, me, "updated", "account", id, a.name, changes);
     return res.status(200).json({ account: updated });

@@ -384,6 +384,42 @@ a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: va
 .db-checks.is-long { max-height: 240px; overflow-y: auto; }
 .db-checks__find { height: 30px; font-size: 13px; }
 
+/* ───────────── finance ───────────── */
+.db-alert--warn { color: var(--warn); background: var(--warn-soft); border-color: rgba(138, 90, 0, .25); }
+.db-stack-page { display: grid; gap: 16px; }
+.db-stack-page .db-panel + .db-panel, .db-stack-page > * + * { margin-top: 0; }
+.db-files { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.db-files li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.db-files--thumbs { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.db-files--thumbs li { display: grid; gap: 4px; align-content: start; }
+.db-files--thumbs a { overflow-wrap: anywhere; }
+.db-thumb { display: block; width: 100%; height: 120px; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
+.db-qr { width: 220px; max-width: 100%; height: auto; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.db-payout, .db-rules { padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.db-form--inner { grid-column: 1 / -1; }
+.db-rule { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.db-rule .db-notes { margin: 4px 0; color: var(--muted); }
+.db-rule-edit { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.db-rule-edit summary { cursor: pointer; font-weight: 600; }
+.db-rule-edit .db-form { margin-top: 12px; }
+.db-bar-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.db-bar { position: relative; display: inline-block; width: 110px; height: 8px; overflow: hidden; background: #ebe8e4; border-radius: 999px; }
+.db-bar__fill { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 999px; }
+.db-bar.is-over .db-bar__fill { background: var(--danger); }
+.db-fund-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 16px; border-top: 1px solid var(--line); }
+.db-mini-form { display: grid; gap: 8px; align-content: start; padding: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.db-mini-form .db-btn { justify-self: start; }
+.db-guidelines { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--surface); }
+.db-guidelines__group { margin: 8px 0 2px; font: 600 11px/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.db-guidelines__group:first-child { margin-top: 0; }
+.db-guidelines__row { display: grid; grid-template-columns: auto minmax(0, 1fr) 120px; align-items: center; gap: 10px; }
+.db-guidelines__row .db-input { height: 30px; text-align: right; }
+.db-guidelines__row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); }
+.db-bank { gap: 6px; }
+.db-bank .db-input { height: 30px; margin-top: 6px; }
+.db-bank.is-closed { opacity: .6; }
+.db-seg a[aria-current] { cursor: default; }
+
 /* ───────────── phones and tablets ───────────── */
 @media (max-width: 900px) {
   .db-app.is-in { display: block; }

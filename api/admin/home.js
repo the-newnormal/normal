@@ -10,6 +10,7 @@ const auth = require("../../lib/auth");
 const { log } = require("../../lib/activity");
 const R = require("../../lib/records");
 const { LEANING } = require("../../lib/org");
+const F = require("../../lib/finance");
 
 const like = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
@@ -17,11 +18,21 @@ const like = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 function hrefOf(kind, ref) {
   if (!ref) return null;
   if (kind.startsWith("record:")) return `#/r/${kind.slice(7)}/${ref}`;
-  return { member: `#/m/${ref}`, application: `#/a/${ref}`, account: `#/accounts/${ref}`, unit: `#/org/${ref}`, ip: `#/w/ip/${ref}`, event: `#/w/event/${ref}` }[kind] || null;
+  return { member: `#/m/${ref}`, application: `#/a/${ref}`, account: `#/accounts/${ref}`, unit: `#/org/${ref}`, ip: `#/w/ip/${ref}`, event: `#/w/event/${ref}`,
+    claim: `#/fin/c/${ref}`, budget: `#/fin/b/${ref}`, bank: "#/fin/bank" }[kind] || null;
 }
 
 // can this person see (and leave notes on) this timeline? → the record's label, or null
 async function timelineAccess(q, me, kind, ref) {
+  if (kind === "claim" || kind === "budget") {
+    const fm = await F.whoIs(q, me);
+    if (kind === "claim") {
+      const [c] = await q(`select seq, description, claimant_id, division_id from fin_claims where id = $1`, [ref]);
+      return c && (Number(c.claimant_id) === me.memberId || fm.inPurview(c.division_id)) ? `${F.claimCode(c.seq)} ${c.description}` : null;
+    }
+    const [b] = await q(`select name, division_id, is_reserve from fin_budgets where id = $1`, [ref]);
+    return b && (b.is_reserve ? fm.finance : fm.inPurview(b.division_id)) ? b.name : null;
+  }
   if (kind.startsWith("record:")) {
     const c = kind.slice(7);
     if (!R.canOpen(me, c)) return null;
@@ -62,26 +73,36 @@ function namesFor(c, data, refs) {
 async function dashboard(q, me) {
   const today = R.todaySG();
   const admin = R.isAdmin(me);
-  const notDone = (c) => (p) => {
-    const d = R.COLLECTIONS[c].done;
-    return d ? `coalesce(data->>'${d.field}', '') <> all(${p(d.values)}::text[])` : "true";
-  };
-  const and = (...fs) => (p) => fs.map((f) => f(p)).join(" and ");
+  const has = (c) => Boolean(R.COLLECTIONS[c]);
   const mine = (c) => (p) => {
     const keys = R.COLLECTIONS[c].fields.filter((f) => f.type === "member" || f.type === "members");
     if (!me.memberId) return "false";
     return `(${keys.map((f) => (f.type === "members" ? `coalesce(data->'${f.key}', '[]'::jsonb) @> jsonb_build_array(${p(me.memberId)}::bigint)` : `data->>'${f.key}' = ${p(String(me.memberId))}`)).join(" or ")})`;
   };
+  const and = (...fs) => (p) => fs.map((f) => f(p)).join(" and ");
   const from = (k) => (p) => `data->>'${k}' >= ${p(today)}`;
-  const out = { today, role: me.role };
+  const out = { today, role: me.role, modules: Object.keys(R.COLLECTIONS) };
 
-  out.announcements = await listOf(q, me, "announcements", (p) => "true", `(data->>'pinned')::boolean desc nulls last, data->>'date' desc nulls last, seq desc`, 4);
-  out.upcoming = await listOf(q, me, "projects", and(notDone("projects"), from("start")), `data->>'start' asc`, 6);
-  out.myTasks = await listOf(q, me, "tasks", and(notDone("tasks"), mine("tasks")), `data->>'due' asc nulls last, seq`, 8);
-  out.myMeetings = await listOf(q, me, "meetings", and(from("date"), mine("meetings")), `data->>'date' asc`, 5);
+  if (has("meetings")) out.myMeetings = await listOf(q, me, "meetings", and(from("date"), mine("meetings")), `data->>'date' asc`, 5);
+
+  // finance: my claims; claims waiting for me; claims to disburse
+  const fm = await F.whoIs(q, me);
+  out.finance = { isLead: fm.isLead, finance: fm.finance };
+  const claimRow = (c) => ({ id: Number(c.id), code: F.claimCode(c.seq), description: c.description, amount_cents: Number(c.amount_cents), status: c.status,
+    status_label: F.statusLabel(c.status, c.kind), claimant_name: c.claimant_name, created_at: c.created_at });
+  if (me.memberId) out.myClaims = (await q(`select * from fin_claims where claimant_id = $1 order by created_at desc limit 5`, [me.memberId])).map(claimRow);
+  if (fm.finance || fm.isLead) {
+    const rows = fm.finance
+      ? await q(`select * from fin_claims where status = 'pending_finance' or (status = 'pending_review' and claimant_id <> $1) order by created_at limit 50`, [me.memberId || 0])
+      : await q(`select * from fin_claims where status = 'pending_review' and claimant_id <> $1 and division_id = any($2::bigint[]) order by created_at limit 50`, [me.memberId || 0, [...fm.leads]]);
+    out.toReview = rows.map(claimRow);
+  }
+  if (fm.finance) {
+    const rows = await q(`select * from fin_claims where status = 'approved' order by updated_at limit 50`);
+    out.toDisburse = rows.map(claimRow);
+  }
 
   if (!admin) {
-    out.myClaims = await listOf(q, me, "finance", mine("finance"), `seq desc`, 5);
     if (me.memberId) {
       out.mySeats = await q(
         `select s.role, u.code, u.name from seats s left join org_units u on u.id = s.unit_id where s.member_id = $1 order by s.sort`,
@@ -96,17 +117,10 @@ async function dashboard(q, me) {
     members: (await one(`select count(*)::int as n from members where status = 'active'`)).n,
     joining: (await one(`select count(*)::int as n from members where status = any($1::text[])`, [LEANING])).n,
     newApplications: (await one(`select count(*)::int as n from applications where status = 'new'`)).n,
-    openTasks: (await one(`select count(*)::int as n from records where collection = 'tasks' and not archived and coalesce(data->>'status','') <> 'done'`)).n,
-    overdueTasks: (await one(`select count(*)::int as n from records where collection = 'tasks' and not archived and coalesce(data->>'status','') <> 'done' and data->>'due' < $1`, [today])).n,
-    upcoming: (await one(`select count(*)::int as n from records where collection = 'projects' and not archived and data->>'start' >= $1 and coalesce(data->>'status','') not in ('done','cancelled')`, [today])).n,
-    claims: (await one(`select count(*)::int as n, coalesce(sum((data->>'amount')::numeric), 0)::float as total from records
-                         where collection = 'finance' and not archived and data->>'type' = 'expense' and data->>'status' = 'submitted'`)),
-    activePartners: (await one(`select count(*)::int as n from records where collection = 'partners' and not archived and data->>'status' = 'active'`)).n,
   };
+  if (has("partners")) out.counts.activePartners = (await one(`select count(*)::int as n from records where collection = 'partners' and not archived and data->>'status' = 'active'`)).n;
   if (me.role === "master") out.counts.pendingLinks = (await one(`select count(*)::int as n from accounts where password_hash is null and setup_expires > now() and not disabled`)).n;
   out.applications = (await q(`select id, name, created_at, life_stage from applications where status = 'new' order by created_at desc limit 5`)).map((a) => ({ ...a, id: Number(a.id) }));
-  out.overdue = await listOf(q, me, "tasks", and(notDone("tasks"), (p) => `data->>'due' < ${p(today)}`), `data->>'due' asc`, 6);
-  out.claimsToApprove = await listOf(q, me, "finance", (p) => `data->>'type' = 'expense' and data->>'status' = 'submitted'`, `data->>'date' asc nulls last, seq`, 6);
   out.recent = (await q(`select * from activity where action <> 'signed in' order by at desc limit 12`)).map((a) => ({ ...a, id: Number(a.id), href: hrefOf(a.kind, a.ref_id) }));
   return out;
 }
@@ -133,6 +147,14 @@ async function search(q, me, text) {
     const p = (v) => { params.push(v); return `$${params.length}`; };
     const rows = await q(`select id, seq, data from records where collection = ${p(c)} and not archived and ${R.visibleSql(me, c, p)} and data::text ilike ${p(t)} order by seq desc limit 6`, params);
     add(c, R.COLLECTIONS[c].label, rows.map((r) => ({ href: `#/r/${c}/${r.id}`, title: R.titleOf(c, r.data), sub: R.code(c, r.seq) })));
+  }
+  {
+    const fm = await F.whoIs(q, me);
+    const rows = await q(
+      `select id, seq, description, claimant_name, status, kind, claimant_id, division_id from fin_claims
+        where (description ilike $1 or claimant_name ilike $1 or coalesce(vendor_name,'') ilike $1) order by created_at desc limit 40`, [t]);
+    add("claims", "claims", rows.filter((c) => Number(c.claimant_id) === me.memberId || fm.inPurview(c.division_id)).slice(0, 6)
+      .map((c) => ({ href: `#/fin/c/${c.id}`, title: c.description, sub: `${F.claimCode(c.seq)} · ${c.claimant_name} · ${F.statusLabel(c.status, c.kind)}` })));
   }
   if (me.role === "master") {
     add("accounts", "accounts", (await q(`select id, name, username, role from accounts where name ilike $1 or username ilike $1 order by lower(name) limit 5`, [t]))

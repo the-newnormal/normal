@@ -38,25 +38,22 @@ Admins edit the "what's on" page (`events.html`) in the portal: **admin.newnorma
 
 ## The admin portal (admin.newnormal.sg)
 
-Normal's admin suite: people, work, outreach, money and the library in one place. Everyone signs in to **home**, which shows what needs them (their tasks, meetings, claims, announcements; for admins also new applications, overdue tasks and claims to approve). **Search** (top left, or press `/`) looks across everything they're allowed to see.
+Normal's admin suite: people, meetings, partners and finance in one place. Everyone signs in to **home**, which shows what needs them (their meetings and claims; claims waiting for their review; for Finance, claims to disburse; for admins, new applications and the latest activity). **Search** (top left, or press `/`) looks across everything they're allowed to see.
 
 | Section | What's in it | Who sees it |
 |---|---|---|
 | members | Everyone in Normal: name, title, seats on the org chart (role + division, domain or team), Telegram, phone, email, birthday, school, joined, recruitment round, status, notes. A table (search, filter by division or team, export) and an **org chart**. | Everyone. Members see only name, title, seats and Telegram of others, see recruits as "joining", edit only their own contact details, and can't change the chart. |
 | applications | Join-page applications: full answers, status (new, interviewing, accepted, declined), "accept" adds them to members. Export. | Admins |
 | what's on | The IPs and events on the what's on page | Admins |
-| tasks | To-dos with status, priority, due date, who's on it, team and event. Overdue ones are flagged. | Everyone sees the tasks they're on, adds tasks and updates their status; admins see and edit all. |
-| events & projects | Everything Normal runs: dates, team, lead, budget, venue, attendance. Each one's page gathers its tasks, meetings and finance. | Everyone sees them; admins edit. |
 | meetings | Date, attendees, agenda, minutes, decisions | Attendees (and can write the minutes); admins |
 | partners | Organisations Normal works with (PA, HDB, schools, sponsors…), status, who looks after them, their contact | The person who looks after each; admins |
-| finance | Budget lines, expenses and income, with a status (submitted → approved → paid). Totals at the bottom of the list. | Anyone can submit an expense claim and see their own (locked once approved); admins see all and approve |
-| library | Links to guides, SOPs, templates, decks, policies | Everyone, unless marked admins-only |
-| announcements | Messages to the team; pinned ones top everyone's home | Everyone, unless marked admins-only |
+| claims | Reimbursements and vendor invoices: receipts, review, approval, disbursement (see **Finance** below) | Everyone claims and sees their own; division leads review their divisions'; Finance everything |
+| budgets, disbursements, bank, finance setup | Budgets with spend guidelines, funding and the reserve; paying approved claims; the bank ledger; categories and claim-form notices | Budgets: division leads (theirs) and Finance; the rest: Finance |
 | accounts | Who can sign in, and as what | Master Admins |
 | activity log | Every change: who, what, when, old → new. Sign-ins and account changes for Master Admins only. | Admins |
 | privacy | Delete old applications (the privacy notice's 3-year promise) | Master Admins |
 
-**Every record works the same way.** A record number (T-0012, P-0003, F-0042…), a table with search, filters and CSV export, a page with its details and a **history & notes** timeline: every change is logged there automatically, and anyone who can see the record can leave a note (a call, a decision, an update). Admins can archive a record (hidden, not deleted) or delete it.
+**Every record works the same way.** A record number (MT-0012, PT-0003…), a table with search, filters and CSV export, a page with its details and a **history & notes** timeline: every change is logged there automatically, and anyone who can see the record can leave a note (a call, a decision, an update). Admins can archive a record (hidden, not deleted) or delete it.
 
 **Adding a module.** The modules are defined in one file, `lib/collections.js`: their fields, which appear as columns and filters, and what Members may see, add and change. Add an entry there and it appears in the sidebar with all of the above. No other code changes.
 
@@ -67,7 +64,21 @@ Normal's admin suite: people, work, outreach, money and the library in one place
 - **Import from Team Map** (on the chart): in the Team Map, Export CSV, then choose that file. The portal shows what's in it, then adds any new divisions, domains, teams and people and gives everyone in the file their seats, status and round from it. People are matched by name, so importing again adds nothing twice; nobody is deleted.
 - A domain that is just one team of the same name shows as one card. Hover a Director to see what they oversee. A division, domain or team can only be deleted once it's empty.
 
-**Roles.** Master Admin: everything, plus accounts, sign-ins in the log and privacy tools. Admin: everything else. Member: home, the members directory and org chart, their own profile, and the modules as set in `lib/collections.js` (by default: their tasks, meetings, partners and claims; all events, the library and announcements).
+**Roles.** Master Admin: everything, plus accounts, sign-ins in the log and privacy tools, and always on the Finance team. Admin: everything else except Finance's pages (unless they're on the Finance team). Member: home, the members directory and org chart, their own profile, their claims, and the modules as set in `lib/collections.js` (by default: the meetings they attend and the partners they look after).
+
+### Finance
+
+Rebuilt from [the-newnormal/finance](https://github.com/the-newnormal/finance) (its `CLAUDE.md` is the rulebook), inside the portal with the same login.
+
+- **Who's who.** *Finance team*: Master Admins, plus anyone a Master Admin ticks "On the Finance team" for (accounts → the person). *Division leads*: anyone with a Founder, Chief of Staff or Director seat on an org-chart division, so the org chart decides who reviews what. *Everyone else* claims what they paid for. A login must be linked to a member record to claim (Master Admins from Vercel: "This is me").
+- **A claim** goes *awaiting review* (members' claims: one approval from a lead of the budget's division, or Finance) → *awaiting Finance* (leads' and Finance's own claims start here) → *approved* → *reimbursed* (or *settled*, for a vendor invoice), or *rejected* with a reason the claimant sees. Nobody reviews their own claim, except that Finance may finalise its own. Vendor invoices: leads and Finance only. Every step is on the claim's timeline, with notes.
+- **Receipts** (1–5 per claim, photos or PDFs up to 3.5 MB; big photos are shrunk in the browser) are stored in the database. Only the claimant, the division's leads and Finance can open them.
+- **Payout details** (PayNow mobile or UEN, or a bank account) are encrypted (AES-256-GCM, the claimant as additional data) with `PAYOUT_ENCRYPTION_KEY`; everyone but Finance sees only the last four characters. People can save theirs for next time.
+- **Disbursements.** Finance opens an approved claim for a **PayNow QR** (payee, amount and the reference `NN-C00012` filled in), pays in the bank app, then records the disbursement: which account, the bank reference, the date. That takes it off the account in the ledger.
+- **Budgets** live in a division and provide some of the 15 spend categories (in 5 groups: Venue & Production, Programme, People, Marketing & Brand, Operations & Admin), each with a guideline amount; claims can only use a budget's categories. Leads and Finance see spending against each guideline. **Available** = grants received + loans from the reserve − repayments − approved and disbursed claims. A short balance never blocks a claim; Finance gets a warning.
+- **The reserve** is the budget outside every division: Finance adds to it, claims against it and lends from it.
+- **Bank.** Accounts with an opening balance and an append-only ledger (money in, adjustments, transfers, disbursements). Type in the DBS balance to compare; "Match it" adds the adjustment. Mistakes are corrected with an adjustment, never edited.
+- **Not in the portal yet** (still in the finance app): claim emails, AI receipt checks, importing claims paid before the portal, and editing ledger entries with a reason. Claims in the finance app aren't copied across.
 
 **Giving someone a login.** accounts → create an account (or "make them a login" on their member profile). Pick their role and their member profile. You get a one-time link to send on WhatsApp or Telegram; they open it and choose their own password. Links work once and last 7 days. If someone forgets their password, open their account → new password link.
 
@@ -80,8 +91,8 @@ Normal's admin suite: people, work, outreach, money and the library in one place
 | Portal | `admin/index.html`, `admin/admin.js`, `admin/admin.css`, `admin/teammap.js` (served at admin.newnormal.sg, also at `/admin/`). It has its own plain records-office look, separate from the public site's `styles.css`. |
 | Setup-link page | `admin/welcome.html` (admin.newnormal.sg/welcome) |
 | First Master Admin's login line | `admin/setup.html` (admin.newnormal.sg/setup) |
-| Vercel functions (11 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `org.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js`, `records.js` (every module), `home.js` (home, search, activity log, notes) |
-| Shared code | `lib/collections.js` (the modules), `lib/records.js` (their rules), `lib/activity.js` (the log), `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/org.js` (org chart roles and shape), `lib/form.js` (questions) |
+| Vercel functions (all 12 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `org.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js`, `records.js` (every module), `home.js` (home, search, activity log, notes), `finance.js` (claims, budgets, disbursements, bank). To add another, fold `export.js` into `applications.js` first. |
+| Shared code | `lib/finance.js` (finance rules, encryption, PayNow), `lib/collections.js` (the modules), `lib/records.js` (their rules), `lib/activity.js` (the log), `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/org.js` (org chart roles and shape), `lib/form.js` (questions) |
 
 ### Switching it on (once)
 
@@ -89,6 +100,8 @@ Normal's admin suite: people, work, outreach, money and the library in one place
 2. **The first Master Admin.** Open `/admin/setup.html`, pick a username and password, and copy the line it gives you (the password is scrambled in your browser and never sent). In Vercel → **Settings → Environment Variables**, add `ADMIN_USERS` with that line. Master Admins set this way can't be changed from the portal, so keep it to one or two people. Everyone else gets an account from the portal. Once signed in, open your own member record and press **This is me**, so home shows your tasks and meetings.
 3. **Domain.** In Vercel → **Settings → Domains**, add `admin.newnormal.sg` (and `newnormal.sg` when you move the main site there), then add the DNS record Vercel shows you at your domain registrar.
 4. **Redeploy**, sign in at admin.newnormal.sg, and create the other accounts.
+
+**Finance needs `PAYOUT_ENCRYPTION_KEY`** (Vercel → Settings → Environment Variables, marked Sensitive): 32 random bytes in base64. Make one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` and keep a copy in a password manager: payout details saved under a lost key can't be read again. Until it's set, claims can't be sent.
 
 Optional: `FILLOUT_API_KEY` also sends a copy of each application to the old Fillout form. `ADMIN_SESSION_SECRET` (any long random text) signs the login cookies; without it one is made from `ADMIN_USERS` and the database address.
 

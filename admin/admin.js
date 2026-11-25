@@ -100,6 +100,7 @@
     me = user;
     const s = await api("/api/admin/records?schema=1").catch(() => null);
     schema = s && s.ok ? s.data.collections : {};
+    await loadFinMe();
     buildNav();
     $("#who-name").textContent = user.name;
     $("#who-name").href = user.memberId ? `#/m/${user.memberId}` : "#/";
@@ -1247,7 +1248,7 @@
         { label: "ID", cls: "is-id", cell: (a) => (a.fixed ? "env" : rid("U", a.id)) },
         { label: "Name", cls: "is-name is-nowrap", link: true, cell: (a) => a.name },
         { label: "Username", cls: "is-nowrap", cell: (a) => el("span", "mono", a.username) },
-        { label: "Role", cls: "is-nowrap", cell: (a) => pill(ROLE_NAMES[a.role], a.role) },
+        { label: "Role", cls: "is-nowrap", cell: (a) => nodes(pill(ROLE_NAMES[a.role], a.role), (a.finance || a.role === "master") && pill("finance", "accepted")) },
         { label: "Status", cls: "is-nowrap", cell: (a) => nodes(a.fixed ? pill("set in Vercel", "active") : pill(STATE_NAMES[a.state], a.state), a.username === me.username && pill("you", "you")) },
         { label: "Member record", cls: "is-nowrap", cell: (a) => (a.member_id ? `${a.member_name} (${rid("M", a.member_id)})` : "") },
         { label: "Last sign-in", cls: "is-nowrap is-muted", cell: (a) => (a.fixed ? "" : a.last_login ? when(a.last_login) : "never") },
@@ -1311,8 +1312,9 @@
       { key: "username", label: "Username", hint: "What they sign in with: lowercase letters, numbers, dots.", required: true },
       { key: "role", label: "Role", type: "select", options: ROLE_OPTIONS },
       { key: "member", label: "Member record", type: "select", options: [["new", "Create a new member record"], ...r.data.unlinked.map((m) => [String(m.id), `${m.name} (${rid("M", m.id)})`]), ["none", "No member record"]] },
+      { key: "finance", label: "On the Finance team (final approval, disbursements, bank, budgets)", type: "checkbox" },
     ];
-    const { form: f, inputs } = buildForm(defs, { name: pre ? pre.name : "", username: pre ? usernameFrom(pre.name) : "", role: "member", member: pre ? String(pre.id) : "new" }, {
+    const { form: f, inputs } = buildForm(defs, { name: pre ? pre.name : "", username: pre ? usernameFrom(pre.name) : "", role: "member", member: pre ? String(pre.id) : "new", finance: false }, {
       submit: "Create account",
       extra: [linkButton("Cancel", "#/accounts")],
       onSubmit: async (vals, status) => {
@@ -1389,7 +1391,15 @@
       toast("Deleted.");
       location.hash = "#/accounts";
     });
-    acts.append(lab, role, link, toggle, del, el("p", "db-note", "Changing the role or disabling signs them out straight away."));
+    const finToggle = button(a.role === "master" ? "Finance team (as Master Admin)" : a.finance ? "Remove from the Finance team" : "Add to the Finance team", "", async () => {
+      const s = await api("/api/admin/accounts", { method: "PATCH", json: { id: a.id, finance: !a.finance } }).catch(() => null);
+      if (!s || !s.ok) return fail(errText(s));
+      listKey = null;
+      toast(a.finance ? "Removed from the Finance team." : "Added to the Finance team.");
+      accountDetail(id);
+    }, "toggle-finance");
+    finToggle.disabled = a.role === "master";
+    acts.append(lab, role, link, toggle, finToggle, del, el("p", "db-note", "Changing the role or disabling signs them out straight away. Master Admins are always on the Finance team."));
     aside.append(panel("access", acts));
     main.append(timelinePanel("account", a.id));
   }
@@ -1415,6 +1425,11 @@
     key: '<circle cx="5" cy="10.5" r="3"/><path d="M7.2 8.4 13.5 2M11 4.5l2 2M9.5 6l1.5 1.5"/>',
     history: '<path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.5H5M8 5v3l2 1.5"/>',
     shield: '<path d="M8 1.8 13 3.5v4c0 3-2.1 5.3-5 6.7-2.9-1.4-5-3.7-5-6.7v-4z"/>',
+    receipt: '<path d="M3.5 1.5h9v13l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1z"/><path d="M6 5h4M6 8h4M6 11h2"/>',
+    pie: '<path d="M8 2.5a5.5 5.5 0 1 0 5.5 5.5H8z"/><path d="M10 1.5A5 5 0 0 1 14.5 6H10z"/>',
+    send: '<path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5z"/>',
+    bank: '<path d="M2 6 8 2.5 14 6M3 6.5v6M6.3 6.5v6M9.7 6.5v6M13 6.5v6M2 13.5h12"/>',
+    sliders: '<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/>',
   };
   // the icons are fixed strings above, never anything people typed
   function icon(name) {
@@ -1435,13 +1450,18 @@
       nav.append(a);
     };
     add("home", "home", "#/", "home");
-    for (const g of ["People", "Work", "Outreach", "Money", "Library", "Website", "Admin"]) {
+    for (const g of ["People", "Work", "Outreach", "Money", "Website", "Admin"]) {
       const items = [];
       if (g === "People") {
         items.push(["members", "members", "#/members", "members"]);
         if (isAdmin()) items.push(["applications", "applications", "#/applications", "applications"]);
       }
       for (const c of Object.values(schema)) if (c.group === g) items.push([c.key, c.label, `#/r/${c.key}`, c.icon]);
+      if (g === "Money") {
+        items.push(["fin-claims", "claims", "#/fin/claims", "receipt"]);
+        if (finMe.finance || finMe.isLead) items.push(["fin-budgets", "budgets", "#/fin/budgets", "pie"]);
+        if (finMe.finance) items.push(["fin-payouts", "disbursements", "#/fin/payouts", "send"], ["fin-bank", "bank", "#/fin/bank", "bank"], ["fin-setup", "finance setup", "#/fin/setup", "sliders"]);
+      }
       if (g === "Website" && isAdmin()) items.push(["whats-on", "what's on", "#/whats-on", "globe"]);
       if (g === "Admin") {
         if (me.role === "master") items.push(["accounts", "accounts", "#/accounts", "key"]);
@@ -1818,6 +1838,7 @@
     if (!r.ok) { bodyEl.replaceChildren(); return fail(errText(r, "Couldn't load home.")); }
     const d = r.data;
     const parts = [];
+    const sum = (list) => (list || []).reduce((s, c) => s + c.amount_cents, 0);
 
     if (d.counts) {
       const k = d.counts;
@@ -1832,10 +1853,9 @@
       grid.append(
         stat(k.members, "active members", "#/members", k.joining ? `+${k.joining} recruits not confirmed` : ""),
         stat(k.newApplications, "new applications", "#/applications", "", k.newApplications > 0),
-        stat(k.openTasks, "open tasks", "#/r/tasks", k.overdueTasks ? `${k.overdueTasks} overdue` : "", k.overdueTasks > 0),
-        stat(k.upcoming, "events & projects ahead", "#/r/projects"),
-        stat(k.claims.n, "claims to approve", "#/r/finance", k.claims.n ? money(k.claims.total) : "", k.claims.n > 0),
-        stat(k.activePartners, "active partners", "#/r/partners"),
+        ...(d.toReview ? [stat(d.toReview.length, "claims waiting for you", "#/fin/claims/review", d.toReview.length ? cents(sum(d.toReview)) : "", d.toReview.length > 0)] : []),
+        ...(d.toDisburse ? [stat(d.toDisburse.length, "claims to disburse", "#/fin/payouts", d.toDisburse.length ? cents(sum(d.toDisburse)) : "", d.toDisburse.length > 0)] : []),
+        ...(k.activePartners !== undefined ? [stat(k.activePartners, "active partners", "#/r/partners")] : []),
         ...(k.pendingLinks !== undefined ? [stat(k.pendingLinks, "setup links unused", "#/accounts")] : []),
       );
       parts.push(grid);
@@ -1843,38 +1863,22 @@
 
     const left = el("div", "db-home__col");
     const right = el("div", "db-home__col");
-    const due = (x) => (x.data.due ? [el("span", x.data.due < d.today ? "is-overdue" : "muted", day(x.data.due))] : []);
+    const claimLi = (who) => (c) => {
+      const li = el("li");
+      li.append(el("span", "mono muted", c.code), finLink(c.description, `#/fin/c/${c.id}`), ...(who ? [el("span", "muted", c.claimant_name)] : [claimPill(c)]), el("span", "", cents(c.amount_cents)));
+      return li;
+    };
     if (d.counts) {
-      left.append(
-        panel("new applications", miniList(d.applications, (a) => {
-          const li = el("li");
-          const link = el("a", "", a.name);
-          link.href = `#/a/${a.id}`;
-          li.append(link, el("span", "muted", [a.life_stage, when(a.created_at)].filter(Boolean).join(" · ")));
-          return li;
-        }, "None waiting."), linkButton("All →", "#/applications")),
-        panel("overdue tasks", miniList(d.overdue, recLi("tasks", (x) => [el("span", "muted", x.names.assignees || "unassigned"), ...due(x)]), "Nothing overdue.")),
-        panel("claims to approve", miniList(d.claimsToApprove, recLi("finance", (x) => [el("span", "muted", x.names.claimant || ""), el("span", "", money(x.data.amount))]), "None waiting.")),
-      );
-    }
-    left.append(
-      panel("my tasks", miniList(d.myTasks, recLi("tasks", (x) => [pill(x.data.status, x.data.status), ...due(x)]), "Nothing assigned to you."), schema.tasks && schema.tasks.canCreate ? linkButton("+ task", "#/r/tasks/new") : null),
-      panel("my meetings", miniList(d.myMeetings, recLi("meetings", (x) => [el("span", "muted", day(x.data.date))]), "No meetings coming up.")),
-    );
-    if (d.myClaims) {
-      left.append(panel("my claims", miniList(d.myClaims, recLi("finance", (x) => [pill(x.data.status, x.data.status), el("span", "", money(x.data.amount))]), "No claims."),
-        schema.finance && schema.finance.canCreate ? linkButton("+ submit a claim", "#/r/finance/new") : null));
-    }
-    right.append(
-      panel("coming up", miniList(d.upcoming, recLi("projects", (x) => [el("span", "muted", [day(x.data.start), x.names.team].filter(Boolean).join(" · ")), pill(x.data.status, x.data.status)]), "Nothing scheduled.")),
-      panel("announcements", miniList(d.announcements, (x) => {
-        const li = el("li", "db-mini__block");
-        const a = el("a", "", (x.data.pinned ? "📌 " : "") + x.title);
-        a.href = `#/r/announcements/${x.id}`;
-        li.append(a, el("span", "muted", day(x.data.date)), el("p", "db-notes", String(x.data.body || "").slice(0, 220)));
+      left.append(panel("new applications", miniList(d.applications, (a) => {
+        const li = el("li");
+        li.append(finLink(a.name, `#/a/${a.id}`), el("span", "muted", [a.life_stage, when(a.created_at)].filter(Boolean).join(" · ")));
         return li;
-      }, "No announcements.")),
-    );
+      }, "None waiting."), linkButton("All →", "#/applications")));
+    }
+    if (d.toReview) left.append(panel("claims waiting for you", miniList(d.toReview.slice(0, 8), claimLi(true), "Nothing to review."), linkButton("All →", "#/fin/claims/review")));
+    if (d.toDisburse) left.append(panel("claims to disburse", miniList(d.toDisburse.slice(0, 8), claimLi(true), "Nothing approved and waiting."), linkButton("Disbursements →", "#/fin/payouts")));
+    if (d.myClaims) left.append(panel("my claims", miniList(d.myClaims, claimLi(false), "No claims. Paid for something for Normal? Claim it back."), linkButton("+ new claim", "#/fin/claims/new")));
+    if (d.myMeetings) right.append(panel("my meetings", miniList(d.myMeetings, recLi("meetings", (x) => [el("span", "muted", day(x.data.date))]), "No meetings coming up.")));
     if (d.mySeats) {
       right.append(panel("where you sit", miniList(d.mySeats, (s) => {
         const li = el("li");
@@ -1983,6 +1987,879 @@
     );
   }
 
+  /* ───────────── finance: claims, budgets, disbursements, bank (rules: lib/finance.js) ───────────── */
+  let finMe = { finance: false, isLead: false, canInvoice: false, keyReady: false, rules: [], groups: {}, divisions: [] };
+  const cents = (c) => money(Number(c || 0) / 100);
+  const FIN_ERRORS = {
+    link_member: "Your login isn't linked to a member record yet. Master Admins from Vercel: open your member record and press \"This is me\". Others: ask a Master Admin.",
+    payout_key: "Finance isn't switched on yet: PAYOUT_ENCRYPTION_KEY needs setting in Vercel (see the README).",
+    invoice_not_allowed: "Only division leads and Finance can submit vendor invoices.",
+    budget_closed: "That budget isn't open for claims.",
+    bad_category: "That budget doesn't provide for that category. Choose one of its categories.",
+    need_description: "Add a short description (3 characters or more).",
+    bad_amount: "Enter the amount in dollars, e.g. 45.50.",
+    bad_expense_date: "The purchase date can't be in the future.",
+    need_vendor: "Enter the vendor's name.",
+    need_receipt: "Attach at least one receipt or invoice (up to 5).",
+    bad_receipt: "Attach the receipts again.",
+    need_agreement: "Tick the box to agree to the declaration.",
+    need_payout: "Enter your payout details.",
+    vendor_payout: "Enter the vendor's payment details.",
+    saved_payout_unreadable: "Your saved payout details can no longer be used. Please enter them again.",
+    cant_decide: "You can't decide this claim.",
+    already_decided: "This claim has already been decided.",
+    need_reason: "Give a reason so the claimant can fix it.",
+    not_approved: "Only approved claims can be disbursed.",
+    need_reference: "Enter the bank transaction reference.",
+    account_closed: "Choose an open bank account.",
+    before_opening: "That date is before the account's opening balance.",
+    future_date: "The date can't be in the future.",
+    need_division: "Choose a division from the org chart.",
+    budget_has_claims: "This budget already has claims, so it can't move to another division. Close it and create a new one there.",
+    category_has_claims: "A category with claims has to stay provided.",
+    bad_guideline: "Check the guideline amounts.",
+    need_name: "Enter a name.",
+    need_group: "Choose a group.",
+    category_exists: "There's already a category with that name.",
+    need_rule: "A notice needs a title and text.",
+    bad_rule_link: "Links must start with https://.",
+    need_last4: "Enter the last four digits of the account number.",
+    account_exists: "There's already an account with that name.",
+    need_note: "Add a note saying what this is.",
+    balance_changed: "The balance has changed since you compared it. Compare with DBS again.",
+    same_account: "Choose two different accounts.",
+    reserve_short: "The reserve doesn't have that much available.",
+    repay_too_much: "That's more than the budget owes the reserve.",
+    budget_short: "The budget doesn't have that much available.",
+    bad_file_type: "Receipts can be photos (JPEG, PNG, WebP, HEIC) or PDFs.",
+    file_too_big: "That file is too big (3.5 MB at most). Save a smaller copy and try again.",
+    payout_unreadable: "These payout details can't be read (the encryption key may have changed).",
+  };
+  const finErr = (r, fallback) => (r && r.data && (r.data.message || FIN_ERRORS[r.data.error])) || errText(r, fallback);
+  const finApi = (json) => api("/api/admin/finance", { method: "POST", json }).catch(() => null);
+  const finGet = (query) => get(`/api/admin/finance?${params(query)}`);
+  const statusKind = (s) => ({ pending_review: "new", pending_finance: "interviewing", approved: "active", paid: "accepted", rejected: "declined" }[s] || s);
+  const claimPill = (c) => pill(c.status_label, statusKind(c.status));
+  const finLink = (text, href) => { const a = el("a", "", text); a.href = href; return a; };
+
+  async function loadFinMe() {
+    const r = await get("/api/admin/finance?view=me");
+    finMe = r && r.ok ? r.data : finMe;
+  }
+
+  /* claims lists */
+  function claimsList(scope) {
+    const reviewer = finMe.finance || finMe.isLead;
+    openList(`fin:${scope}`, () => {
+      $("#list-title").textContent = "claims";
+      const q = searchBox("Search descriptions, claimants, vendors…");
+      q.id = "f-q";
+      const status = select("Status", [["", "All statuses"], ...Object.entries({ pending_review: "Awaiting review", pending_finance: "Awaiting Finance", approved: "Approved", paid: "Reimbursed or settled", rejected: "Rejected" })]);
+      status.id = "f-status";
+      filterInputs([q, status]);
+      if (reviewer) {
+        const seg = el("div", "db-seg");
+        for (const [key, text] of [["mine", "Mine"], ["review", "To review"], ["all", finMe.finance ? "All" : "My divisions"]]) {
+          const a = finLink(text, key === "mine" ? "#/fin/claims" : `#/fin/claims/${key}`);
+          if (key === scope) a.setAttribute("aria-current", "page");
+          seg.append(a);
+        }
+        $("#list-actions").append(seg);
+      }
+      if (finMe.finance) $("#list-actions").append(button("Export CSV", "", () => download("/api/admin/finance?view=export")));
+      $("#list-actions").append(linkButton("+ new claim", "#/fin/claims/new", "primary"));
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (c) => c.code },
+        { label: "Submitted", cls: "is-muted", cell: (c) => day(String(c.created_at).slice(0, 10)) },
+        ...(scope === "mine" ? [] : [{ label: "Claimant", cell: (c) => c.claimant_name }]),
+        { label: "What for", cls: "is-name", link: true, cell: (c) => c.description },
+        { label: "Budget", cell: (c) => `${c.budget_name} · ${c.category_name}` },
+        { label: "Kind", cell: (c) => (c.kind === "invoice" ? `invoice · ${c.vendor_name}` : "reimbursement") },
+        { label: "Amount", cls: "is-right", cell: (c) => cents(c.amount_cents) },
+        { label: "Status", cell: claimPill },
+      ];
+      loadRows = async () => {
+        fail("");
+        const r = await finGet({ view: "claims", scope, q: q.value.trim(), status: status.value });
+        if (!r) return;
+        if (!r.ok) return fail(finErr(r, "Couldn't load claims."));
+        const total = r.data.claims.reduce((s, c) => s + c.amount_cents, 0);
+        fillList(columns, r.data.claims, (c) => `#/fin/c/${c.id}`, r.data.claims.length,
+          scope === "review" ? "Nothing waiting for your review." : scope === "mine" ? "No claims yet. Paid for something for Normal? Claim it back with \"+ new claim\"." : "No claims yet.",
+          "No claims match those filters.", r.data.claims.length ? `Total ${cents(total)}` : "");
+      };
+    });
+  }
+
+  /* a new claim */
+  async function fileToUpload(file) {
+    // big photos are shrunk in the browser (receipts stay readable at 1800px)
+    if (/^image\/(jpeg|png|webp)$/.test(file.type) && file.size > 700 * 1024 && window.createImageBitmap) {
+      try {
+        const bmp = await createImageBitmap(file);
+        const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(bmp.width * scale);
+        c.height = Math.round(bmp.height * scale);
+        c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+        const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.82));
+        if (blob) return { name: file.name.replace(/\.\w+$/, "") + ".jpg", type: "image/jpeg", blob };
+      } catch { /* send it as it is */ }
+    }
+    const type = file.type || (/\.hei[cf]$/i.test(file.name) ? "image/heic" : /\.pdf$/i.test(file.name) ? "application/pdf" : "");
+    return { name: file.name, type, blob: file };
+  }
+  async function toBase64(blob) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+
+  async function newClaimPage() {
+    fail("");
+    const body = detail("#/fin/claims", "claims", "new", "new claim");
+    await loadFinMe();
+    if (!me.memberId) { body.append(el("p", "db-alert", FIN_ERRORS.link_member)); return; }
+    if (!finMe.keyReady) body.append(el("p", "db-alert", FIN_ERRORS.payout_key));
+    const br = await finGet({ view: "budgets" });
+    if (!br || !br.ok) return fail(finErr(br, "Couldn't load budgets."));
+    const budgets = br.data.budgets.filter((b) => b.active);
+    if (!budgets.length) { body.append(el("p", "db-empty", "There are no budgets to claim against yet. Finance sets them up.")); return; }
+
+    const submissionId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+    const f = el("form", "db-form");
+    f.noValidate = true;
+    const field = (label, input, hint, wide) => {
+      const w = el("div", `db-field${wide ? " db-field--wide" : ""}`);
+      const l = el("label", "db-label", label);
+      if (input.id) l.htmlFor = input.id;
+      w.append(l, input);
+      if (hint) w.append(el("p", "db-hint", hint));
+      return w;
+    };
+    const input = (id, type = "text", attrs = {}) => { const i = el("input", "db-input"); i.id = id; i.type = type; Object.assign(i, attrs); return i; };
+
+    // kind
+    let kind = "reimbursement";
+    const kindSeg = el("div", "db-seg db-field--wide");
+    const kindBtns = {};
+    for (const [k, text] of [["reimbursement", "Reimbursement: I paid"], ["invoice", "Vendor invoice: Normal pays a vendor"]]) {
+      const bt = el("a", "", text);
+      bt.href = "#";
+      bt.id = `kind-${k}`;
+      bt.addEventListener("click", (e) => { e.preventDefault(); kind = k; refresh(); });
+      kindBtns[k] = bt;
+      kindSeg.append(bt);
+    }
+    if (finMe.canInvoice) f.append(kindSeg);
+
+    const budget = select("Budget", budgets.map((b) => [String(b.id), b.is_reserve ? "Reserve" : `${b.name}${b.division_name ? ` · ${b.division_name}` : ""}`]), undefined, "db-input");
+    budget.id = "fc-budget";
+    const category = select("Category", [], undefined, "db-input");
+    category.id = "fc-category";
+    const fillCategories = () => {
+      const bud = budgets.find((x) => String(x.id) === budget.value);
+      category.replaceChildren(new Option("Choose a category", ""));
+      for (const [g, label] of Object.entries(finMe.groups)) {
+        const inG = (bud ? bud.categories : []).filter((k) => k.grp === g);
+        if (!inG.length) continue;
+        const og = document.createElement("optgroup");
+        og.label = label;
+        og.append(...inG.map((k) => new Option(k.name, String(k.id))));
+        category.append(og);
+      }
+    };
+    budget.addEventListener("change", fillCategories);
+    fillCategories();
+    const description = el("textarea", "db-input");
+    description.id = "fc-description";
+    description.rows = 2;
+    const amount = input("fc-amount", "text", { inputMode: "decimal", placeholder: "0.00" });
+    const expenseDate = input("fc-date", "date", { max: todaySG() });
+    const vendor = input("fc-vendor");
+    const dueDate = input("fc-due", "date");
+    const dateField = field("Purchase date", expenseDate, "When you paid. Not in the future.");
+    const vendorField = field("Vendor", vendor, "Who Normal is paying.");
+    const dueField = field("Due date", dueDate, "From the invoice, if it has one.");
+    f.append(field("Budget", budget), field("Category", category), field("What was it for?", description, "e.g. Venue deposit for Youth Day 27", true),
+      field("Amount (S$)", amount), dateField, vendorField, dueField);
+
+    // receipts
+    const files = [];
+    const fileInput = input("fc-files", "file", { multiple: true, accept: "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf" });
+    const fileList = el("ul", "db-files");
+    const renderFiles = () => fileList.replaceChildren(...files.map((x, i) => {
+      const li = el("li");
+      const rm = el("button", "db-link", x.uploading ? "uploading…" : "remove");
+      rm.type = "button";
+      rm.disabled = Boolean(x.uploading);
+      rm.addEventListener("click", () => { files.splice(i, 1); renderFiles(); });
+      li.append(el("span", "", x.name), el("span", "muted", x.size ? `${Math.ceil(x.size / 1024)} KB` : ""), rm);
+      if (x.error) li.append(el("span", "db-error", x.error));
+      return li;
+    }));
+    fileInput.addEventListener("change", async () => {
+      for (const file of [...fileInput.files]) {
+        if (files.length >= 5) { fail("Up to 5 files per claim."); break; }
+        const entry = { name: file.name, uploading: true };
+        files.push(entry);
+        renderFiles();
+        const prep = await fileToUpload(file);
+        if (prep.blob.size > 3.5 * 1024 * 1024) { entry.uploading = false; entry.error = FIN_ERRORS.file_too_big; renderFiles(); continue; }
+        const r = await finApi({ action: "upload", name: prep.name, type: prep.type, data: await toBase64(prep.blob) });
+        entry.uploading = false;
+        if (r && r.ok) Object.assign(entry, { id: r.data.id, name: r.data.name, size: r.data.size });
+        else entry.error = finErr(r, "Couldn't upload that file.");
+        renderFiles();
+      }
+      fileInput.value = "";
+    });
+    const filesWrap = field("Receipts or invoices", fileInput, "Photos or PDFs, up to 5. Each must show the shop or vendor, the date, what was bought and the total.", true);
+    filesWrap.append(fileList);
+    f.append(filesWrap);
+
+    // payout
+    const payBox = el("div", "db-field db-field--wide db-payout");
+    payBox.append(el("p", "db-label", "How should Finance pay?"));
+    const useSaved = el("label", "db-check");
+    const useSavedBox = input("fc-use-saved", "checkbox");
+    useSaved.append(useSavedBox, finMe.saved ? `Use my saved details (${finMe.saved.payout_masked})` : "");
+    useSavedBox.checked = Boolean(finMe.saved);
+    const payType = select("Payout method", [["paynow_mobile", "PayNow (mobile number)"], ["paynow_uen", "PayNow (UEN)"], ["bank", "Bank transfer"]], undefined, "db-input");
+    payType.id = "fc-paytype";
+    const payName = input("fc-payname");
+    const payProxy = input("fc-proxy", "text", { inputMode: "tel" });
+    const payBank = input("fc-bankname");
+    const payAcct = input("fc-acct", "text", { inputMode: "numeric" });
+    const remember = el("label", "db-check");
+    const rememberBox = input("fc-remember", "checkbox");
+    remember.append(rememberBox, "Remember these details for my next claim");
+    const newPay = el("div", "db-form db-form--inner");
+    const proxyField = field("Mobile number or UEN", payProxy);
+    const bankField = field("Bank", payBank, "e.g. DBS");
+    const acctField = field("Account number", payAcct);
+    newPay.append(field("Payout method", payType), field("Account holder's name", payName), proxyField, bankField, acctField);
+    payBox.append(useSaved, newPay, remember);
+    f.append(payBox);
+
+    // the declaration, with Finance's notices
+    const rulesBox = el("div", "db-field db-field--wide db-rules");
+    const agree = el("label", "db-check");
+    const agreeBox = input("fc-agree", "checkbox");
+    agree.append(agreeBox, "I declare that this claim is true and complete, that I haven't claimed it before, and that the documents attached are genuine.");
+    f.append(rulesBox);
+
+    const status = el("p", "db-error");
+    const bar = el("div", "db-formbar");
+    const go = el("button", "db-btn db-btn--primary", "Send claim");
+    go.type = "submit";
+    go.id = "fc-submit";
+    bar.append(go, linkButton("Cancel", "#/fin/claims"));
+    f.append(status, bar);
+
+    function refresh() {
+      Object.entries(kindBtns).forEach(([k, bt]) => (k === kind ? bt.setAttribute("aria-current", "page") : bt.removeAttribute("aria-current")));
+      dateField.hidden = kind !== "reimbursement";
+      vendorField.hidden = dueField.hidden = kind !== "invoice";
+      useSaved.hidden = !finMe.saved || kind === "invoice";
+      const saved = !useSaved.hidden && useSavedBox.checked;
+      newPay.hidden = saved;
+      remember.hidden = saved || kind === "invoice";
+      proxyField.hidden = payType.value === "bank";
+      bankField.hidden = acctField.hidden = payType.value !== "bank";
+      $("label", proxyField).textContent = payType.value === "paynow_uen" ? "UEN" : "Mobile number (registered with PayNow)";
+      const rules = finMe.rules.filter((r) => r.applies_to === "all" || r.applies_to === kind);
+      rulesBox.replaceChildren(el("p", "db-label", "Declaration"), ...rules.map((r) => {
+        const d = el("div", "db-rule");
+        d.append(el("strong", "", r.title), el("p", "db-notes", r.body));
+        if (r.link_url) { const a = finLink(r.link_label || r.link_url, r.link_url); a.target = "_blank"; a.rel = "noopener"; d.append(a); }
+        return d;
+      }), agree);
+    }
+    [useSavedBox, payType].forEach((x) => x.addEventListener("change", refresh));
+    refresh();
+
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "";
+      if (files.some((x) => x.uploading)) { status.textContent = "Wait for the receipts to finish uploading."; return; }
+      const saved = !useSaved.hidden && useSavedBox.checked;
+      const payload = {
+        action: "submit", submissionId, kind, budgetId: budget.value, categoryId: category.value, description: description.value, amount: amount.value,
+        expenseDate: expenseDate.value, vendorName: vendor.value, dueDate: dueDate.value, fileIds: files.filter((x) => x.id).map((x) => x.id),
+        agreed: agreeBox.checked, savePayout: rememberBox.checked,
+        payout: saved ? { type: "saved" } : { type: payType.value, name: payName.value, proxy: payProxy.value, bankName: payBank.value, accountNumber: payAcct.value },
+      };
+      if (!payload.categoryId) { status.textContent = "Choose a category."; return; }
+      go.disabled = true;
+      const r = await finApi(payload);
+      go.disabled = false;
+      if (!r || !r.ok) { status.textContent = finErr(r); return; }
+      listKey = null;
+      toast(`${r.data.code} sent. ${r.data.status === "pending_review" ? "A lead of the division reviews it first." : "Finance reviews it next."}`);
+      location.hash = `#/fin/c/${r.data.id}`;
+    });
+    body.append(panel("claim", f));
+  }
+
+  /* one claim */
+  async function claimPage(id) {
+    fail("");
+    const r = await finGet({ view: "claim", id });
+    if (!r) return;
+    if (!r.ok) { detail("#/fin/claims", "claims", "", "not found"); return fail(r.status === 404 ? "That claim isn't there, or you can't see it." : finErr(r)); }
+    const { claim: c, files, canDecide, canPay } = r.data;
+    const back = canDecide ? "#/fin/claims/review" : Number(c.claimant_id) === me.memberId ? "#/fin/claims" : "#/fin/claims/all";
+    const body = detail(back, "claims", c.code, c.description, [claimPill(c), c.kind === "invoice" ? "vendor invoice" : "reimbursement"]);
+    const { main, aside } = recordLayout(body);
+    if (c.status === "rejected" && c.rejection_reason) main.append(el("p", "db-alert", `Rejected: ${c.rejection_reason}`));
+    if (r.data.budget_available_cents !== undefined && r.data.budget_available_cents < 0) {
+      main.append(el("p", "db-alert db-alert--warn", `Heads up: after this claim the budget is ${cents(-r.data.budget_available_cents)} short of its funding. A short balance doesn't block a claim.`));
+    }
+    main.append(panel("details", fields([
+      ["Amount", cents(c.amount_cents)],
+      ["Claimant", c.claimant_name, `#/m/${c.claimant_id}`],
+      ["Budget", c.budget_name, finMe.finance || finMe.isLead ? `#/fin/b/${c.budget_id}` : null],
+      ["Category", c.category_name],
+      ["Division", c.division_name || (c.division_id === null ? "Reserve" : "")],
+      ...(c.kind === "invoice" ? [["Vendor", c.vendor_name || ""], ["Due", c.due_date ? day(c.due_date) : ""]] : [["Purchase date", c.expense_date ? day(c.expense_date) : ""]]),
+      ["Paid to", `${({ paynow_mobile: "PayNow", paynow_uen: "PayNow", bank: "Bank" })[c.payout_type]} · ${c.payout_masked}`],
+      ["Submitted", when(c.created_at)],
+      ...(c.status === "paid" ? [["Disbursed", day(c.paid_on)], ["Reference", c.payment_reference || ""]] : []),
+    ])));
+
+    const fl = el("ul", "db-files db-files--thumbs");
+    for (const x of files) {
+      const li = el("li");
+      const href = `/api/admin/finance?view=file&id=${x.id}`;
+      const a = finLink(x.name, href);
+      a.target = "_blank";
+      a.rel = "noopener";
+      if (/^image\/(jpeg|png|webp)$/.test(x.type)) {
+        const img = el("img", "db-thumb");
+        img.src = href;
+        img.alt = x.name;
+        img.loading = "lazy";
+        const t = finLink("", href);
+        t.target = "_blank";
+        t.rel = "noopener";
+        t.append(img);
+        li.append(t);
+      }
+      li.append(a, el("span", "muted", `${Math.ceil(x.size / 1024)} KB`));
+      fl.append(li);
+    }
+    main.append(panel(`receipts (${files.length})`, files.length ? fl : el("p", "db-note", "No files.")));
+
+    if (canDecide) {
+      const box = el("div", "db-stack");
+      const reason = el("textarea", "db-input");
+      reason.id = "fc-reason";
+      reason.rows = 2;
+      reason.placeholder = "If rejecting: what should the claimant fix?";
+      const err = el("p", "db-error");
+      const decide = async (approve) => {
+        err.textContent = "";
+        const s = await finApi({ action: "decide", id: c.id, approve, reason: reason.value });
+        if (!s || !s.ok) { err.textContent = finErr(s); return; }
+        listKey = null;
+        toast(approve ? (c.status === "pending_review" ? "Reviewed: it goes to Finance now." : "Approved: it's ready to disburse.") : "Rejected. The claimant sees your reason.");
+        claimPage(String(c.id));
+      };
+      const row = el("div", "db-actions");
+      row.append(
+        button(c.status === "pending_review" ? "Approve → send to Finance" : "Approve", "primary", () => decide(true), "fc-approve"),
+        button("Reject", "danger", () => decide(false), "fc-reject"),
+      );
+      box.append(el("p", "db-note", c.status === "pending_review" ? "You're reviewing this as a lead of its division. Finance gives the final approval." : "Final approval. Once approved, it's ready to disburse."), reason, err, row);
+      main.append(panel("your decision", box));
+    }
+
+    if (canPay) {
+      const p = el("div", "db-stack");
+      const pr = await finGet({ view: "payout", id: c.id });
+      const bk = await finGet({ view: "bank" });
+      if (pr && pr.ok) {
+        const d = pr.data.details;
+        const info = fields([
+          ["Pay", cents(c.amount_cents)],
+          ["To", d.name],
+          ...(d.type === "bank" ? [["Bank", d.bankName], ["Account", d.accountNumber]] : [[d.type === "paynow_uen" ? "UEN" : "PayNow mobile", d.proxy]]),
+          ["Reference", pr.data.reference],
+        ]);
+        p.append(info);
+        if (pr.data.qr) {
+          const img = el("img", "db-qr");
+          img.alt = "PayNow QR code";
+          img.src = `data:image/svg+xml;base64,${btoa(pr.data.qr)}`;
+          p.append(img, el("p", "db-note", "Scan with your banking app: the payee, amount and reference are filled in. Confirm the transfer there, then record it below."));
+        }
+      } else p.append(el("p", "db-alert", finErr(pr, "Couldn't read the payout details.")));
+      const accounts = bk && bk.ok ? bk.data.accounts.filter((a) => a.active) : [];
+      if (!accounts.length) p.append(el("p", "db-alert", "Add a bank account on the Bank page first."));
+      const acc = select("Paid from", accounts.map((a) => [String(a.id), `${a.name} ••${a.last4}`]), undefined, "db-input");
+      acc.id = "fc-account";
+      const ref = el("input", "db-input");
+      ref.id = "fc-ref";
+      ref.placeholder = "Bank transaction reference";
+      const dt = el("input", "db-input");
+      dt.type = "date";
+      dt.id = "fc-paid-on";
+      dt.value = todaySG();
+      dt.max = todaySG();
+      const err = el("p", "db-error");
+      const rec = button("Record disbursement", "primary", async () => {
+        err.textContent = "";
+        const s = await finApi({ action: "pay", id: c.id, accountId: acc.value, reference: ref.value, date: dt.value });
+        if (!s || !s.ok) { err.textContent = finErr(s); return; }
+        listKey = null;
+        toast(c.kind === "invoice" ? "Settled." : "Reimbursed.");
+        claimPage(String(c.id));
+      }, "fc-pay");
+      const grid = el("div", "db-form");
+      const lab = (t, i) => { const w = el("div", "db-field"); const l = el("label", "db-label", t); l.htmlFor = i.id; w.append(l, i); return w; };
+      grid.append(lab("Paid from", acc), lab("Bank reference", ref), lab("Date", dt));
+      p.append(grid, err, rec);
+      main.append(panel("disburse", p));
+    }
+    main.append(timelinePanel("claim", c.id));
+    aside.append(panel("claim", fields([["Claim", c.code], ["Status", c.status_label], ["Last change", when(c.updated_at)]], true)));
+  }
+
+  /* budgets */
+  function budgetsList() {
+    openList("fin:budgets", () => {
+      $("#list-title").textContent = "budgets";
+      filterInputs([]);
+      if (finMe.finance) $("#list-actions").append(linkButton("+ new budget", "#/fin/b/new", "primary"));
+      const columns = [
+        { label: "Budget", cls: "is-name", link: true, cell: (b) => (b.is_reserve ? "Reserve" : b.name) },
+        { label: "Division", cell: (b) => (b.is_reserve ? "outside every division" : b.division_name || "—") },
+        { label: "Guidelines", cls: "is-right", cell: (b) => (b.is_reserve ? "" : cents(b.guideline_cents)) },
+        { label: "Pending", cls: "is-right", cell: (b) => cents(b.pending_cents) },
+        { label: "Approved", cls: "is-right", cell: (b) => cents(b.approved_cents) },
+        { label: "Disbursed", cls: "is-right", cell: (b) => cents(b.paid_cents) },
+        { label: "Available", cls: "is-right", cell: (b) => el("span", b.available_cents < 0 ? "is-overdue" : "", cents(b.available_cents)) },
+        { label: "Status", cell: (b) => pill(b.active ? "open" : "closed", b.active ? "active" : "disabled") },
+      ];
+      loadRows = async () => {
+        fail("");
+        const r = await finGet({ view: "budgets" });
+        if (!r || !r.ok) return fail(finErr(r, "Couldn't load budgets."));
+        const rows = r.data.budgets.filter((b) => b.figures);
+        fillList(columns, rows, (b) => `#/fin/b/${b.id}`, rows.length, finMe.finance ? "No budgets yet. Add one with \"+ new budget\"." : "No budgets in your divisions yet.", "",
+          "Available = grants received + loans from the reserve − repayments − approved and disbursed claims.");
+      };
+    });
+  }
+
+  async function budgetPage(id) {
+    fail("");
+    const isNew = id === "new";
+    let d = null;
+    if (!isNew) {
+      const r = await finGet({ view: "budget", id });
+      if (!r) return;
+      if (!r.ok) { detail("#/fin/budgets", "budgets", "", "not found"); return fail(finErr(r)); }
+      d = r.data;
+    }
+    const b = d ? d.budget : { name: "", kind: "event", division_id: null, active: true, grant_committed_cents: 0 };
+    const body = detail("#/fin/budgets", "budgets", isNew ? "new" : `B-${String(b.id).padStart(4, "0")}`, isNew ? "new budget" : b.is_reserve ? "Reserve" : b.name,
+      isNew ? [] : [pill(b.active ? "open" : "closed", b.active ? "active" : "disabled"), b.is_reserve ? "outside every division" : [b.division_name, b.kind].filter(Boolean).join(" · ")]);
+    const stack = el("div", "db-stack-page");
+    body.append(stack);
+
+    if (d) {
+      const tile = (n, label, sub, warn) => { const t = el("div", `db-stat${warn ? " is-warn" : ""}`); t.append(el("span", "db-stat__n", n), el("span", "db-stat__l", label)); if (sub) t.append(el("span", "db-stat__s", sub)); return t; };
+      const tiles = el("div", "db-stats");
+      if (b.is_reserve) {
+        tiles.append(tile(cents(b.funded_cents), "added to the reserve"), tile(cents(b.lent_out_cents), "lent out to budgets"), tile(cents(b.approved_cents + b.paid_cents), "claimed against it"),
+          tile(cents(b.available_cents), "available", "", b.available_cents < 0));
+      } else {
+        tiles.append(
+          tile(cents(b.guideline_cents), "guidelines"),
+          tile(cents(b.approved_cents + b.paid_cents), "approved + disbursed", b.pending_cents ? `${cents(b.pending_cents)} pending` : ""),
+          tile(cents(b.granted_cents), "grants received", b.grant_committed_cents ? `of ${cents(b.grant_committed_cents)} committed` : ""),
+          tile(cents(b.loaned_cents - b.repaid_cents), "owed to the reserve"),
+          tile(cents(b.available_cents), "available", "", b.available_cents < 0),
+        );
+      }
+      stack.append(tiles);
+
+      if (!b.is_reserve) {
+        const t = el("table", "db-table");
+        const th = el("thead"), tb = el("tbody");
+        renderTable(th, tb, [
+          { label: "Category", cls: "is-name", cell: (g) => g.name },
+          { label: "Group", cls: "is-muted", cell: (g) => d.groups[g.grp] || "" },
+          { label: "Guideline", cls: "is-right", cell: (g) => cents(g.guideline_cents) },
+          { label: "Pending", cls: "is-right", cell: (g) => cents(g.pending_cents) },
+          { label: "Approved", cls: "is-right", cell: (g) => cents(g.approved_cents) },
+          { label: "Disbursed", cls: "is-right", cell: (g) => cents(g.paid_cents) },
+          { label: "Used", cell: (g) => {
+            const used = g.approved_cents + g.paid_cents;
+            const pct = g.guideline_cents ? Math.min(100, Math.round((used / g.guideline_cents) * 100)) : used ? 100 : 0;
+            const bar = el("span", `db-bar${used > g.guideline_cents ? " is-over" : ""}`);
+            const fill = el("span", "db-bar__fill");
+            fill.style.width = `${pct}%`;
+            bar.append(fill);
+            const w = el("span", "db-bar-wrap");
+            w.append(bar, el("span", "muted", g.guideline_cents ? `${Math.round((used / g.guideline_cents) * 100)}%` : ""));
+            return w;
+          } },
+        ], d.guidelines);
+        t.append(th, tb);
+        const sc = el("div", "db-scroll");
+        sc.append(t);
+        const p = panel("spending against each guideline", null);
+        p.append(sc);
+        stack.append(p);
+      }
+
+      // funding
+      const fundsUl = el("ul", "db-mini");
+      const KIND = { grant: "Grant received", loan: "Loan from the reserve", repayment: "Repaid to the reserve", addition: "Added to the reserve" };
+      for (const x of d.funds) {
+        const li = el("li");
+        li.append(el("span", "", KIND[x.kind]), el("span", "muted", [day(x.entry_date), x.note, x.actor].filter(Boolean).join(" · ")), el("span", x.kind === "repayment" ? "is-overdue" : "", `${x.kind === "repayment" ? "−" : "+"}${cents(x.amount_cents)}`));
+        fundsUl.append(li);
+      }
+      if (!d.funds.length) fundsUl.append(el("li", "db-note", "Nothing recorded yet."));
+      const fundPanel = panel(b.is_reserve ? "additions" : "funding", fundsUl);
+      if (d.finance) {
+        const forms = el("div", "db-fund-forms");
+        const mini = (title, idp, fieldsList, submitText, action, extra = () => ({})) => {
+          const fbox = el("form", "db-mini-form");
+          fbox.noValidate = true;
+          fbox.append(el("p", "db-label", title));
+          const inputs = {};
+          for (const [k, label, type, opts] of fieldsList) {
+            let i;
+            if (type === "select") i = select(label, opts, undefined, "db-input");
+            else { i = el("input", "db-input"); i.type = type; i.placeholder = label; if (type === "date") { i.value = todaySG(); i.max = todaySG(); } }
+            i.id = `${idp}-${k}`;
+            i.setAttribute("aria-label", label);
+            inputs[k] = i;
+            fbox.append(i);
+          }
+          const err = el("p", "db-error");
+          const go = el("button", "db-btn db-btn--sm", submitText);
+          go.type = "submit";
+          go.id = `${idp}-go`;
+          fbox.append(err, go);
+          fbox.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            err.textContent = "";
+            const vals = Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value]));
+            const s = await finApi({ action, budgetId: b.id, ...vals, ...extra() });
+            if (!s || !s.ok) { err.textContent = finErr(s) + (s && s.data && s.data.available_cents !== undefined ? ` (${cents(s.data.available_cents)} available)` : s && s.data && s.data.owed_cents !== undefined ? ` (owes ${cents(s.data.owed_cents)})` : ""); return; }
+            toast("Recorded.");
+            listKey = null;
+            budgetPage(String(b.id));
+          });
+          return fbox;
+        };
+        if (b.is_reserve) {
+          forms.append(mini("Add to the reserve", "rs", [["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "What is it?", "text"]], "Add", "reserve-add"));
+        } else {
+          const accts = (d.accounts || []).map((a) => [String(a.id), `${a.name} ••${a.last4}`]);
+          forms.append(
+            mini("Grant received", "gr", [["accountId", "Into account", "select", accts.length ? accts : [["", "Add a bank account first"]]], ["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "Note", "text"]], "Record grant", "grant"),
+            mini("Loan from the reserve", "ln", [["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "Note", "text"]], "Lend", "loan"),
+            mini("Repay the reserve", "rp", [["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "Note", "text"]], "Repay", "repay"),
+          );
+        }
+        fundPanel.append(forms);
+      }
+      stack.append(fundPanel);
+
+      const cl = await finGet({ view: "claims", scope: "budget", budget: String(b.id) });
+      if (cl && cl.ok) {
+        const ul = el("ul", "db-mini");
+        for (const c of cl.data.claims.slice(0, 15)) {
+          const li = el("li");
+          li.append(el("span", "mono muted", c.code), finLink(c.description, `#/fin/c/${c.id}`), el("span", "muted", `${c.claimant_name} · ${c.category_name}`), claimPill(c), el("span", "", cents(c.amount_cents)));
+          ul.append(li);
+        }
+        if (!cl.data.claims.length) ul.append(el("li", "db-note", "No claims yet."));
+        stack.append(panel(`claims (${cl.data.claims.length})`, ul));
+      }
+    }
+
+    // setting it up (Finance)
+    if ((isNew || d.finance) && !(d && d.budget.is_reserve)) {
+      if (isNew) await loadFinMe();
+      const cats = d ? d.allCategories : (await finGet({ view: "setup" }))?.data?.categories?.filter((k) => k.active).map((k) => ({ ...k, provided: false, guideline_cents: 0 })) || [];
+      const f = el("form", "db-form");
+      f.noValidate = true;
+      const field = (label, input) => { const w = el("div", "db-field"); const l = el("label", "db-label", label); l.htmlFor = input.id; w.append(l, input); return w; };
+      const name = el("input", "db-input"); name.id = "fb-name"; name.value = b.name || "";
+      const kind = select("Kind", [["event", "Event"], ["general", "General (running costs)"]], b.kind, "db-input"); kind.id = "fb-kind";
+      const div = select("Division", [["", "Choose a division"], ...finMe.divisions.map((x) => [String(x.id), x.name])], b.division_id ? String(b.division_id) : "", "db-input"); div.id = "fb-division";
+      const committed = el("input", "db-input"); committed.id = "fb-committed"; committed.inputMode = "decimal"; committed.value = b.grant_committed_cents ? (b.grant_committed_cents / 100).toFixed(2) : "";
+      const activeL = el("label", "db-check"); const active = el("input"); active.type = "checkbox"; active.id = "fb-active"; active.checked = b.active !== false; activeL.append(active, "Open for claims");
+      f.append(field("Name", name), field("Kind", kind), field("Division", div), field("Grant committed (S$)", committed));
+      const aw = el("div", "db-field"); aw.append(activeL); f.append(aw);
+      const gl = el("div", "db-field db-field--wide");
+      gl.append(el("p", "db-label", "Categories it provides, with a guideline amount each"));
+      const grid = el("div", "db-guidelines");
+      const rows = [];
+      for (const [g, label] of Object.entries(finMe.groups)) {
+        const inG = cats.filter((k) => k.grp === g);
+        if (!inG.length) continue;
+        grid.append(el("p", "db-guidelines__group", label));
+        for (const k of inG) {
+          const r = el("div", "db-guidelines__row");
+          const cb = el("input"); cb.type = "checkbox"; cb.checked = Boolean(k.provided); cb.id = `fb-cat-${k.id}`;
+          const lab = el("label", "", k.name); lab.htmlFor = cb.id;
+          const amt = el("input", "db-input"); amt.inputMode = "decimal"; amt.placeholder = "0.00"; amt.value = k.guideline_cents ? (k.guideline_cents / 100).toFixed(2) : ""; amt.id = `fb-amt-${k.id}`;
+          amt.setAttribute("aria-label", `Guideline for ${k.name}`);
+          amt.addEventListener("input", () => { if (amt.value) cb.checked = true; });
+          r.append(cb, lab, amt);
+          grid.append(r);
+          rows.push({ id: k.id, cb, amt });
+        }
+      }
+      gl.append(grid);
+      f.append(gl);
+      const err = el("p", "db-error");
+      const bar = el("div", "db-formbar");
+      const go = el("button", "db-btn db-btn--primary", isNew ? "Create budget" : "Save budget"); go.type = "submit"; go.id = "fb-save";
+      bar.append(go);
+      f.append(err, bar);
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        err.textContent = "";
+        const s = await finApi({ action: "budget", id: isNew ? undefined : b.id, name: name.value, kind: kind.value, divisionId: div.value, committed: committed.value, active: active.checked,
+          guidelines: rows.filter((x) => x.cb.checked).map((x) => ({ categoryId: x.id, amount: x.amt.value })) });
+        if (!s || !s.ok) { err.textContent = finErr(s); return; }
+        listKey = null;
+        toast("Budget saved.");
+        if (isNew) location.hash = `#/fin/b/${s.data.id}`; else budgetPage(String(b.id));
+      });
+      if (!finMe.divisions.length) stack.append(el("p", "db-alert", "Budgets live in a division: add divisions on the org chart first."));
+      stack.append(panel(isNew ? "budget" : "set up", f));
+    }
+    if (d) stack.append(timelinePanel("budget", b.id));
+  }
+
+  /* disbursements (Finance) */
+  function payoutsList() {
+    openList("fin:payouts", () => {
+      $("#list-title").textContent = "disbursements";
+      filterInputs([]);
+      $("#list-actions").append(button("Export CSV", "", () => download("/api/admin/finance?view=export")));
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (c) => c.code },
+        { label: "Approved", cls: "is-muted", cell: (c) => when(c.updated_at) },
+        { label: "Pay", cell: (c) => c.kind === "invoice" ? `${c.vendor_name} (invoice)` : c.claimant_name },
+        { label: "What for", cls: "is-name", link: true, cell: (c) => c.description },
+        { label: "Via", cell: (c) => c.payout_masked },
+        { label: "Amount", cls: "is-right", cell: (c) => cents(c.amount_cents) },
+      ];
+      loadRows = async () => {
+        fail("");
+        const r = await finGet({ view: "claims", scope: "disburse" });
+        if (!r || !r.ok) return fail(finErr(r, "Couldn't load disbursements."));
+        const total = r.data.claims.reduce((s, c) => s + c.amount_cents, 0);
+        fillList(columns, r.data.claims, (c) => `#/fin/c/${c.id}`, r.data.claims.length, "Nothing approved and waiting. Approved claims appear here to pay.", "",
+          r.data.claims.length ? `To disburse: ${cents(total)}` : "");
+      };
+    });
+  }
+
+  /* bank (Finance) */
+  async function bankPage() {
+    fail("");
+    const prev = $("#bank-account-filter");
+    const picked = prev ? prev.value : "";
+    const body = detail("#/", "home", "", "bank");
+    const r = await finGet({ view: "bank", account: picked });
+    if (!r || !r.ok) return fail(finErr(r, "Couldn't load the bank."));
+    const { accounts, entries } = r.data;
+    const cards = el("div", "db-stats");
+    for (const a of accounts) {
+      const c = el("div", `db-stat db-bank${a.active ? "" : " is-closed"}`);
+      c.append(el("span", "db-stat__l", `${a.name} · ${a.bank} ••${a.last4}${a.active ? "" : " (closed)"}`), el("span", "db-stat__n", cents(a.balance_cents)), el("span", "db-stat__s", "expected balance"));
+      if (a.active) {
+        const dbs = el("input", "db-input");
+        dbs.placeholder = "DBS balance";
+        dbs.inputMode = "decimal";
+        dbs.setAttribute("aria-label", `Balance in the bank for ${a.name}`);
+        dbs.id = `bank-dbs-${a.id}`;
+        const out = el("span", "db-stat__s");
+        const fix = button("Match it", "", async () => {
+          const typed = Math.round(Number(dbs.value.replace(/[$,\s]/g, "")) * 100);
+          const diff = typed - a.balance_cents;
+          const s = await finApi({ action: "entry", kind: "adjustment", accountId: a.id, amount: (diff < 0 ? "-" : "") + (Math.abs(diff) / 100).toFixed(2), note: "Matched to the DBS balance", expectedBalance: a.balance_cents });
+          if (!s || !s.ok) return fail(finErr(s));
+          toast("Adjusted to match.");
+          bankPage();
+        });
+        fix.classList.add("db-btn--sm");
+        fix.hidden = true;
+        dbs.addEventListener("input", () => {
+          const typed = Math.round(Number(dbs.value.replace(/[$,\s]/g, "")) * 100);
+          if (!dbs.value || !Number.isFinite(typed)) { out.textContent = ""; fix.hidden = true; return; }
+          const diff = typed - a.balance_cents;
+          out.textContent = diff === 0 ? "✓ matches" : `${diff > 0 ? "bank has " + cents(diff) + " more" : "bank has " + cents(-diff) + " less"}`;
+          fix.hidden = diff === 0;
+        });
+        c.append(dbs, out, fix);
+      }
+      cards.append(c);
+    }
+    if (!accounts.length) cards.append(el("p", "db-empty", "No bank accounts yet. Add one below with its opening balance."));
+    body.append(cards);
+
+    const open = accounts.filter((a) => a.active).map((a) => [String(a.id), `${a.name} ••${a.last4}`]);
+    const forms = el("div", "db-fund-forms");
+    const mini = (title, idp, list, text, action, extra = {}) => {
+      const f = el("form", "db-mini-form");
+      f.noValidate = true;
+      f.append(el("p", "db-label", title));
+      const inputs = {};
+      for (const [k, label, type, opts] of list) {
+        let i;
+        if (type === "select") i = select(label, opts.length ? opts : [["", "Add an account first"]], undefined, "db-input");
+        else { i = el("input", "db-input"); i.type = type; i.placeholder = label; if (type === "date") { i.value = todaySG(); i.max = todaySG(); } }
+        i.id = `${idp}-${k}`;
+        i.setAttribute("aria-label", label);
+        inputs[k] = i;
+        f.append(i);
+      }
+      const err = el("p", "db-error");
+      const go = el("button", "db-btn db-btn--sm", text);
+      go.type = "submit";
+      go.id = `${idp}-go`;
+      f.append(err, go);
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        err.textContent = "";
+        const s = await finApi({ action, ...Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value])), ...extra });
+        if (!s || !s.ok) { err.textContent = finErr(s); return; }
+        toast("Recorded.");
+        bankPage();
+      });
+      return f;
+    };
+    forms.append(
+      mini("Add an account", "ba", [["name", "Name, e.g. DBS current", "text"], ["bank", "Bank (DBS)", "text"], ["last4", "Last 4 digits", "text"], ["opening", "Opening balance (S$)", "text"], ["date", "As of", "date"]], "Add account", "account"),
+      mini("Money in (grant or other income)", "bi", [["accountId", "Account", "select", open], ["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "What is it?", "text"]], "Record", "entry", { kind: "grant" }),
+      mini("Adjustment (use − for money out)", "bj", [["accountId", "Account", "select", open], ["amount", "Amount (S$), e.g. -12.50", "text"], ["date", "Date", "date"], ["note", "Why?", "text"]], "Record", "entry", { kind: "adjustment" }),
+      mini("Transfer between accounts", "bt", [["from", "From", "select", open], ["to", "To", "select", open], ["amount", "Amount (S$)", "text"], ["date", "Date", "date"], ["note", "Note", "text"]], "Transfer", "transfer"),
+    );
+    body.append(panel("record", forms));
+
+    const filter = select("Account", [["", "All accounts"], ...accounts.map((a) => [String(a.id), `${a.name} ••${a.last4}`])], picked, "db-select");
+    filter.id = "bank-account-filter";
+    filter.addEventListener("change", () => bankPage());
+    const KIND = { opening: "Opening balance", grant: "Money in", payout: "Disbursement", adjustment: "Adjustment", transfer_in: "Transfer in", transfer_out: "Transfer out" };
+    const name = new Map(accounts.map((a) => [a.id, `${a.name} ••${a.last4}`]));
+    const t = el("table", "db-table");
+    const th = el("thead"), tb = el("tbody");
+    renderTable(th, tb, [
+      { label: "Date", cls: "is-nowrap", cell: (e) => day(e.entry_date) },
+      { label: "Account", cell: (e) => name.get(e.account_id) },
+      { label: "Kind", cell: (e) => KIND[e.kind] },
+      { label: "Note", cls: "is-wide", cell: (e) => (e.claim_id ? [finLink(e.claim_code, `#/fin/c/${e.claim_id}`), ` ${e.note || ""}`] : e.note) },
+      { label: "Amount", cls: "is-right", cell: (e) => el("span", e.amount_cents < 0 ? "is-overdue" : "", `${e.amount_cents < 0 ? "−" : "+"}${cents(Math.abs(e.amount_cents))}`) },
+      { label: "By", cls: "is-muted", cell: (e) => e.actor },
+    ], entries);
+    t.append(th, tb);
+    const sc = el("div", "db-scroll");
+    sc.append(t);
+    const ledger = panel("ledger", null, [filter]);
+    ledger.append(sc);
+    if (!entries.length) ledger.append(el("p", "db-empty", "No entries yet."));
+    body.append(ledger);
+    const closeBox = el("div", "db-actions");
+    for (const a of accounts) {
+      closeBox.append(button(a.active ? `Close ${a.name}` : `Reopen ${a.name}`, "", async () => {
+        const s = await finApi({ action: "account-close", id: a.id, active: !a.active });
+        if (s && s.ok) bankPage(); else fail(finErr(s));
+      }));
+    }
+    if (accounts.length) body.append(panel("accounts", [el("p", "db-note", "Entries are never edited or deleted: correct a mistake with an adjustment, so the ledger always explains the balance."), closeBox]));
+  }
+
+  /* setup (Finance) */
+  async function finSetupPage() {
+    fail("");
+    const body = detail("#/", "home", "", "finance setup");
+    const r = await finGet({ view: "setup" });
+    if (!r || !r.ok) return fail(finErr(r));
+    const { categories, rules, groups, keyReady } = r.data;
+    body.append(el("p", keyReady ? "db-note" : "db-alert", keyReady
+      ? "Payout details are encrypted (PAYOUT_ENCRYPTION_KEY is set). Who's on the Finance team is set on each login in accounts; division leads come from the org chart (Founder, Chief of Staff or Director seats on a division)."
+      : FIN_ERRORS.payout_key));
+
+    // categories
+    const t = el("table", "db-table");
+    const th = el("thead"), tb = el("tbody");
+    const groupSel = (v) => select("Group", Object.entries(groups), v, "db-select");
+    renderTable(th, tb, [
+      { label: "Category", cell: (k) => { const i = el("input", "db-input"); i.value = k.name; i.dataset.k = "name"; i.setAttribute("aria-label", "Category name"); return i; } },
+      { label: "Group", cell: (k) => { const s = groupSel(k.grp); s.dataset.k = "group"; return s; } },
+      { label: "In use", cell: (k) => { const l = el("label", "db-check"); const c = el("input"); c.type = "checkbox"; c.checked = k.active; c.dataset.k = "active"; l.append(c, "active"); return l; } },
+      { label: "", cls: "is-right", cell: (k) => button("Save", "", async (e) => {
+        const tr = e.target.closest("tr");
+        const v = (x) => $(`[data-k=${x}]`, tr);
+        const s = await finApi({ action: "category", id: k.id, name: v("name").value, group: v("group").value, active: v("active").checked });
+        if (s && s.ok) toast("Saved."); else fail(finErr(s));
+      }) },
+    ], categories);
+    t.append(th, tb);
+    const sc = el("div", "db-scroll");
+    sc.append(t);
+    const addName = el("input", "db-input"); addName.placeholder = "New category"; addName.id = "fs-cat-name";
+    const addGroup = groupSel("operations"); addGroup.id = "fs-cat-group";
+    const add = button("Add category", "", async () => {
+      const s = await finApi({ action: "category", name: addName.value, group: addGroup.value });
+      if (s && s.ok) { toast("Added."); finSetupPage(); } else fail(finErr(s));
+    }, "fs-cat-add");
+    const addRow = el("div", "db-toolbar");
+    addRow.append(addName, addGroup, add);
+    const catPanel = panel(`spend categories (${categories.length})`, null);
+    catPanel.append(sc, addRow);
+    body.append(catPanel);
+
+    // the claim form's notices
+    const ruleForm = (x = {}) => {
+      const { form: f } = buildForm([
+        { key: "title", label: "Title", required: true },
+        { key: "appliesTo", label: "Shown on", type: "select", options: [["all", "every claim"], ["reimbursement", "reimbursements"], ["invoice", "vendor invoices"]] },
+        { key: "body", label: "Text", type: "textarea", required: true, wide: true },
+        { key: "linkLabel", label: "Link text" },
+        { key: "linkUrl", label: "Link (https://…)", type: "url" },
+        { key: "sort", label: "Order", type: "number" },
+        { key: "active", label: "Show it", type: "checkbox" },
+      ], { title: x.title, appliesTo: x.applies_to || "all", body: x.body, linkLabel: x.link_label, linkUrl: x.link_url, sort: x.sort || 0, active: x.active !== false }, {
+        submit: x.id ? "Save notice" : "Add notice",
+        extra: x.id ? [confirmButton("Delete", "", async () => { const s = await finApi({ action: "rule-delete", id: x.id }); if (s && s.ok) finSetupPage(); else fail(finErr(s)); })] : [],
+        onSubmit: async (vals, status) => {
+          const s = await finApi({ action: "rule", id: x.id, ...vals });
+          if (!s || !s.ok) { status.textContent = finErr(s); return; }
+          toast("Saved.");
+          finSetupPage();
+        },
+      });
+      return f;
+    };
+    const rulesBox = el("div", "db-stack");
+    rulesBox.append(el("p", "db-note", "Shown on the claim form above the declaration people tick. Plain text."));
+    for (const x of rules) {
+      const det = el("details", "db-rule-edit");
+      det.append(el("summary", "", `${x.title}${x.active ? "" : " (hidden)"}`), ruleForm(x));
+      rulesBox.append(det);
+    }
+    const addDet = el("details", "db-rule-edit");
+    addDet.append(el("summary", "", "+ add a notice"), ruleForm());
+    rulesBox.append(addDet);
+    body.append(panel("claim form notices", rulesBox));
+  }
+
   /* ───────────── which view ───────────── */
   const ROUTES = [
     [/^#\/$/, () => homePage(), "home"],
@@ -2004,6 +2881,15 @@
     [/^#\/search\/(.+)$/, (m) => searchPage(decodeURIComponent(m[1])), "search"],
     [/^#\/activity$/, () => activityPage(), "activity", ["master", "admin"]],
     [/^#\/privacy$/, () => privacyPage(), "privacy", ["master"]],
+    [/^#\/fin\/claims$/, () => claimsList("mine"), "fin-claims"],
+    [/^#\/fin\/claims\/(review|all)$/, (m) => claimsList(m[1]), "fin-claims", null, () => finMe.finance || finMe.isLead],
+    [/^#\/fin\/claims\/new$/, () => newClaimPage(), "fin-claims"],
+    [/^#\/fin\/c\/(\d+)$/, (m) => claimPage(m[1]), "fin-claims"],
+    [/^#\/fin\/budgets$/, () => budgetsList(), "fin-budgets", null, () => finMe.finance || finMe.isLead],
+    [/^#\/fin\/b\/(new|\d+)$/, (m) => budgetPage(m[1]), "fin-budgets", null, () => finMe.finance || finMe.isLead],
+    [/^#\/fin\/payouts$/, () => payoutsList(), "fin-payouts", null, () => finMe.finance],
+    [/^#\/fin\/bank$/, () => bankPage(), "fin-bank", null, () => finMe.finance],
+    [/^#\/fin\/setup$/, () => finSetupPage(), "fin-setup", null, () => finMe.finance],
   ];
 
   function route() {

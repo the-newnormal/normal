@@ -12,7 +12,7 @@ const { log } = require("../../lib/activity");
 const MAX_FAILURES = 8; // per name, per 15 minutes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const publicUser = (u) => ({ username: u.username, name: u.name, role: u.role, memberId: u.memberId, fixed: u.fixed });
+const publicUser = (u) => ({ username: u.username, name: u.name, role: u.role, memberId: u.memberId, fixed: u.fixed, finance: Boolean(u.finance) });
 
 async function accountForToken(q, token) {
   if (typeof token !== "string" || token.length < 20 || token.length > 100) return null;
@@ -123,7 +123,7 @@ module.exports = async function handler(req, res) {
   const a = who.account;
   return res.status(200).json({
     user: a
-      ? { username: a.username, name: a.name, role: a.role, memberId: a.member_id === null ? null : Number(a.member_id), fixed: false }
-      : { username, name: username, role: "master", memberId: null, fixed: true },
+      ? { username: a.username, name: a.name, role: a.role, memberId: a.member_id === null ? null : Number(a.member_id), fixed: false, finance: a.role === "master" || a.finance === true }
+      : { username, name: username, role: "master", memberId: null, fixed: true, finance: true },
   });
 };
