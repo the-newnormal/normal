@@ -2,7 +2,7 @@
 //   GET                                                   → units, people and seats                (everyone signed in)
 //   POST   { kind, parent_id, name, code, overseers, note } → add a division, domain or team         (admins)
 //   POST   { action: "import", units, people }            → load a Team Map export                 (admins)
-//   PATCH  { id, ...same fields }                          → edit one                               (admins)
+//   PATCH  { id, ...same fields, manages? }                → edit one; manages: the modules it looks after (admins)
 //   DELETE ?id=                                            → remove an empty one                    (admins)
 // Seating someone by hand is done on their member record.
 
@@ -10,6 +10,7 @@ const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
 const { ROLES, OVERSEER_ROLES, KINDS, PARENT_KINDS, STATUSES, publicStatus } = require("../../lib/org");
 const { log } = require("../../lib/activity");
+const R = require("../../lib/records");
 
 const idOf = (v) => {
   const n = Number(v);
@@ -138,7 +139,7 @@ module.exports = async function handler(req, res) {
       `select s.member_id, s.unit_id, s.role, s.note from seats s join members m on m.id = s.member_id
         where m.status <> 'alumni' order by s.sort, s.id`
     )).map((s) => ({ member_id: Number(s.member_id), unit_id: num(s.unit_id), role: s.role, ...(admin && s.note ? { note: s.note } : {}) }));
-    return res.status(200).json({ units, people, seats, roles: ROLES, overseerRoles: OVERSEER_ROLES });
+    return res.status(200).json({ units, people, seats, roles: ROLES, overseerRoles: OVERSEER_ROLES, managers: await R.managerUnits(q), managerGroups: R.MANAGER_GROUPS });
   }
 
   const b = req.method === "DELETE" ? req.query : auth.body(req);
@@ -215,14 +216,24 @@ module.exports = async function handler(req, res) {
     await log(q, me, "created", "unit", row.id, row.name, [{ field: "Kind", from: null, to: kind }]);
     return res.status(201).json({ unit: unitOut(row) });
   }
-  if (!keys.length) return res.status(400).json({ error: "nothing_to_change" });
-  const [row] = await q(
+  if (!keys.length && !Array.isArray(b.manages)) return res.status(400).json({ error: "nothing_to_change" });
+  const [row] = keys.length ? await q(
     `update org_units set ${keys.map((k, i) => `${k} = $${i + 2}${cast(k)}`).join(", ")}, updated_at = now() where id = $1 returning *`,
     [current.id, ...keys.map((k) => v[k])]
-  );
+  ) : [current];
   const changes = ["name", "code", "parent_id", "note"].filter((k) => k in v && (v[k] ?? null) !== (k === "parent_id" ? (current[k] === null ? null : Number(current[k])) : current[k] ?? null))
     .map((k) => ({ field: { name: "Name", code: "Code", parent_id: "Sits under", note: "Note" }[k], from: k === "parent_id" ? null : current[k], to: k === "parent_id" ? "moved" : v[k] }));
   if ("overseers" in v && JSON.stringify(v.overseers) !== JSON.stringify((current.overseers || []).map(Number))) changes.push({ field: "Overseen by", from: null, to: "changed" });
+  // the modules this unit looks after (one unit each): ticking moves it here, unticking clears it
+  if (Array.isArray(b.manages)) {
+    const now = await R.managerUnits(q);
+    for (const g of R.MANAGER_GROUPS) {
+      const want = b.manages.includes(g.key), has = now[g.key] === Number(current.id);
+      if (want && !has) await q(`insert into settings (key, value) values ($1, $2) on conflict (key) do update set value = excluded.value`, [`managers:${g.key}`, String(current.id)]);
+      if (!want && has) await q(`delete from settings where key = $1`, [`managers:${g.key}`]);
+      if (want !== has) changes.push({ field: g.label, from: has ? "yes" : "no", to: want ? "yes" : "no" });
+    }
+  }
   if (changes.length) await log(q, me, "updated", "unit", current.id, row.name, changes);
   return res.status(200).json({ unit: unitOut(row) });
 };

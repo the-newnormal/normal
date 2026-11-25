@@ -66,13 +66,15 @@
     bad_person: "One of those people isn't in the directory any more.",
     bad_record_link: "One of the linked records isn't there any more.",
     keep_yourself: "Keep yourself or your team on it, or ask an admin to hand it over.",
+    not_in_team: (f) => `${f}: choose someone from the team that looks after partners (ticked on its org chart page).`,
+    one_each: (f, d) => `${d.other ? `That person is already the ${f.toLowerCase()} of ${d.other}. ` : ""}Each person leads one partnership.`,
     empty_note: "Write something first.",
     bad_seats: "A person can hold up to 10 seats.",
     bad_import: "That file couldn't be imported. Nothing was changed.",
   };
   const errText = (r, fallback) => {
     const e = r && r.data ? ERRORS[r.data.error] : null;
-    return (typeof e === "function" ? e(r.data.field || "that") : e) || fallback || "Couldn't save that. Try again.";
+    return (typeof e === "function" ? e(r.data.field || "that", r.data) : e) || fallback || "Couldn't save that. Try again.";
   };
 
   async function api(path, opts = {}) {
@@ -855,8 +857,11 @@
         hint: eligible.length ? "Founders, Chiefs of Staff and Directors." : "Give someone a Director seat to pick them here." });
     }
     defs.push({ key: "note", label: "Note", type: "textarea", wide: true });
+    const groups = isNew ? [] : org.managerGroups || [];
+    for (const g of groups) defs.push({ key: `manages_${g.key}`, label: g.label, type: "checkbox", wide: true });
 
     const values = { ...unit, parent_id: unit.parent_id === null ? "" : String(unit.parent_id), overseers: (unit.overseers || []).map(String) };
+    for (const g of groups) values[`manages_${g.key}`] = (org.managers || {})[g.key] === unit.id;
     const extra = [linkButton("Cancel", "#/members/chart")];
     if (!isNew) extra.push(confirmButton(`Delete ${kind}`, "Only empty ones can be deleted: move its people and teams first.", async () => {
       const d = await api(`/api/admin/org?id=${unit.id}`, { method: "DELETE" }).catch(() => null);
@@ -869,6 +874,10 @@
       onSubmit: async (vals, status) => {
         const json = { ...vals, ...(isNew ? { kind } : { id: unit.id }) };
         if (kind === "division") json.parent_id = null;
+        if (groups.length) {
+          json.manages = groups.filter((g) => vals[`manages_${g.key}`]).map((g) => g.key);
+          groups.forEach((g) => delete json[`manages_${g.key}`]);
+        }
         const s = await api("/api/admin/org", { method: isNew ? "POST" : "PATCH", json }).catch(() => null);
         if (!s || !s.ok) { status.textContent = errText(s); return; }
         toast(isNew ? `${kind[0].toUpperCase() + kind.slice(1)} added.` : "Saved.");
@@ -1527,6 +1536,11 @@
       const org = await getOrg();
       if (org) { out.people = org.people; out.units = org.units; }
     }
+    out.eligible = {};
+    for (const f of cfg.fields.filter((x) => x.fromManagers)) {
+      const r = await get(`/api/admin/records?${params({ c, eligible: f.key })}`);
+      if (r && r.ok) out.eligible[f.key] = r.data;
+    }
     for (const to of new Set(cfg.fields.filter((x) => (x.type === "link" || x.type === "links") && schema[x.to]).map((x) => x.to))) {
       const r = await get(`/api/admin/records?c=${to}&lite=1`);
       out.links[to] = r && r.ok ? r.data.records : [];
@@ -1590,7 +1604,12 @@
       case "number": return { ...base, type: "number" };
       case "money": return { ...base, type: "number", step: "0.01" };
       case "phone": return { ...base, type: "tel" };
-      case "member": return { ...base, type: "select", options: [["", "—"], ...peopleOptions(look)] };
+      case "member": {
+        const el2 = f.fromManagers && look.eligible && look.eligible[f.key];
+        if (!el2) return { ...base, type: "select", options: [["", "—"], ...peopleOptions(look)] };
+        return { ...base, type: "select", hint: el2.team ? base.hint : `${base.hint || ""} No team is marked as looking after partners yet: tick that on the Relationships team's org chart page to list only them here.`.trim(),
+          options: [["", "—"], ...el2.people.map((x) => [String(x.id), x.on ? `${x.name} · leads ${x.on.title}` : `${x.name} · free`])] };
+      }
       case "members": return { ...base, type: "checks", options: peopleOptions(look) };
       case "unit": return { ...base, type: "select", options: [["", "—"], ...unitOptions(look.units)] };
       case "link": return { ...base, type: "select", options: [["", "—"], ...linkOptions(look, f.to)] };
@@ -2118,6 +2137,22 @@
     if (d.toDisburse) left.append(panel("claims to disburse", miniList(d.toDisburse.slice(0, 8), claimLi(true), "Nothing approved and waiting."), linkButton("Disbursements →", "#/fin/payouts")));
     if (d.myClaims) left.append(panel("my claims", miniList(d.myClaims, claimLi(false), "No claims. Paid for something for Normal? Claim it back."), linkButton("+ new claim", "#/fin/claims/new")));
     if (d.myMeetings) right.append(panel("my meetings", miniList(d.myMeetings, recLi("meetings", (x) => [el("span", "muted", day(x.data.date))]), "No meetings coming up.")));
+    if (d.partnerships) {
+      const free = d.partnerships.people.filter((x) => !x.partner).length;
+      const board = miniList(d.partnerships.people, (x) => {
+        const li = el("li");
+        const who = el("a", "", x.name);
+        who.href = `#/m/${x.id}`;
+        let what;
+        if (x.partner) { what = el("a", "", x.partner.title); what.href = `#/r/partners/${x.partner.id}`; } else what = el("span", "is-overdue", "not assigned yet");
+        li.append(who, what);
+        return li;
+      }, "No one is seated in the team that looks after partners yet.");
+      const note = el("p", "db-note", [free ? `${free} without a partnership.` : "Everyone has a partnership.", d.partnerships.unled ? ` ${d.partnerships.unled} partners have no lead.` : ""].join(""));
+      const wrap = el("div");
+      wrap.append(note, board);
+      right.append(panel("partnerships", wrap, linkButton("Partners →", "#/r/partners")));
+    }
     if (d.followUps && d.followUps.length) {
       right.append(panel("partner follow-ups", miniList(d.followUps, recLi("partners", (x) => [
         el("span", x.data.next_date < d.today ? "is-overdue" : "muted", `${day(x.data.next_date)}${x.data.next_date < d.today ? " · overdue" : ""}`),

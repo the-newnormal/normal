@@ -67,6 +67,8 @@ Normal's admin suite: people, meetings, partners and finance in one place. The s
 
 **Our team, from the org chart.** Partners, contacts and meetings each belong to one of our teams on the org chart (a new one starts as the team of whoever adds it; a contact starts as their organisation's). A member's part of the org chart is the teams they sit in, everything under them and the divisions and domains above them: they can update what belongs there, and **My team's** lists it. Home lists each person's partner follow-ups that are overdue or due within two weeks.
 
+**The Relationships team looks after every partner.** On the team's org chart page (org chart → the team), an admin ticks *Looks after every partner*: everyone seated in that team (or under it) can then update every partner, every contact and every meeting held with a partner. Each partner has a **Relationships lead** from that team, and each member leads one partnership: the form lists who's free, and a second partnership is refused. Their home (and admins') shows each Relationships member's partnership, flags anyone not assigned yet, and counts partners with no lead.
+
 **Roles.** Master Admin: everything, plus accounts, sign-ins in the log and privacy tools, and always on the Finance team. Admin: everything else except Finance's pages (unless they're on the Finance team). Member: home, the members directory and org chart, their own profile, their claims, and the modules as set in `lib/collections.js` (by default: every partner and contact, the meetings they were at or their team's; they add all three and update their team's).
 
 ### Finance

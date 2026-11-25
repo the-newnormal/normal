@@ -88,7 +88,24 @@ async function dashboard(q, me) {
   if (has("partners") && R.fieldOf("partners", "next_date")) {
     const soon = new Date(Date.now() + 8 * 3600e3 + 14 * 864e5).toISOString().slice(0, 10);
     out.followUps = await listOf(q, me, "partners",
-      (p) => `coalesce(data->>'next_date', '') <> '' and data->>'next_date' <= ${p(soon)} and ${R.ownSql(me, "partners", p)}`, `data->>'next_date' asc`, 8);
+      (p) => `coalesce(data->>'next_date', '') <> '' and data->>'next_date' <= ${p(soon)} and ${R.ownSql(me, "partners", p, { managers: false })}`, `data->>'next_date' asc`, 8);
+  }
+  // partnerships: each member of the team that looks after partners, and the partnership they lead
+  const leadField = has("partners") && R.COLLECTIONS.partners.fields.find((f) => f.fromManagers && f.oneEach);
+  const partnersTeam = leadField ? (await R.managerUnits(q)).partners : null;
+  if (partnersTeam && (admin || (me.manages || []).includes("partners"))) {
+    const ids = await R.seatedUnder(q, partnersTeam);
+    const people = ids.length ? await q(`select id, name from members where id = any($1::bigint[]) order by lower(name)`, [ids]) : [];
+    const led = await q(`select id, data from records where collection = 'partners' and not archived and coalesce(data->>'${leadField.key}', '') <> ''`);
+    const [{ n: unled }] = await q(`select count(*)::int as n from records where collection = 'partners' and not archived and coalesce(data->>'parent', '') = ''
+      and coalesce(data->>'status', '') <> 'past' and coalesce(data->>'${leadField.key}', '') = ''`);
+    out.partnerships = {
+      people: people.map((x) => {
+        const r = led.find((y) => String(y.data[leadField.key]) === String(x.id));
+        return { id: Number(x.id), name: x.name, partner: r ? { id: Number(r.id), title: R.titleOf("partners", r.data) } : null };
+      }),
+      unled,
+    };
   }
 
   // finance: my claims; claims waiting for me; claims to disburse

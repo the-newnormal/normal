@@ -4,6 +4,7 @@
 //   GET    ?c=partners&lite=1                          → id + title (+ pickerSub) of every record (for pickers)
 //   GET    ?c=partners&id=                             → one record
 //   GET    ?c=partners&id=&chart=1                     → its org chart: the parts under it, their people, meetings with them
+//   GET    ?c=partners&eligible=lead                   → who can be picked for that field, and what each is on now
 //   GET    ?c=tasks&format=csv                         → the list as a spreadsheet       (admins)
 //   POST   { c, data }                                 → add a record
 //   PATCH  { c, id, data }                             → change fields
@@ -48,6 +49,11 @@ module.exports = async function handler(req, res) {
     params.length = 0;
     const [row] = await q(`select * from records where collection = ${p(c)} and id = ${p(id)} and ${R.visibleSql(me, c, p)}`, params);
     return row || null;
+  }
+
+  if (req.method === "GET" && b.eligible !== undefined) {
+    const out = await R.eligible(q, c, String(b.eligible));
+    return out ? res.status(200).json(out) : res.status(400).json({ error: "bad_request" });
   }
 
   if (req.method === "GET" && b.id !== undefined && b.chart !== undefined) {
@@ -178,6 +184,8 @@ module.exports = async function handler(req, res) {
     }
     // our team starts as the team of whoever adds it
     for (const f of cfg.fields) if (f.mine && f.type === "unit" && unset(f.key) && me.seatUnits && me.seatUnits.length) data[f.key] = me.seatUnits[0];
+    const rule = await R.checkPeople(q, c, data, null);
+    if (rule) return res.status(400).json(rule);
     // a member who adds a record owns it
     if (!admin && (cfg.members.own || []).length && !R.isOwn(me, c, data)) {
       if (!me.memberId) return res.status(403).json({ error: "not_allowed" });
@@ -225,6 +233,8 @@ module.exports = async function handler(req, res) {
     const next = { ...row.data, ...cl.data };
     // members can't hand away a record they own
     if (!admin && !R.isOwn(me, c, next)) return res.status(400).json({ error: "keep_yourself" });
+    const rule = await R.checkPeople(q, c, cl.data, id);
+    if (rule) return res.status(400).json(rule);
     await q(`update records set data = $2::jsonb, updated_by = $3, updated_at = now() where id = $1`, [id, JSON.stringify(next), me.username]);
     const refs = await R.refsFor(q, c, [{ data: { ...row.data } }, { data: next }]);
     const changes = diff(row.data, cl.data, labels, (k, v) => R.display(c, k, v, refs));
