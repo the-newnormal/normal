@@ -648,6 +648,15 @@
       ], true);
       const acts = el("div", "db-stack");
       if (!m.login && me.role === "master") acts.append(linkButton("Create login", `#/accounts/new/${m.id}`));
+      // Master Admins from ADMIN_USERS have no member record until they say which one is theirs
+      if (me.fixed && me.memberId !== Number(m.id)) {
+        acts.append(button("This is me", "", async () => {
+          const s = await api("/api/admin/session", { method: "POST", json: { action: "link-member", memberId: m.id } }).catch(() => null);
+          if (!s || !s.ok) return fail(errText(s));
+          location.reload();
+        }, "this-is-me"));
+      }
+      if (me.fixed && me.memberId === Number(m.id)) acts.append(el("p", "db-note", "This is you: your login is linked to this record."));
       acts.append(confirmButton("Delete record", "Their login (if any) stays, but loses its profile.", async () => {
         const d = await api(`/api/admin/members?id=${m.id}`, { method: "DELETE" }).catch(() => null);
         if (d && d.ok) { toast("Deleted."); location.hash = "#/members"; } else fail(errText(d));

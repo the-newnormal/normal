@@ -46,6 +46,22 @@ module.exports = async function handler(req, res) {
   const b = auth.body(req);
   const q = await db().catch(() => null);
 
+  /* ── a Master Admin from ADMIN_USERS links their login to their member record ── */
+  if (b.action === "link-member") {
+    const user = await auth.currentUser(req).catch(() => null);
+    if (!user || !user.fixed || !q) return res.status(403).json({ error: "not_allowed" });
+    const memberId = b.memberId === null ? null : Number(b.memberId);
+    if (memberId === null) {
+      await q(`delete from settings where key = $1`, [`env_member:${user.username}`]);
+    } else {
+      const [m] = Number.isSafeInteger(memberId) ? await q(`select id, name from members where id = $1`, [memberId]) : [];
+      if (!m) return res.status(404).json({ error: "not_found" });
+      await q(`insert into settings (key, value) values ($1, $2) on conflict (key) do update set value = excluded.value`, [`env_member:${user.username}`, String(m.id)]);
+      await log(q, user, "linked their login to", "member", m.id, m.name);
+    }
+    return res.status(200).json({ ok: true });
+  }
+
   /* ── setup links ── */
   if (b.action === "peek" || b.action === "setup") {
     if (!q) return res.status(503).json({ error: "not_configured" });
