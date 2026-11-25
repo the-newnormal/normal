@@ -20,7 +20,7 @@
     <form class="db-search" id="search-form" role="search">
       <input class="db-input" type="search" id="search-q" placeholder="Search everything  /" aria-label="Search everything" autocomplete="off">
     </form>
-    <nav class="db-nav" id="tabs" aria-label="Sections"></nav>
+    <nav class="db-nav" id="tabs" aria-label="Main"></nav>
     <div class="db-user" id="who">
       <span class="db-avatar" id="who-initials" aria-hidden="true"></span>
       <a class="db-user__name" id="who-name" href="#/"></a>
@@ -30,6 +30,7 @@
   </aside>
 
   <main class="db-main" id="main">
+    <nav class="db-hat" id="hat" aria-label="Sections" hidden></nav>
 
     <!-- signed out -->
     <section class="db-gate" id="login" data-view hidden>
@@ -70,7 +71,7 @@
     <section id="list" data-view hidden>
       <header class="db-head">
         <div>
-          <p class="db-crumb">records</p>
+          <p class="db-crumb" data-area>records</p>
           <h1 class="db-title" id="list-title"></h1>
         </div>
         <div class="db-actions" id="list-actions"></div>
@@ -92,7 +93,7 @@
     <section id="org" data-view hidden>
       <header class="db-head">
         <div>
-          <p class="db-crumb">records</p>
+          <p class="db-crumb" data-area>records</p>
           <h1 class="db-title">members</h1>
         </div>
         <div class="db-actions" id="org-actions"></div>
@@ -124,7 +125,7 @@
     <section id="whats-on" data-view hidden>
       <header class="db-head">
         <div>
-          <p class="db-crumb">records</p>
+          <p class="db-crumb" data-area>records</p>
           <h1 class="db-title">what's on</h1>
         </div>
         <div class="db-actions"><a class="db-btn" href="/events.html" target="_blank" rel="noopener">view public page ↗</a></div>

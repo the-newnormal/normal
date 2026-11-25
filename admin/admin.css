@@ -335,6 +335,13 @@ a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: va
 .db-nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
 .db-nav .db-side__label { margin: 14px 8px 4px; }
 
+/* the open hat's sections */
+.db-hat { display: flex; gap: 2px; margin: -6px 0 20px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.db-hat::-webkit-scrollbar { display: none; }
+.db-hat a { flex: none; padding: 8px 12px 10px; margin-bottom: -1px; color: var(--muted); font-weight: 500; text-decoration: none; border-bottom: 2px solid transparent; }
+.db-hat a:hover { color: var(--text); }
+.db-hat a[aria-current] { color: var(--brand); border-bottom-color: var(--brand); cursor: default; }
+
 .db-pill--done, .db-pill--confirmed, .db-pill--live, .db-pill--approved, .db-pill--paid, .db-pill--received { color: var(--ok); background: var(--ok-soft); }
 .db-pill--doing, .db-pill--planning, .db-pill--talking, .db-pill--submitted { color: var(--info); background: var(--info-soft); }
 .db-pill--to-do, .db-pill--idea, .db-pill--prospect, .db-pill--planned, .db-pill--high { color: var(--warn); background: var(--warn-soft); }
@@ -435,6 +442,7 @@ a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: va
   .db-user__name, .db-user__role { display: none; }
   .db-user .db-link { grid-column: auto; margin: 0; }
   .db-main { padding: 18px 16px 48px; }
+  .db-hat { margin: -4px -16px 16px; padding: 0 10px; }
 }
 @media (max-width: 560px) {
   .db-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

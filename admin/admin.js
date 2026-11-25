@@ -26,6 +26,7 @@
   function show(id) {
     $$("[data-view]").forEach((v) => { v.hidden = v.id !== id; });
     $("#side").hidden = id === "login";
+    if (id === "login") $("#hat").hidden = true;
     $("#app").classList.toggle("is-in", id !== "login");
   }
 
@@ -367,6 +368,7 @@
   // Lists keep their filters while you open a record and come back.
   let listKey = null;
   let loadRows = () => {};
+  let listRun = 0; // each load's number: only the latest one fills the table (not a slow earlier one, or another list's)
   function openList(key, setup) {
     show("list");
     if (listKey !== key) {
@@ -463,20 +465,6 @@
     ];
   }
 
-  // Table | Org chart
-  function memberViews(active) {
-    const seg = el("div", "db-seg");
-    seg.setAttribute("role", "group");
-    seg.setAttribute("aria-label", "View");
-    for (const [key, text, href] of [["table", "Table", "#/members"], ["chart", "Org chart", "#/members/chart"]]) {
-      const a = el("a", "", text);
-      a.href = href;
-      if (key === active) a.setAttribute("aria-current", "page");
-      seg.append(a);
-    }
-    return seg;
-  }
-
   function membersList() {
     openList("members", () => {
       $("#list-title").textContent = "members";
@@ -494,7 +482,6 @@
         unit.replaceChildren(new Option("Whole org", ""), ...unitOptions(org.units).map(([v, t]) => new Option(t, v)));
         unit.value = keep;
       });
-      $("#list-actions").append(memberViews("table"));
       if (isAdmin()) {
         $("#list-actions").append(
           button("Export CSV", "", () => download("/api/admin/members?" + params({ format: "csv", q: q.value.trim(), unit: unit.value, status: status.value }))),
@@ -515,8 +502,10 @@
         { label: "Status", cell: (m) => nodes(pill(m.status, statusKey(m.status)), Number(m.id) === me.memberId && pill("you", "you")) },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const [r] = await Promise.all([get("/api/admin/members?" + params({ q: q.value.trim(), unit: unit.value, status: status.value })), refreshUnits()]);
+        if (run !== listRun) return;
         if (!r) return;
         if (!r.ok) return fail(errText(r, "Couldn't load members."));
         fillList(columns, r.data.members, (m) => `#/m/${m.id}`, r.data.total,
@@ -693,7 +682,7 @@
     // never show the last chart (possibly someone else's view of it) while this one loads
     $("#org-chart").replaceChildren(el("p", "db-empty", "Loading the org chart…"));
     $("#org-unplaced").hidden = true;
-    $("#org-actions").replaceChildren(memberViews("chart"), ...(isAdmin() ? [linkButton("Import from Team Map", "#/org/import"), linkButton("+ add division", "#/org/new/division", "primary")] : []));
+    $("#org-actions").replaceChildren(...(isAdmin() ? [linkButton("Import from Team Map", "#/org/import"), linkButton("+ add division", "#/org/new/division", "primary")] : []));
     const legend = ORG_ROLES.map((r) => {
       const s = el("span", `org-person org-person--${roleKey(r)} is-key`);
       s.append(el("span", "org-av"), el("span", "org-nm", r));
@@ -1012,8 +1001,10 @@
         { label: "Submitted", cls: "is-nowrap is-muted", cell: (a) => new Date(a.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" }) },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const r = await get("/api/admin/applications?" + params(vals()));
+        if (run !== listRun) return;
         if (!r) return;
         if (!r.ok) return fail(errText(r, "Couldn't load applications."));
         fillList(columns, r.data.applications, (a) => `#/a/${a.id}`, r.data.total,
@@ -1254,8 +1245,10 @@
         { label: "Last sign-in", cls: "is-nowrap is-muted", cell: (a) => (a.fixed ? "" : a.last_login ? when(a.last_login) : "never") },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const r = await get("/api/admin/accounts");
+        if (run !== listRun) return;
         if (!r) return;
         if (!r.ok) return fail(errText(r, "Couldn't load accounts."));
         const fixed = r.data.fixed.map((u) => ({ fixed: true, username: u, name: u, role: "master" }));
@@ -1439,6 +1432,8 @@
   }
 
   // the sidebar: home, then each group's sections the person can open
+  // the sidebar: one entry per hat (people; the modules, by group; finance), each hat's sections as tabs on its pages
+  let hatList = [];
   function buildNav() {
     const nav = $("#tabs");
     nav.replaceChildren();
@@ -1449,29 +1444,46 @@
       a.append(icon(ic), label);
       nav.append(a);
     };
-    add("home", "home", "#/", "home");
-    for (const g of ["People", "Work", "Outreach", "Money", "Website", "Admin"]) {
-      const items = [];
-      if (g === "People") {
-        items.push(["members", "members", "#/members", "members"]);
-        if (isAdmin()) items.push(["applications", "applications", "#/applications", "applications"]);
-      }
-      for (const c of Object.values(schema)) if (c.group === g) items.push([c.key, c.label, `#/r/${c.key}`, c.icon]);
-      if (g === "Money") {
-        items.push(["fin-claims", "claims", "#/fin/claims", "receipt"]);
-        if (finMe.finance || finMe.isLead) items.push(["fin-budgets", "budgets", "#/fin/budgets", "pie"]);
-        if (finMe.finance) items.push(["fin-payouts", "disbursements", "#/fin/payouts", "send"], ["fin-bank", "bank", "#/fin/bank", "bank"], ["fin-setup", "finance setup", "#/fin/setup", "sliders"]);
-      }
-      if (g === "Website" && isAdmin()) items.push(["whats-on", "what's on", "#/whats-on", "globe"]);
-      if (g === "Admin") {
-        if (me.role === "master") items.push(["accounts", "accounts", "#/accounts", "key"]);
-        if (isAdmin()) items.push(["activity", "activity log", "#/activity", "history"]);
-        if (me.role === "master") items.push(["privacy", "privacy", "#/privacy", "shield"]);
-      }
-      if (!items.length) continue;
-      nav.append(el("p", "db-side__label", g));
-      items.forEach((i) => add(...i));
+    hatList = [];
+    const people = [["members", "members", "#/members"], ["chart", "org chart", "#/members/chart"]];
+    if (isAdmin()) people.push(["applications", "applications", "#/applications"]);
+    hatList.push({ key: "people", label: "people", icon: "members", items: people });
+    const groups = new Map();
+    for (const c of Object.values(schema)) {
+      if (!groups.has(c.group)) groups.set(c.group, { key: `g-${String(c.group).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, label: c.group, icon: c.icon, items: [] });
+      groups.get(c.group).items.push([c.key, c.label, `#/r/${c.key}`]);
     }
+    hatList.push(...groups.values());
+    const money = [["fin-claims", "claims", "#/fin/claims"]];
+    if (finMe.finance || finMe.isLead) money.push(["fin-budgets", "budgets", "#/fin/budgets"]);
+    if (finMe.finance) money.push(["fin-payouts", "disbursements", "#/fin/payouts"], ["fin-bank", "bank", "#/fin/bank"], ["fin-setup", "setup", "#/fin/setup"]);
+    hatList.push({ key: "finance", label: "finance", icon: "coin", items: money });
+
+    add("home", "home", "#/", "home");
+    for (const h of hatList) add(h.key, h.label, h.items[0][2], h.icon);
+    const admin = [];
+    if (isAdmin()) admin.push(["whats-on", "what's on", "#/whats-on", "globe"]);
+    if (me.role === "master") admin.push(["accounts", "accounts", "#/accounts", "key"]);
+    if (isAdmin()) admin.push(["activity", "activity log", "#/activity", "history"]);
+    if (me.role === "master") admin.push(["privacy", "privacy", "#/privacy", "shield"]);
+    if (admin.length) {
+      nav.append(el("p", "db-side__label", "Admin"));
+      admin.forEach((i) => add(...i));
+    }
+  }
+  // the open hat's sections, as tabs across the top (hidden outside a hat, or when it has only one)
+  function showHat(hat, tab) {
+    const bar = $("#hat");
+    bar.hidden = !hat || hat.items.length < 2;
+    if (bar.hidden) return bar.replaceChildren();
+    bar.setAttribute("aria-label", hat.label);
+    bar.replaceChildren(...hat.items.map(([key, label, href]) => {
+      const a = el("a", "", label);
+      a.href = href;
+      a.dataset.tab = key;
+      if (key === tab) a.setAttribute("aria-current", "page");
+      return a;
+    }));
   }
 
   $("#search-form").addEventListener("submit", (e) => {
@@ -1608,6 +1620,7 @@
         })),
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const query = { c, q: q.value.trim() };
         if (scope.value === "mine") query.mine = "1";
@@ -1615,6 +1628,7 @@
         if (scope.value === "archived") query.archived = "1";
         filterFields.forEach((f, i) => { if (filterEls[i].value) query[`f.${f.key}`] = filterEls[i].value; });
         const r = await get(`/api/admin/records?${params(query)}`);
+        if (run !== listRun) return;
         if (!r) return;
         if (!r.ok) return fail(errText(r, `Couldn't load ${cfg.label}.`));
         refs = r.data.refs;
@@ -2079,8 +2093,10 @@
         { label: "Status", cell: claimPill },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const r = await finGet({ view: "claims", scope, q: q.value.trim(), status: status.value });
+        if (run !== listRun) return;
         if (!r) return;
         if (!r.ok) return fail(finErr(r, "Couldn't load claims."));
         const total = r.data.claims.reduce((s, c) => s + c.amount_cents, 0);
@@ -2444,8 +2460,10 @@
         { label: "Status", cell: (b) => pill(b.active ? "open" : "closed", b.active ? "active" : "disabled") },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const r = await finGet({ view: "budgets" });
+        if (run !== listRun) return;
         if (!r || !r.ok) return fail(finErr(r, "Couldn't load budgets."));
         const rows = r.data.budgets.filter((b) => b.figures);
         fillList(columns, rows, (b) => `#/fin/b/${b.id}`, rows.length, finMe.finance ? "No budgets yet. Add one with \"+ new budget\"." : "No budgets in your divisions yet.", "",
@@ -2659,8 +2677,10 @@
         { label: "Amount", cls: "is-right", cell: (c) => cents(c.amount_cents) },
       ];
       loadRows = async () => {
+        const run = ++listRun;
         fail("");
         const r = await finGet({ view: "claims", scope: "disburse" });
+        if (run !== listRun) return;
         if (!r || !r.ok) return fail(finErr(r, "Couldn't load disbursements."));
         const total = r.data.claims.reduce((s, c) => s + c.amount_cents, 0);
         fillList(columns, r.data.claims, (c) => `#/fin/c/${c.id}`, r.data.claims.length, "Nothing approved and waiting. Approved claims appear here to pay.", "",
@@ -2865,10 +2885,10 @@
     [/^#\/$/, () => homePage(), "home"],
     [/^#\/members$/, () => membersList(), "members"],
     [/^#\/m\/(new|\d+)$/, (m) => memberProfile(m[1]), "members"],
-    [/^#\/members\/chart$/, () => orgChart(), "members"],
-    [/^#\/org\/new\/(division|domain|team)(?:\/(\d+))?$/, (m) => unitForm("new", m[1], m[2]), "members", ["master", "admin"]],
-    [/^#\/org\/import$/, () => importPage(), "members", ["master", "admin"]],
-    [/^#\/org\/(\d+)$/, (m) => unitForm(m[1]), "members", ["master", "admin"]],
+    [/^#\/members\/chart$/, () => orgChart(), "chart"],
+    [/^#\/org\/new\/(division|domain|team)(?:\/(\d+))?$/, (m) => unitForm("new", m[1], m[2]), "chart", ["master", "admin"]],
+    [/^#\/org\/import$/, () => importPage(), "chart", ["master", "admin"]],
+    [/^#\/org\/(\d+)$/, (m) => unitForm(m[1]), "chart", ["master", "admin"]],
     [/^#\/applications$/, () => applicationsList(), "applications", ["master", "admin"]],
     [/^#\/a\/(\d+)$/, (m) => applicationDetail(m[1]), "applications", ["master", "admin"]],
     [/^#\/whats-on$/, () => whatsOn(), "whats-on", ["master", "admin"]],
@@ -2899,7 +2919,11 @@
     if (!hit) { location.hash = "#/"; return; }
     const m = hash.match(hit[0]);
     const tab = typeof hit[2] === "function" ? hit[2](m) : hit[2];
-    $$("#tabs a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    const hat = hatList.find((h) => h.items.some(([key]) => key === tab));
+    const side = hat ? hat.key : tab;
+    $$("#tabs a").forEach((a) => (a.dataset.tab === side ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    $$("[data-area]").forEach((p) => { p.textContent = hat ? hat.label : "admin"; });
+    showHat(hat, tab);
     hit[1](m);
   }
   addEventListener("hashchange", route);
