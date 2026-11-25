@@ -16,12 +16,14 @@
 // POST { action: "pay", id, accountId, reference, date }   record the disbursement      (Finance)
 // POST { action: "budget" | "category" | "rule" | "rule-delete" | "account" | "account-close" | "entry"
 //        | "transfer" | "grant" | "loan" | "repay" | "reserve-add", ... }               (Finance)
+// POST { action: "import-check" | "import-run" | "import-receipts", ... }   copy the finance app's data in (Master Admins; lib/finance-import.js)
 
 const QRCode = require("qrcode");
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
 const { log } = require("../../lib/activity");
 const F = require("../../lib/finance");
+const FI = require("../../lib/finance-import");
 
 const idOf = (v) => {
   const n = Number(v);
@@ -43,11 +45,11 @@ const claimOut = (c) => ({
   budget_id: Number(c.budget_id), category_id: Number(c.category_id), description: c.description, amount_cents: Number(c.amount_cents),
   expense_date: c.expense_date, vendor_name: c.vendor_name, due_date: c.due_date, payout_type: c.payout_type, payout_masked: c.payout_masked,
   rejection_reason: c.rejection_reason, payment_reference: c.payment_reference, paid_on: c.paid_on, created_at: c.created_at, updated_at: c.updated_at,
-  budget_name: c.budget_name, category_name: c.category_name, division_name: c.division_name,
+  budget_name: c.budget_name, category_name: c.category_name, division_name: c.division_name, items: c.items || null,
 });
 const CLAIM_COLS = `c.id, c.seq, c.kind, c.status, c.claimant_id, c.claimant_name, c.division_id, c.budget_id, c.category_id, c.description,
   c.amount_cents, c.expense_date::text as expense_date, c.vendor_name, c.due_date::text as due_date, c.payout_type, c.payout_masked,
-  c.rejection_reason, c.payment_reference, c.paid_on::text as paid_on, c.created_at, c.updated_at,
+  c.rejection_reason, c.payment_reference, c.paid_on::text as paid_on, c.created_at, c.updated_at, c.items,
   b.name as budget_name, k.name as category_name, u.name as division_name`;
 const CLAIM_FROM = `fin_claims c join fin_budgets b on b.id = c.budget_id join fin_categories k on k.id = c.category_id left join org_units u on u.id = c.division_id`;
 
@@ -70,6 +72,14 @@ async function checkAccountDate(q, accountId, date) {
   if (date > F.todaySG()) return { error: "future_date" };
   if (opened && date < opened) return { error: "before_opening" };
   return { account: a };
+}
+
+// for finance setup: can the import run, and when it last did
+async function importStatus(q) {
+  const [row] = await q(`select value from settings where key = 'finance_import'`);
+  let last = null;
+  try { const v = row ? JSON.parse(row.value) : null; last = v && v.at ? { at: v.at, by: v.by } : null; } catch { last = null; }
+  return { ready: Boolean(FI.config()), last };
 }
 
 module.exports = async function handler(req, res) {
@@ -127,6 +137,11 @@ module.exports = async function handler(req, res) {
       if (!c || !canSee(me, c)) return fail(404, "not_found");
       const files = (await q(`select id, name, type, size from fin_files where claim_id = $1 order by id`, [c.id])).map((f) => ({ ...f, id: Number(f.id) }));
       const out = { claim: claimOut(c), files, canDecide: canDecide(me, c), canPay: me.finance && c.status === "approved", finance: me.finance };
+      // line items (claims copied from the finance app can have them), with their categories' names
+      if (Array.isArray(c.items) && c.items.length) {
+        const names = new Map((await q(`select id, name from fin_categories`)).map((k) => [Number(k.id), k.name]));
+        out.claim.items = c.items.map((i) => ({ ...i, category_name: i.category_id ? names.get(Number(i.category_id)) || null : null }));
+      }
       if (me.finance && ["pending_finance", "approved"].includes(c.status)) {
         const [t] = await F.budgetTotals(q, [c.budget_id]);
         // a short balance never blocks a claim; Finance is told instead
@@ -149,6 +164,7 @@ module.exports = async function handler(req, res) {
       const [c] = await q(`select * from fin_claims where id = $1`, [idOf(req.query.id) || 0]);
       if (!c) return fail(404, "not_found");
       if (!["pending_finance", "approved"].includes(c.status)) return fail(409, "not_payable");
+      if (!c.payout_enc) return fail(409, "no_payout");
       let d;
       try { d = F.decryptPayout(c.payout_enc, c.claimant_id); } catch { return fail(500, "payout_unreadable"); }
       const reference = F.payRef(c.seq);
@@ -212,6 +228,7 @@ module.exports = async function handler(req, res) {
         rules: (await q(`select * from fin_rules order by sort, id`)).map((r) => ({ ...r, id: Number(r.id) })),
         divisions: (await q(`select id, name from org_units where kind = 'division' order by sort, lower(name)`)).map((d) => ({ id: Number(d.id), name: d.name })),
         groups: F.GROUPS, keyReady: F.keyReady(),
+        ...(user.role === "master" ? { import: await importStatus(q) } : {}),
       });
     }
 
@@ -256,6 +273,33 @@ module.exports = async function handler(req, res) {
   }
   const b = auth.body(req);
   const a = b.action;
+
+  /* ── copying the finance app's data in (Master Admins) ── */
+  if (a === "import-check" || a === "import-run" || a === "import-receipts") {
+    if (user.role !== "master") return fail(403, "not_allowed");
+    const cfg = FI.config();
+    if (!cfg) return fail(503, "import_not_set_up");
+    try {
+      if (a === "import-check") return res.status(200).json(await FI.check(q, cfg));
+      if (a === "import-run") {
+        const people = b.people && typeof b.people === "object" ? b.people : {};
+        const divisions = b.divisions && typeof b.divisions === "object" ? b.divisions : {};
+        const out = await FI.run(q, cfg, user, { people, divisions });
+        await log(q, user, "imported", "import", null, "the finance app", [
+          { field: "Claims", from: null, to: String(out.counts.claims) },
+          ...(out.created.people.length ? [{ field: "Members added", from: null, to: out.created.people.join(", ") }] : []),
+          ...(out.created.divisions.length ? [{ field: "Divisions added", from: null, to: out.created.divisions.join(", ") }] : []),
+          ...(out.financeTeam.length ? [{ field: "Finance team", from: null, to: out.financeTeam.join(", ") }] : []),
+        ]);
+        return res.status(200).json(out);
+      }
+      const skip = Array.isArray(b.skip) ? b.skip.map(String).slice(0, 1000) : [];
+      return res.status(200).json(await FI.receipts(q, cfg, skip));
+    } catch (e) {
+      if (e && ["import_unreachable", "import_denied", "import_key", "payout_key"].includes(e.code)) return fail(e.code === "payout_key" ? 503 : 502, e.code);
+      throw e;
+    }
+  }
 
   /* ── receipts ── */
   if (a === "upload") {

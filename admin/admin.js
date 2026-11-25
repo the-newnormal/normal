@@ -2028,6 +2028,10 @@
   const FIN_ERRORS = {
     link_member: "Your login isn't linked to a member record yet. Master Admins from Vercel: open your member record and press \"This is me\". Others: ask a Master Admin.",
     payout_key: "Finance isn't switched on yet: PAYOUT_ENCRYPTION_KEY needs setting in Vercel (see the README).",
+    import_not_set_up: "Set FINANCE_SUPABASE_URL and FINANCE_SUPABASE_KEY in Vercel first (see the README).",
+    import_unreachable: "Couldn't reach the finance app's database. Check FINANCE_SUPABASE_URL in Vercel.",
+    import_denied: "The finance app's database refused the key: FINANCE_SUPABASE_KEY must be its service role key.",
+    import_key: "The payout key doesn't match the finance app's: set FINANCE_PAYOUT_KEY in Vercel to the finance app's PAYOUT_ENCRYPTION_KEY.",
     invoice_not_allowed: "Only division leads and Finance can submit vendor invoices.",
     budget_closed: "That budget isn't open for claims.",
     bad_category: "That budget doesn't provide for that category. Choose one of its categories.",
@@ -2361,10 +2365,23 @@
       ["Category", c.category_name],
       ["Division", c.division_name || (c.division_id === null ? "Reserve" : "")],
       ...(c.kind === "invoice" ? [["Vendor", c.vendor_name || ""], ["Due", c.due_date ? day(c.due_date) : ""]] : [["Purchase date", c.expense_date ? day(c.expense_date) : ""]]),
-      ["Paid to", `${({ paynow_mobile: "PayNow", paynow_uen: "PayNow", bank: "Bank" })[c.payout_type]} · ${c.payout_masked}`],
+      ["Paid to", c.payout_type ? `${({ paynow_mobile: "PayNow", paynow_uen: "PayNow", bank: "Bank" })[c.payout_type]} · ${c.payout_masked}` : "not recorded"],
       ["Submitted", when(c.created_at)],
       ...(c.status === "paid" ? [["Disbursed", day(c.paid_on)], ["Reference", c.payment_reference || ""]] : []),
     ])));
+    if (Array.isArray(c.items) && c.items.length) {
+      const t = el("table", "db-table");
+      const th = el("thead"), tb = el("tbody");
+      renderTable(th, tb, [
+        { label: "Item", cell: (i) => i.description },
+        { label: "Category", cell: (i) => i.category_name || "" },
+        { label: "Amount", cls: "is-right", cell: (i) => (i.amount_cents === null || i.amount_cents === undefined ? "" : cents(i.amount_cents)) },
+      ], c.items);
+      t.append(th, tb);
+      const sc = el("div", "db-scroll");
+      sc.append(t);
+      main.append(panel(`items (${c.items.length})`, sc));
+    }
 
     const fl = el("ul", "db-files db-files--thumbs");
     for (const x of files) {
@@ -2835,6 +2852,9 @@
     body.append(el("p", keyReady ? "db-note" : "db-alert", keyReady
       ? "Payout details are encrypted (PAYOUT_ENCRYPTION_KEY is set). Who's on the Finance team is set on each login in accounts; division leads come from the org chart (Founder, Chief of Staff or Director seats on a division)."
       : FIN_ERRORS.payout_key));
+    const justImported = Boolean(importDone);
+    const importBox = r.data.import ? importPanel(r.data.import) : null;
+    if (importBox && (!r.data.import.last || justImported)) body.append(importBox);
 
     // categories
     const t = el("table", "db-table");
@@ -2899,6 +2919,148 @@
     addDet.append(el("summary", "", "+ add a notice"), ruleForm());
     rulesBox.append(addDet);
     body.append(panel("claim form notices", rulesBox));
+    if (importBox && r.data.import.last && !justImported) body.append(importBox);
+  }
+
+  // copying the finance app's data in: check (who's who), import, then the receipts a batch at a time
+  let importDone = null; // the result, shown once on the refreshed setup page
+  const nOf = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  function importPanel(info) {
+    const box = el("div", "db-stack");
+    box.id = "fin-import";
+    const ABOUT = "Copies the finance app's claims (with their receipts and history), budgets and funding, bank ledger, reserve, saved payout details and claim-form notices into the portal.";
+    const intro = (error) => {
+      box.replaceChildren();
+      if (error) box.append(el("p", "db-alert", error));
+      if (!info.ready) {
+        box.append(el("p", "db-note", `${ABOUT} To switch it on, set FINANCE_SUPABASE_URL and FINANCE_SUPABASE_KEY in Vercel (see the README), then come back here.`));
+        return;
+      }
+      box.append(el("p", "db-note", info.last
+        ? `Last imported ${when(info.last.at)} by ${info.last.by}. Running it again copies only what's new in the finance app.`
+        : `${ABOUT} First it checks: it reads the finance app and suggests who's who. Nothing is copied until you press Import.`));
+      const go = el("div", "db-actions");
+      go.append(button("Check the finance app", "primary", checkIt, "fi-check"));
+      box.append(go);
+    };
+    async function checkIt() {
+      box.replaceChildren(el("p", "db-note", "Reading the finance app…"));
+      const r = await finApi({ action: "import-check" });
+      if (!r || !r.ok) return intro(finErr(r, "Couldn't read the finance app."));
+      showPlan(r.data);
+    }
+    const mapTable = (rows, cols) => {
+      const t = el("table", "db-table");
+      const th = el("thead"), tb = el("tbody");
+      renderTable(th, tb, cols, rows);
+      t.append(th, tb);
+      const sc = el("div", "db-scroll");
+      sc.append(t);
+      return sc;
+    };
+    function showPlan(d) {
+      box.replaceChildren();
+      const k = d.counts;
+      if (d.keyOk === false) box.append(el("p", "db-alert", FIN_ERRORS.import_key));
+      if (!d.portalKey) box.append(el("p", "db-alert", FIN_ERRORS.payout_key));
+      box.append(fields([
+        ["Claims", `${k.claims}${d.already ? ` (${d.already} copied before: skipped)` : ""}`],
+        ["Receipts", String(k.receipts)],
+        ["Claim history", nOf(k.history, "step")],
+        ["Budgets", `${k.budgets}, with ${nOf(k.funds, "grant, loan or repayment", "grants, loans and repayments")}`],
+        ["Bank", `${nOf(k.bankAccounts, "account")}, ${nOf(k.bankEntries, "ledger entry", "ledger entries")}`],
+        ["Reserve", nOf(k.reserveAdditions, "addition")],
+        ["Saved payout details", String(k.savedPayouts)],
+        ["Claim form notices", String(k.rules)],
+      ]));
+      const left = [
+        ...(d.leftOut.bankEdits ? [`${nOf(d.leftOut.bankEdits, "edit")} to ledger entries: the entries' current amounts are copied, their edit history stays in the finance app.`] : []),
+        ...(d.leftOut.reversedReserve ? [`${nOf(d.leftOut.reversedReserve, "reserve addition")} that were reversed (they cancel out).`] : []),
+        "AI receipt checks.",
+      ];
+      box.append(el("p", "db-note", `Left out: ${left.join(" ")}`));
+
+      box.append(el("h3", "db-subhead", "who's who"));
+      box.append(el("p", "db-note", "Each person in the finance app, and who they are in the portal. Their claims and saved payout details go to that member. Anyone with claims needs a member: pick one, or add them as a new member."));
+      box.append(mapTable(d.people, [
+        { label: "In the finance app", cell: (p) => nodes(el("strong", "", p.name), el("span", "muted", ` ${p.email || ""}${p.role === "finance" ? " · Finance" : p.role === "lead" ? " · lead" : ""}`)) },
+        { label: "Claims", cls: "is-right", cell: (p) => String(p.claims) },
+        { label: "In the portal", cell: (p) => {
+          const opts = [...d.members.map((m) => [String(m.id), m.name]), ["new", "+ add as a new member"], ...(p.needed ? [] : [["skip", "leave out (nothing to copy)"]])];
+          const sel = select(`Who ${p.name} is in the portal`, opts, p.suggest ? String(p.suggest) : p.needed ? "new" : "skip");
+          sel.dataset.person = p.id;
+          return nodes(sel, p.why ? el("span", "muted", ` ${p.why}`) : null);
+        } },
+      ]));
+      box.append(el("h3", "db-subhead", "divisions"));
+      box.append(el("p", "db-note", "Each budget lives in a division. Pick the org-chart division each of the finance app's divisions is, or add it to the org chart."));
+      box.append(mapTable(d.divisions, [
+        { label: "In the finance app", cell: (x) => nodes(el("strong", "", x.name), el("span", "muted", ` ${nOf(x.budgets, "budget")}`)) },
+        { label: "On the org chart", cell: (x) => {
+          const opts = [...d.units.map((u) => [String(u.id), u.name]), ["new", "+ add as a new division"]];
+          const sel = select(`Which division ${x.name} is`, opts, x.suggest ? String(x.suggest) : "new");
+          sel.dataset.division = x.id;
+          return sel;
+        } },
+      ]));
+      const notes = [];
+      if (d.financeTeam.length) notes.push(`On the finance app's Finance team: ${d.financeTeam.map((f) => f.name).join(", ")}. Their portal logins (where they have one) go on the Finance team.`);
+      const offChart = d.leads.filter((l) => !l.inChart);
+      if (offChart.length) notes.push(`Division leads in the finance app who aren't leads on the org chart: ${offChart.map((l) => `${l.person} (${l.division})`).join(", ")}. In the portal, leads come from the org chart: give them a Founder, Chief of Staff or Director seat on the division if they should keep reviewing claims.`);
+      notes.forEach((n) => box.append(el("p", "db-note", n)));
+
+      const go = confirmButton("Import", "", runIt);
+      go.classList.replace("db-btn--danger", "db-btn--primary");
+      go.id = "fi-run";
+      go.disabled = d.keyOk === false || !d.portalKey;
+      const row = el("div", "db-actions");
+      row.append(go, button("Cancel", "", () => intro()));
+      box.append(row);
+    }
+    async function runIt() {
+      const people = {}, divisions = {};
+      $$("select[data-person]", box).forEach((x) => { people[x.dataset.person] = x.value; });
+      $$("select[data-division]", box).forEach((x) => { divisions[x.dataset.division] = x.value; });
+      box.replaceChildren(el("p", "db-note", "Copying claims, budgets and the bank ledger…"));
+      const r = await finApi({ action: "import-run", people, divisions });
+      if (!r || !r.ok) return intro(finErr(r, "The import stopped. Nothing is copied twice, so you can check and import again."));
+      const res = r.data;
+      const progress = el("p", "db-note", "Copying receipts…");
+      box.replaceChildren(progress);
+      let copied = 0;
+      let skip = [];
+      let stopped = "";
+      for (;;) {
+        const f = await finApi({ action: "import-receipts", skip });
+        if (!f || !f.ok) { stopped = finErr(f, "Copying the receipts stopped."); break; }
+        copied += f.data.copied;
+        skip = skip.concat(f.data.failed);
+        progress.textContent = `Copying receipts… ${copied} copied${f.data.remaining ? `, ${f.data.remaining} to go` : ""}`;
+        if (f.data.remaining <= 0 || (!f.data.copied && !f.data.failed.length)) break;
+      }
+      info.last = { at: new Date().toISOString(), by: me.username };
+      const done = el("div", "db-stack");
+      done.id = "fi-result";
+      done.append(el("p", "db-note", "Done. The finance app's data is in the portal."), fields([
+        ["Claims copied", String(res.counts.claims)],
+        ["Receipts copied", String(copied)],
+        ...(res.created.people.length ? [["Members added", res.created.people.join(", ")]] : []),
+        ...(res.created.divisions.length ? [["Divisions added", res.created.divisions.join(", ")]] : []),
+        ...(res.financeTeam.length ? [["Put on the Finance team", res.financeTeam.join(", ")]] : []),
+      ]));
+      if (skip.length) done.append(el("p", "db-alert db-alert--warn", `${skip.length} ${skip.length === 1 ? "receipt" : "receipts"} couldn't be copied (they stay in the finance app): ${skip.join(", ")}`));
+      if (stopped) done.append(el("p", "db-alert", `${stopped} Press "Check the finance app" and import again to copy the rest.`));
+      const row = el("div", "db-actions");
+      row.append(linkButton("See the claims", "#/fin/claims/all", "primary"), linkButton("Budgets", "#/fin/budgets"), linkButton("Bank", "#/fin/bank"));
+      done.append(row);
+      importDone = done;
+      finSetupPage(); // new categories and notices show at once
+    }
+    if (importDone) {
+      box.append(importDone);
+      importDone = null;
+    } else intro();
+    return panel("import from the finance app", box);
   }
 
   /* ───────────── which view ───────────── */
