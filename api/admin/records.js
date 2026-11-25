@@ -1,9 +1,9 @@
-// /api/admin/records — every module defined in lib/collections.js (tasks, events & projects, meetings,
-// partners, finance, library, announcements).
+// /api/admin/records — every module defined in lib/collections.js (partners, contacts, meetings).
 //   GET    ?schema=1                                   → the modules this person can open, and their fields
-//   GET    ?c=tasks [&q=] [&f.<field>=] [&mine=1] [&sort=&dir=] [&archived=1]   → a list
-//   GET    ?c=tasks&lite=1                             → id + title of every record (for pickers)
-//   GET    ?c=tasks&id=                                → one record
+//   GET    ?c=partners [&q=] [&f.<field>=] [&mine=1] [&team=1] [&sort=&dir=] [&archived=1]   → a list
+//   GET    ?c=partners&lite=1                          → id + title (+ pickerSub) of every record (for pickers)
+//   GET    ?c=partners&id=                             → one record
+//   GET    ?c=partners&id=&chart=1                     → its org chart: the parts under it, their people, meetings with them
 //   GET    ?c=tasks&format=csv                         → the list as a spreadsheet       (admins)
 //   POST   { c, data }                                 → add a record
 //   PATCH  { c, id, data }                             → change fields
@@ -28,6 +28,7 @@ module.exports = async function handler(req, res) {
   const q = await db();
   if (!q) return res.status(503).json({ error: "not_configured" });
   const admin = R.isAdmin(me);
+  await R.withUnits(q, me);
 
   if (req.method === "GET" && req.query.schema !== undefined) {
     return res.status(200).json({ collections: R.schemaFor(me) });
@@ -49,6 +50,45 @@ module.exports = async function handler(req, res) {
     return row || null;
   }
 
+  if (req.method === "GET" && b.id !== undefined && b.chart !== undefined) {
+    const ch = cfg.chart;
+    const id = R.idOf(b.id);
+    const row = ch && id ? await loadOne(id) : null;
+    if (!row) return res.status(404).json({ error: "not_found" });
+    const key = (k) => (R.KEY_RE.test(k) ? k : "x");
+    // the record and every part under it (union, not union all: a loop in the links can't run forever)
+    const units = await q(
+      `with recursive t(id) as (select $1::bigint union select r.id from records r join t on (r.data->>'${key(ch.parent)}')::bigint = t.id where r.collection = $2)
+       select r.* from records r join t on r.id = t.id where r.collection = $2 and (r.id = $1 or not r.archived)`, [id, c]);
+    const ancestors = await q(
+      `with recursive u(id, up, depth) as (select id, (data->>'${key(ch.parent)}')::bigint, 0 from records where id = $1
+         union select r.id, (r.data->>'${key(ch.parent)}')::bigint, u.depth + 1 from records r join u on r.id = u.up where r.collection = $2 and u.depth < 20)
+       select r.id, r.seq, r.data, u.depth from u join records r on r.id = u.id where u.depth > 0 order by u.depth desc`, [id, c]);
+    const unitIds = units.map((u) => Number(u.id));
+    let people = [];
+    if (R.canOpen(me, ch.people.c)) {
+      params.length = 0;
+      people = await q(`select * from records where collection = ${p(ch.people.c)} and not archived and (data->>'${key(ch.people.at)}')::bigint = any(${p(unitIds)}::bigint[])
+        and ${R.visibleSql(me, ch.people.c, p)} order by lower(data->>'${key(R.COLLECTIONS[ch.people.c].title)}')`, params);
+    }
+    let meetings = [];
+    if (R.canOpen(me, ch.meetings.c)) {
+      params.length = 0;
+      const peopleIds = people.map((x) => Number(x.id));
+      const any = (k, ids) => `exists (select 1 from jsonb_array_elements_text(coalesce(data->'${key(k)}', '[]'::jsonb)) x where x::bigint = any(${p(ids)}::bigint[]))`;
+      meetings = await q(`select * from records where collection = ${p(ch.meetings.c)} and not archived
+        and (${any(ch.meetings.orgs, unitIds)} or ${any(ch.meetings.people, peopleIds)})
+        and ${R.visibleSql(me, ch.meetings.c, p)} order by data->>'date' desc nulls last, seq desc limit 300`, params);
+    }
+    return res.status(200).json({
+      units: units.map((u) => R.rowOut(c, u)),
+      ancestors: ancestors.map((a) => ({ id: Number(a.id), code: R.code(c, a.seq), title: R.titleOf(c, a.data) })),
+      people: people.map((x) => R.rowOut(ch.people.c, x)), peopleRefs: await R.refsFor(q, ch.people.c, people),
+      meetings: meetings.map((x) => R.rowOut(ch.meetings.c, x)), meetingRefs: await R.refsFor(q, ch.meetings.c, meetings),
+      canAdd: { [ch.people.c]: Boolean((R.schemaFor(me)[ch.people.c] || {}).canCreate), [c]: Boolean((R.schemaFor(me)[c] || {}).canCreate) },
+    });
+  }
+
   if (req.method === "GET" && b.id !== undefined) {
     const id = R.idOf(b.id);
     const row = id ? await loadOne(id) : null;
@@ -65,8 +105,9 @@ module.exports = async function handler(req, res) {
     if (text) where.push(`data::text ilike ${p(like(text))}`);
     for (const f of cfg.fields) {
       const v = b[`f.${f.key}`];
-      if (v === undefined || v === "" || !f.filter || !R.KEY_RE.test(f.key)) continue;
-      if (f.type === "members") where.push(`coalesce(data->'${f.key}', '[]'::jsonb) @> jsonb_build_array(${p(R.idOf(v) || 0)}::bigint)`);
+      // filters: the ones the list shows, and any link (a record page lists what points at it)
+      if (v === undefined || v === "" || !(f.filter || f.type === "link" || f.type === "links") || !R.KEY_RE.test(f.key)) continue;
+      if (f.type === "members" || f.type === "links") where.push(`coalesce(data->'${f.key}', '[]'::jsonb) @> jsonb_build_array(${p(R.idOf(v) || 0)}::bigint)`);
       else if (f.type === "unit") {
         where.push(`(data->>'${f.key}')::bigint in (with recursive t(id) as (select ${p(R.idOf(v) || 0)}::bigint union all
                      select o.id from org_units o join t on o.parent_id = t.id) select id from t)`);
@@ -77,11 +118,14 @@ module.exports = async function handler(req, res) {
         f.type === "members" ? `coalesce(data->'${f.key}', '[]'::jsonb) @> jsonb_build_array(${p(me.memberId || 0)}::bigint)` : `data->>'${f.key}' = ${p(String(me.memberId || 0))}`);
       where.push(mine.length ? `(${mine.join(" or ")})` : "false");
     }
+    if (b.team === "1") where.push(R.ownSql(me, c, p));
     if (b.open === "1" && cfg.done && R.KEY_RE.test(cfg.done.field)) where.push(`coalesce(data->>'${cfg.done.field}', '') <> all(${p(cfg.done.values)}::text[])`);
 
     if (b.lite !== undefined) {
       const rows = await q(`select id, seq, data from records where ${where.join(" and ")} order by lower(data->>'${cfg.title}')`, params);
-      return res.status(200).json({ records: rows.map((r) => ({ id: Number(r.id), code: R.code(c, r.seq), title: R.titleOf(c, r.data) })) });
+      const subRefs = cfg.pickerSub ? await R.refsFor(q, c, rows) : null;
+      return res.status(200).json({ records: rows.map((r) => ({ id: Number(r.id), code: R.code(c, r.seq), title: R.titleOf(c, r.data),
+        ...(cfg.pickerSub && r.data[cfg.pickerSub] ? { sub: R.display(c, cfg.pickerSub, r.data[cfg.pickerSub], subRefs), of: r.data[cfg.pickerSub] } : {}) })) });
     }
 
     const sortKey = cfg.fields.some((f) => f.key === b.sort) ? b.sort : cfg.sort[0];
@@ -121,10 +165,21 @@ module.exports = async function handler(req, res) {
     const cl = await R.cleanData(q, c, input, allowed, true);
     if (cl.error) return res.status(400).json(cl);
     const data = cl.data;
-    // module defaults (a new task starts "to do") apply whoever adds the record
+    // module defaults (a new partner starts as a prospect) apply whoever adds the record
     for (const [k, v] of Object.entries(cfg.defaults || {})) if (data[k] === undefined || data[k] === null) data[k] = v;
+    const unset = (k) => data[k] === undefined || data[k] === null || data[k] === "";
+    // a field that starts as the linked record's (a contact's team: their organisation's)
+    for (const f of cfg.fields) {
+      if (!f.inherit || !unset(f.key)) continue;
+      const via = R.fieldOf(c, f.inherit[0]);
+      if (!via || via.type !== "link" || !data[via.key]) continue;
+      const [src] = await q(`select data from records where collection = $1 and id = $2`, [via.to, data[via.key]]);
+      if (src && src.data[f.inherit[1]] !== undefined && src.data[f.inherit[1]] !== null) data[f.key] = src.data[f.inherit[1]];
+    }
+    // our team starts as the team of whoever adds it
+    for (const f of cfg.fields) if (f.mine && f.type === "unit" && unset(f.key) && me.seatUnits && me.seatUnits.length) data[f.key] = me.seatUnits[0];
     // a member who adds a record owns it
-    if (!admin && cfg.members.see === "own" && !R.isOwn(me, c, data)) {
+    if (!admin && (cfg.members.own || []).length && !R.isOwn(me, c, data)) {
       if (!me.memberId) return res.status(403).json({ error: "not_allowed" });
       const k = cfg.members.own[0];
       const f = R.fieldOf(c, k);

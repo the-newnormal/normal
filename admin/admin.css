@@ -157,6 +157,29 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .db-stack { display: grid; gap: 10px; }
 .db-subhead { margin: 10px 0 0; font-size: 14px; font-weight: 600; }
 
+/* partners: their people as an org chart, and quick-add on meetings */
+.crm-chart { display: grid; gap: 12px; }
+.crm-up { margin: 0; font-size: 13px; color: var(--muted); }
+.crm-levels { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.crm-levels__label { margin-right: 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.crm-level { padding: 2px 9px; font-size: 12px; background: var(--brand-soft); color: var(--brand); border-radius: 999px; }
+.crm-level.is-none { color: var(--muted); background: var(--surface-2); }
+.crm-unit { display: grid; gap: 6px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.crm-unit.is-root { padding: 0; border: 0; }
+.crm-units { display: grid; gap: 8px; margin-top: 4px; padding-left: 14px; border-left: 2px solid var(--line); }
+.crm-unit__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.crm-unit__name { font-weight: 600; }
+.crm-unit__tools { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.crm-people { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.crm-people .crm-people { margin: 2px 0 2px 8px; padding-left: 12px; border-left: 1px dashed var(--line-2); }
+.crm-person__row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 0; }
+.crm-person__name { font-weight: 500; }
+.crm-met { margin-left: auto; font-size: 12px; }
+.crm-person.is-gone > .crm-person__row { opacity: .6; }
+.crm-quick { margin-top: 6px; }
+.crm-quick > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--brand); }
+.crm-quick__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px; }
+
 /* the data protection notice on the privacy page */
 .dpn { display: grid; gap: 10px; max-width: 80ch; line-height: 1.6; }
 .dpn p { margin: 0; }

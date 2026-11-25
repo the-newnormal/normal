@@ -84,6 +84,12 @@ async function dashboard(q, me) {
   const out = { today, role: me.role, modules: Object.keys(R.COLLECTIONS) };
 
   if (has("meetings")) out.myMeetings = await listOf(q, me, "meetings", and(from("date"), mine("meetings")), `data->>'date' asc`, 5);
+  // their partners' next steps: overdue, or due in the next two weeks
+  if (has("partners") && R.fieldOf("partners", "next_date")) {
+    const soon = new Date(Date.now() + 8 * 3600e3 + 14 * 864e5).toISOString().slice(0, 10);
+    out.followUps = await listOf(q, me, "partners",
+      (p) => `coalesce(data->>'next_date', '') <> '' and data->>'next_date' <= ${p(soon)} and ${R.ownSql(me, "partners", p)}`, `data->>'next_date' asc`, 8);
+  }
 
   // finance: my claims; claims waiting for me; claims to disburse
   const fm = await F.whoIs(q, me);
@@ -169,6 +175,7 @@ module.exports = async function handler(req, res) {
   const q = await db();
   if (!q) return res.status(503).json({ error: "not_configured" });
   const admin = R.isAdmin(me);
+  await R.withUnits(q, me);
 
   if (req.method === "GET" && req.query.view === "dashboard") return res.status(200).json(await dashboard(q, me));
   if (req.method === "GET" && req.query.view === "search") return res.status(200).json({ groups: await search(q, me, String(req.query.q || "").trim().slice(0, 100)) });

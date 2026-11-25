@@ -64,8 +64,8 @@
     required: (f) => `"${f}" is needed.`,
     bad_url: (f) => `"${f}" must be a full link starting with https://.`,
     bad_person: "One of those people isn't in the directory any more.",
-    bad_record_link: "That event or project isn't there any more.",
-    keep_yourself: "Keep yourself on it, or ask an admin to hand it over.",
+    bad_record_link: "One of the linked records isn't there any more.",
+    keep_yourself: "Keep yourself or your team on it, or ask an admin to hand it over.",
     empty_note: "Write something first.",
     bad_seats: "A person can hold up to 10 seats.",
     bad_import: "That file couldn't be imported. Nothing was changed.",
@@ -1527,14 +1527,15 @@
       const org = await getOrg();
       if (org) { out.people = org.people; out.units = org.units; }
     }
-    for (const f of cfg.fields.filter((x) => x.type === "link" && schema[x.to])) {
-      const r = await get(`/api/admin/records?c=${f.to}&lite=1`);
-      out.links[f.to] = r && r.ok ? r.data.records : [];
+    for (const to of new Set(cfg.fields.filter((x) => (x.type === "link" || x.type === "links") && schema[x.to]).map((x) => x.to))) {
+      const r = await get(`/api/admin/records?c=${to}&lite=1`);
+      out.links[to] = r && r.ok ? r.data.records : [];
     }
     return out;
   }
   const peopleOptions = (look) => look.people.map((p) => [String(p.id), p.name]);
-  const linkOptions = (look, to) => (look.links[to] || []).map((r) => [String(r.id), `${r.code} ${r.title}`]);
+  const linkLabel = (to, r) => (schema[to] && schema[to].pickerSub ? (r.sub ? `${r.title} · ${r.sub}` : r.title) : `${r.code} ${r.title}`);
+  const linkOptions = (look, to) => (look.links[to] || []).map((r) => [String(r.id), linkLabel(to, r)]);
   const isDone = (cfg, data) => Boolean(cfg.done && cfg.done.values.includes(data[cfg.done.field]));
 
   // a stored value as people read it; inTable keeps it short
@@ -1550,7 +1551,7 @@
       case "select": return pill(v, v);
       case "check": return v ? "✓ yes" : "";
       case "date": {
-        const late = f.key === cfg.due && !isDone(cfg, data) && v < todaySG() && cfg.key === "tasks";
+        const late = f.key === cfg.overdue && !isDone(cfg, data) && v < todaySG();
         return el("span", late ? "is-overdue" : "", day(v) + (late ? " · overdue" : ""));
       }
       case "money": return money(v);
@@ -1567,6 +1568,13 @@
       }
       case "unit": return refs.units[v] || "(removed)";
       case "link": { const t = (refs.links[f.to] || {})[v]; return t ? link(t, `#/r/${f.to}/${v}`) : "(removed)"; }
+      case "links": {
+        const named = (x) => (refs.links[f.to] || {})[x];
+        if (inTable) return v.map((x) => named(x) || "(removed)").join(", ");
+        const box = el("span", "db-names");
+        v.forEach((x, i) => box.append(named(x) ? link(named(x), `#/r/${f.to}/${x}`) : "(removed)", i < v.length - 1 ? ", " : ""));
+        return box;
+      }
       case "long": return inTable ? String(v).slice(0, 80) + (String(v).length > 80 ? "…" : "") : el("p", "db-notes", v);
       default: return String(v);
     }
@@ -1574,7 +1582,7 @@
 
   // a module field as a form question
   function formDef(f, look) {
-    const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" };
+    const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" || f.type === "links" };
     switch (f.type) {
       case "long": return { ...base, type: "textarea" };
       case "select": return { ...base, type: "select", options: f.required ? f.options : [["", "—"], ...f.options] };
@@ -1586,6 +1594,7 @@
       case "members": return { ...base, type: "checks", options: peopleOptions(look) };
       case "unit": return { ...base, type: "select", options: [["", "—"], ...unitOptions(look.units)] };
       case "link": return { ...base, type: "select", options: [["", "—"], ...linkOptions(look, f.to)] };
+      case "links": return { ...base, type: "checks", options: linkOptions(look, f.to) };
       default: return { ...base, type: f.type };
     }
   }
@@ -1593,7 +1602,7 @@
     const out = {};
     for (const f of fieldsList) {
       const v = data[f.key];
-      if (f.type === "members") out[f.key] = (v || []).map(String);
+      if (f.type === "members" || f.type === "links") out[f.key] = (Array.isArray(v) ? v : v ? [v] : []).map(String);
       else if (f.type === "check") out[f.key] = Boolean(v);
       else if (v !== undefined && v !== null) out[f.key] = ["member", "unit", "link"].includes(f.type) ? String(v) : v;
     }
@@ -1608,6 +1617,7 @@
       const q = searchBox(`Search ${cfg.label}…`);
       q.id = "f-q";
       const scopeOpts = [["", "All records"], ["mine", "Mine"]];
+      if (cfg.ownTeam) scopeOpts.push(["team", "My team's"]);
       if (cfg.done) scopeOpts.push(["open", "Not done"]);
       if (cfg.admin) scopeOpts.push(["archived", "Archived"]);
       const scope = select("Show", scopeOpts);
@@ -1621,7 +1631,7 @@
       filterInputs([q, scope, ...filterEls]);
       lookups(c).then((look) => filterFields.forEach((f, i) => {
         if (f.type === "select") return;
-        const opts = f.type === "unit" ? unitOptions(look.units) : f.type === "link" ? linkOptions(look, f.to) : peopleOptions(look);
+        const opts = f.type === "unit" ? unitOptions(look.units) : f.type === "link" || f.type === "links" ? linkOptions(look, f.to) : peopleOptions(look);
         const keep = filterEls[i].value;
         filterEls[i].append(...opts.map(([v, t]) => new Option(t, v)));
         filterEls[i].value = keep;
@@ -1645,6 +1655,7 @@
         fail("");
         const query = { c, q: q.value.trim() };
         if (scope.value === "mine") query.mine = "1";
+        if (scope.value === "team") query.team = "1";
         if (scope.value === "open") query.open = "1";
         if (scope.value === "archived") query.archived = "1";
         filterFields.forEach((f, i) => { if (filterEls[i].value) query[`f.${f.key}`] = filterEls[i].value; });
@@ -1670,8 +1681,194 @@
     });
   }
 
+  /* partners' org charts: the parts under a partner, its people by who reports to whom, every meeting with them */
+  async function chartPanels(c, rec, into) {
+    const cfg = schema[c];
+    const ch = cfg.chart;
+    const r = await get(`/api/admin/records?${params({ c, id: String(rec.id), chart: "1" })}`);
+    if (!r || !r.ok) return;
+    const { units, ancestors, people, meetings, meetingRefs, canAdd } = r.data;
+    const pc = schema[ch.people.c];
+    const levels = ch.people.levels || [];
+    const lv = (x) => x.data[ch.people.level];
+    const order = (a, b) => (levels.indexOf(lv(a)) + 1 || 99) - (levels.indexOf(lv(b)) + 1 || 99) || String(a.data[pc.title]).localeCompare(String(b.data[pc.title]));
+    // how often we've met each person, and when last
+    const met = {};
+    for (const m of meetings) {
+      for (const pid of m.data[ch.meetings.people] || []) {
+        const k = String(pid);
+        met[k] = met[k] || { n: 0, last: "" };
+        met[k].n += 1;
+        if ((m.data.date || "") > met[k].last) met[k].last = m.data.date || "";
+      }
+    }
+    const box = el("div", "crm-chart");
+    if (ancestors.length) {
+      const up = el("p", "crm-up", "Part of ");
+      ancestors.forEach((a, i) => { const l = el("a", "", a.title); l.href = `#/r/${c}/${a.id}`; up.append(l, i < ancestors.length - 1 ? " › " : ""); });
+      box.append(up);
+    }
+    // the levels we reach, among people still in their roles
+    const current = people.filter((x) => x.data.status !== "moved on");
+    if (current.length) {
+      const strip = el("div", "crm-levels");
+      strip.append(el("span", "crm-levels__label", "Who we know:"));
+      for (const name of levels) {
+        const n = current.filter((x) => lv(x) === name).length;
+        strip.append(el("span", `crm-level${n ? "" : " is-none"}`, `${n} ${name}`));
+      }
+      const unknown = current.filter((x) => !levels.includes(lv(x))).length;
+      if (unknown) strip.append(el("span", "crm-level is-none", `${unknown} level not set`));
+      box.append(strip);
+    }
+    const byUnit = new Map(units.map((u) => [u.id, []]));
+    for (const x of people) { const u = Number(x.data[ch.people.at]); if (byUnit.has(u)) byUnit.get(u).push(x); }
+    const kids = new Map(units.map((u) => [u.id, []]));
+    for (const u of units) { const up = Number(u.data[ch.parent]); if (u.id !== rec.id && kids.has(up)) kids.get(up).push(u); }
+    const seenUnits = new Set();
+    const unitNode = (u, depth) => {
+      seenUnits.add(u.id);
+      const wrap = el("div", `crm-unit${depth ? "" : " is-root"}`);
+      const head = el("div", "crm-unit__head");
+      if (depth) {
+        const a = el("a", "crm-unit__name", u.data[cfg.title] || "(untitled)");
+        a.href = `#/r/${c}/${u.id}`;
+        head.append(a);
+      } else head.append(el("strong", "crm-unit__name", "Org chart"));
+      const tools = el("span", "crm-unit__tools");
+      if (canAdd[ch.people.c]) tools.append(linkButton("+ person", `#/r/${ch.people.c}/new?${params({ [ch.people.at]: String(u.id) })}`, "sm"));
+      if (canAdd[c]) tools.append(linkButton("+ department or branch", `#/r/${c}/new?${params({ [ch.parent]: String(u.id) })}`, "sm"));
+      head.append(tools);
+      wrap.append(head);
+      // people here, under whoever they report to (when that person is here too)
+      const here = byUnit.get(u.id) || [];
+      const ids = new Set(here.map((x) => x.id));
+      const below = new Map();
+      const tops = [];
+      for (const x of here) {
+        const boss = Number(x.data[ch.people.reportsTo]);
+        if (boss && boss !== x.id && ids.has(boss)) { if (!below.has(boss)) below.set(boss, []); below.get(boss).push(x); } else tops.push(x);
+      }
+      const seen = new Set();
+      const personNode = (x) => {
+        seen.add(x.id);
+        const li = el("li", `crm-person${x.data.status === "moved on" ? " is-gone" : ""}`);
+        const row = el("div", "crm-person__row");
+        const a = el("a", "crm-person__name", x.data[pc.title] || "(no name)");
+        a.href = `#/r/${ch.people.c}/${x.id}`;
+        row.append(a);
+        if (x.data.title) row.append(el("span", "muted", x.data.title));
+        if (lv(x)) row.append(pill(lv(x), "level"));
+        if (x.data.status === "moved on") row.append(pill("moved on", "disabled"));
+        const m = met[String(x.id)];
+        row.append(el("span", "crm-met muted", m ? `met ${m.n}× · last ${day(m.last)}` : "not met yet"));
+        li.append(row);
+        const subs = (below.get(x.id) || []).filter((y) => !seen.has(y.id)).sort(order);
+        if (subs.length) {
+          const ul = el("ul", "crm-people");
+          subs.forEach((y) => ul.append(personNode(y)));
+          li.append(ul);
+        }
+        return li;
+      };
+      if (here.length) {
+        const ul = el("ul", "crm-people");
+        tops.sort(order).forEach((x) => ul.append(personNode(x)));
+        here.filter((x) => !seen.has(x.id)).sort(order).forEach((x) => ul.append(personNode(x))); // a loop in "reports to"
+        wrap.append(ul);
+      } else wrap.append(el("p", "db-note", depth ? "No one here yet." : "No one at this level yet."));
+      const sub = (kids.get(u.id) || []).filter((k) => !seenUnits.has(k.id)).sort((a, b) => String(a.data[cfg.title]).localeCompare(String(b.data[cfg.title])));
+      if (sub.length && depth < 12) {
+        const k = el("div", "crm-units");
+        sub.forEach((s2) => k.append(unitNode(s2, depth + 1)));
+        wrap.append(k);
+      }
+      return wrap;
+    };
+    const root = units.find((u) => u.id === rec.id);
+    if (root) box.append(unitNode(root, 0));
+    into.append(panel(`people (${current.length}${people.length > current.length ? ` + ${people.length - current.length} moved on` : ""})`, box));
+
+    // every meeting with them, newest first
+    if (schema[ch.meetings.c]) {
+      const mc = schema[ch.meetings.c];
+      const list = el("ul", "db-mini crm-meetings");
+      for (const m of meetings.slice(0, 60)) {
+        const li = el("li");
+        const a = el("a", "", m.data[mc.title] || "(untitled)");
+        a.href = `#/r/${ch.meetings.c}/${m.id}`;
+        const who = (m.data[ch.meetings.people] || []).map((pid) => ((meetingRefs.links || {})[ch.people.c] || {})[pid]).filter(Boolean);
+        li.append(el("span", "mono muted", m.data.date ? day(m.data.date) : ""), a, who.length ? el("span", "muted", who.join(", ")) : null);
+        list.append(li);
+      }
+      const log = schema[ch.meetings.c].canCreate ? linkButton("+ log a meeting", `#/r/${ch.meetings.c}/new?${params({ [ch.meetings.orgs]: String(rec.id) })}`, "sm") : null;
+      into.append(panel(`meetings (${meetings.length})`, meetings.length ? list : el("p", "db-note", "No meetings logged with them yet."), log));
+    }
+  }
+
+  // "+ someone new" under a links field marked quickAdd: adds the record (say, a contact met in this meeting) and ticks it
+  function addQuickAdds(cfg, inputs, look) {
+    for (const f of cfg.fields.filter((x) => x.quickAdd && x.type === "links" && inputs && inputs[x.key])) {
+      const to = schema[f.to];
+      if (!to || !to.canCreate) continue;
+      const box = inputs[f.key];
+      const orgField = to.fields.find((x) => x.type === "link" && x.required);
+      const levelField = to.fields.find((x) => x.key === "level" && x.type === "select");
+      const roleField = to.fields.find((x) => x.key === "title" && x.key !== to.title);
+      const orgsHere = orgField && cfg.fields.find((x) => x.type === "links" && x.to === orgField.to && inputs[x.key]);
+      const det = el("details", "crm-quick");
+      det.append(el("summary", "", "+ someone new"));
+      const name = el("input", "db-input");
+      name.placeholder = "Name";
+      name.setAttribute("aria-label", "Name");
+      name.id = `qa-${f.key}-name`;
+      const role = roleField ? el("input", "db-input") : null;
+      if (role) { role.placeholder = roleField.label; role.setAttribute("aria-label", roleField.label); role.id = `qa-${f.key}-role`; }
+      const org = orgField ? select(orgField.label, [["", `${orgField.label}…`], ...linkOptions(look, orgField.to)], undefined, "db-input") : null;
+      if (org) org.id = `qa-${f.key}-org`;
+      const level = levelField ? select(levelField.label, [["", `${levelField.label}…`], ...levelField.options], undefined, "db-input") : null;
+      if (level) level.id = `qa-${f.key}-level`;
+      const msg = el("p", "db-error");
+      det.addEventListener("toggle", () => {
+        if (!det.open || !org || org.value || !orgsHere) return;
+        const first = $("input:checked", inputs[orgsHere.key]);
+        if (first) org.value = first.value;
+      });
+      const add = button("Add", "", async () => {
+        msg.textContent = "";
+        if (!name.value.trim()) { msg.textContent = "Add their name."; name.focus(); return; }
+        if (org && !org.value) { msg.textContent = `Choose their ${orgField.label.toLowerCase()}.`; org.focus(); return; }
+        const data = { [to.title]: name.value.trim() };
+        if (role && role.value.trim()) data[roleField.key] = role.value.trim();
+        if (org) data[orgField.key] = org.value;
+        if (level && level.value) data[levelField.key] = level.value;
+        const s2 = await api("/api/admin/records", { method: "POST", json: { c: f.to, data } }).catch(() => null);
+        if (!s2 || !s2.ok) { msg.textContent = errText(s2); return; }
+        const lab = el("label", "db-check");
+        const tick = el("input");
+        tick.type = "checkbox";
+        tick.value = String(s2.data.record.id);
+        tick.checked = true;
+        const orgName = org ? org.options[org.selectedIndex].text : "";
+        lab.append(tick, orgName ? `${data[to.title]} · ${orgName}` : data[to.title]);
+        $$(".db-note", box).forEach((n) => n.remove());
+        box.append(lab);
+        if (orgsHere && org) { const t = $(`input[value="${org.value}"]`, inputs[orgsHere.key]); if (t) t.checked = true; }
+        (look.links[f.to] = look.links[f.to] || []).push({ id: s2.data.record.id, code: s2.data.record.code, title: data[to.title], sub: orgName });
+        toast(`${data[to.title]} added to ${to.label}.`);
+        name.value = "";
+        if (role) role.value = "";
+        if (level) level.value = "";
+      }, `qa-${f.key}-add`);
+      const row = el("div", "crm-quick__row");
+      row.append(...nodes(name, role, org, level, add));
+      det.append(row, msg);
+      box.after(det);
+    }
+  }
+
   /* one record */
-  async function recordPage(c, id) {
+  async function recordPage(c, id, prefill = {}) {
     const cfg = schema[c];
     fail("");
     const look = await lookups(c);
@@ -1679,7 +1876,8 @@
       const body = detail(`#/r/${c}`, cfg.label, "new", `new ${cfg.noun}`);
       if (!cfg.canCreate) return fail(ERRORS.not_allowed);
       const defs = cfg.fields.filter((f) => cfg.createFields.includes(f.key)).map((f) => formDef(f, look));
-      const { form: f } = buildForm(defs, formValues(cfg.fields, cfg.defaults), {
+      const given = Object.fromEntries(cfg.fields.filter((f) => prefill[f.key]).map((f) => [f.key, f.type === "links" || f.type === "members" ? [prefill[f.key]] : prefill[f.key]]));
+      const { form: f, inputs: newInputs } = buildForm(defs, formValues(cfg.fields, { ...cfg.defaults, ...given }), {
         submit: `Save ${cfg.noun}`,
         extra: [linkButton("Cancel", `#/r/${c}`)],
         onSubmit: async (vals, status) => {
@@ -1691,6 +1889,7 @@
         },
       });
       if (!cfg.admin && cfg.seeAll === false) f.prepend(el("p", "db-note db-field--wide", "You'll be added to it, so you can find it later."));
+      addQuickAdds(cfg, newInputs, look);
       body.append(panel(`${cfg.noun} record`, f));
       return;
     }
@@ -1715,9 +1914,11 @@
     }
     const related = el("div", "db-related");
 
-    // records in other modules that point at this one (an event's tasks, budget and meetings)
-    for (const other of Object.values(schema)) {
-      const via = other.fields.find((f) => f.type === "link" && f.to === c);
+    // a partner's org chart: the parts under it, its people and every meeting with them
+    if (cfg.chart) await chartPanels(c, rec, related);
+    // records in other modules that point at this one (a contact's meetings, the people who report to them)
+    for (const other of cfg.chart ? [] : Object.values(schema)) {
+      const via = other.fields.find((f) => (f.type === "link" || f.type === "links") && f.to === c);
       if (!via) continue;
       const rr = await get(`/api/admin/records?${params({ c: other.key, [`f.${via.key}`]: String(rec.id) })}`);
       if (!rr || !rr.ok || !rr.data.records.length) continue;
@@ -1733,12 +1934,14 @@
       }
       const more = linkButton(`All ${rr.data.records.length} →`, `#/r/${other.key}`);
       more.classList.add("db-btn--sm");
-      related.append(panel(`${other.label} (${rr.data.records.length})`, ul, rr.data.records.length > 8 ? more : null));
+      const what = other.key === c ? `${via.label.toLowerCase()} them` : other.label;
+      related.append(panel(`${what} (${rr.data.records.length})`, ul, rr.data.records.length > 8 ? more : null));
     }
 
+    if (cfg.chart) main.append(related); // a partner's people and meetings come before the long form
     if (canEdit.length) {
       const editable = cfg.fields.filter((f) => canEdit.includes(f.key));
-      const { form: f } = buildForm(editable.map((x) => formDef(x, look)), formValues(editable, rec.data), {
+      const { form: f, inputs: editInputs } = buildForm(editable.map((x) => formDef(x, look)), formValues(editable, rec.data), {
         submit: "Save changes",
         onSubmit: async (vals, status) => {
           const s = await api("/api/admin/records", { method: "PATCH", json: { c, id: rec.id, data: vals } }).catch(() => null);
@@ -1748,9 +1951,10 @@
           recordPage(c, String(rec.id));
         },
       });
+      addQuickAdds(cfg, editInputs, look);
       main.append(panel(editsAll ? "details" : "update", f));
     }
-    main.append(related, timelinePanel(`record:${c}`, rec.id));
+    main.append(...(cfg.chart ? [] : [related]), timelinePanel(`record:${c}`, rec.id));
 
     aside.append(panel("record", fields([
       ["Record", rec.code],
@@ -1914,6 +2118,12 @@
     if (d.toDisburse) left.append(panel("claims to disburse", miniList(d.toDisburse.slice(0, 8), claimLi(true), "Nothing approved and waiting."), linkButton("Disbursements →", "#/fin/payouts")));
     if (d.myClaims) left.append(panel("my claims", miniList(d.myClaims, claimLi(false), "No claims. Paid for something for Normal? Claim it back."), linkButton("+ new claim", "#/fin/claims/new")));
     if (d.myMeetings) right.append(panel("my meetings", miniList(d.myMeetings, recLi("meetings", (x) => [el("span", "muted", day(x.data.date))]), "No meetings coming up.")));
+    if (d.followUps && d.followUps.length) {
+      right.append(panel("partner follow-ups", miniList(d.followUps, recLi("partners", (x) => [
+        el("span", x.data.next_date < d.today ? "is-overdue" : "muted", `${day(x.data.next_date)}${x.data.next_date < d.today ? " · overdue" : ""}`),
+        x.data.next_step ? el("span", "muted", x.data.next_step) : null,
+      ]), ""), linkButton("Partners →", "#/r/partners")));
+    }
     if (d.mySeats) {
       right.append(panel("where you sit", miniList(d.mySeats, (s) => {
         const li = el("li");
@@ -3121,7 +3331,7 @@
     [/^#\/accounts\/new(?:\/(\d+))?$/, (m) => accountForm(m[1]), "accounts", ["master"]],
     [/^#\/accounts\/(\d+)$/, (m) => accountDetail(m[1]), "accounts", ["master"]],
     [/^#\/r\/([a-z_]+)$/, (m) => collectionList(m[1]), (m) => m[1], null, (m) => Boolean(schema[m[1]])],
-    [/^#\/r\/([a-z_]+)\/(new|\d+)$/, (m) => recordPage(m[1], m[2]), (m) => m[1], null, (m) => Boolean(schema[m[1]])],
+    [/^#\/r\/([a-z_]+)\/(new|\d+)(?:\?(.*))?$/, (m) => recordPage(m[1], m[2], Object.fromEntries(new URLSearchParams(m[3] || ""))), (m) => m[1], null, (m) => Boolean(schema[m[1]])],
     [/^#\/search\/(.+)$/, (m) => searchPage(decodeURIComponent(m[1])), "search"],
     [/^#\/activity$/, () => activityPage(), "activity", ["master", "admin"]],
     [/^#\/privacy$/, () => privacyPage(), "privacy", ["master"]],
