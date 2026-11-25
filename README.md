@@ -38,14 +38,27 @@ Admins edit the "what's on" page (`events.html`) in the portal: **admin.newnorma
 
 ## The admin portal (admin.newnormal.sg)
 
-One place for Normal's people and admin.
+Normal's admin suite: people, work, outreach, money and the library in one place. Everyone signs in to **home**, which shows what needs them (their tasks, meetings, claims, announcements; for admins also new applications, overdue tasks and claims to approve). **Search** (top left, or press `/`) looks across everything they're allowed to see.
 
 | Section | What's in it | Who sees it |
 |---|---|---|
 | members | Everyone in Normal: name, title, seats on the org chart (role + division, domain or team), Telegram, phone, email, birthday, school, joined, recruitment round, status, notes. A table (search, filter by division or team, export) and an **org chart**. | Everyone. Members see only name, title, seats and Telegram of others, see recruits as "joining", edit only their own contact details, and can't change the chart. |
 | applications | Join-page applications: full answers, status (new, interviewing, accepted, declined), "accept" adds them to members. Export. | Admins |
 | what's on | The IPs and events on the what's on page | Admins |
+| tasks | To-dos with status, priority, due date, who's on it, team and event. Overdue ones are flagged. | Everyone sees the tasks they're on, adds tasks and updates their status; admins see and edit all. |
+| events & projects | Everything Normal runs: dates, team, lead, budget, venue, attendance. Each one's page gathers its tasks, meetings and finance. | Everyone sees them; admins edit. |
+| meetings | Date, attendees, agenda, minutes, decisions | Attendees (and can write the minutes); admins |
+| partners | Organisations Normal works with (PA, HDB, schools, sponsors…), status, who looks after them, their contact | The person who looks after each; admins |
+| finance | Budget lines, expenses and income, with a status (submitted → approved → paid). Totals at the bottom of the list. | Anyone can submit an expense claim and see their own (locked once approved); admins see all and approve |
+| library | Links to guides, SOPs, templates, decks, policies | Everyone, unless marked admins-only |
+| announcements | Messages to the team; pinned ones top everyone's home | Everyone, unless marked admins-only |
 | accounts | Who can sign in, and as what | Master Admins |
+| activity log | Every change: who, what, when, old → new. Sign-ins and account changes for Master Admins only. | Admins |
+| privacy | Delete old applications (the privacy notice's 3-year promise) | Master Admins |
+
+**Every record works the same way.** A record number (T-0012, P-0003, F-0042…), a table with search, filters and CSV export, a page with its details and a **history & notes** timeline: every change is logged there automatically, and anyone who can see the record can leave a note (a call, a decision, an update). Admins can archive a record (hidden, not deleted) or delete it.
+
+**Adding a module.** The modules are defined in one file, `lib/collections.js`: their fields, which appear as columns and filters, and what Members may see, add and change. Add an entry there and it appears in the sidebar with all of the above. No other code changes.
 
 **The org chart** (members → Org chart) follows the Team Map: Normal → divisions → domains → teams, each with a code like PB or PB.1. Admins add and rename them on the chart (+ add division, + domain, + team; click a name to edit). A domain can be "overseen by" Founders, Chiefs of Staff or Directors.
 
@@ -54,7 +67,7 @@ One place for Normal's people and admin.
 - **Import from Team Map** (on the chart): in the Team Map, Export CSV, then choose that file. The portal shows what's in it, then adds any new divisions, domains, teams and people and gives everyone in the file their seats, status and round from it. People are matched by name, so importing again adds nothing twice; nobody is deleted.
 - A domain that is just one team of the same name shows as one card. Hover a Director to see what they oversee. A division, domain or team can only be deleted once it's empty.
 
-**Roles.** Master Admin: everything, plus accounts. Admin: everything except accounts. Member: the members directory and their own profile.
+**Roles.** Master Admin: everything, plus accounts, sign-ins in the log and privacy tools. Admin: everything else. Member: home, the members directory and org chart, their own profile, and the modules as set in `lib/collections.js` (by default: their tasks, meetings, partners and claims; all events, the library and announcements).
 
 **Giving someone a login.** accounts → create an account (or "make them a login" on their member profile). Pick their role and their member profile. You get a one-time link to send on WhatsApp or Telegram; they open it and choose their own password. Links work once and last 7 days. If someone forgets their password, open their account → new password link.
 
@@ -64,11 +77,11 @@ One place for Normal's people and admin.
 
 | Piece | Where |
 |---|---|
-| Portal | `admin/index.html`, `admin/admin.js`, `admin/admin.css` (served at admin.newnormal.sg, also at `/admin/`). It has its own plain records-office look, separate from the public site's `styles.css`. |
+| Portal | `admin/index.html`, `admin/admin.js`, `admin/admin.css`, `admin/teammap.js` (served at admin.newnormal.sg, also at `/admin/`). It has its own plain records-office look, separate from the public site's `styles.css`. |
 | Setup-link page | `admin/welcome.html` (admin.newnormal.sg/welcome) |
 | First Master Admin's login line | `admin/setup.html` (admin.newnormal.sg/setup) |
-| Vercel functions (9 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `org.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js` |
-| Shared code | `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/org.js` (org chart roles and shape), `lib/form.js` (questions) |
+| Vercel functions (11 of the free plan's 12) | `api/join.js`, `api/whats-on.js`, `api/admin/session.js`, `members.js`, `org.js`, `applications.js`, `export.js`, `whats-on.js`, `accounts.js`, `records.js` (every module), `home.js` (home, search, activity log, notes) |
+| Shared code | `lib/collections.js` (the modules), `lib/records.js` (their rules), `lib/activity.js` (the log), `lib/db.js` (database and tables), `lib/auth.js` (logins and roles), `lib/org.js` (org chart roles and shape), `lib/form.js` (questions) |
 
 ### Switching it on (once)
 
@@ -85,7 +98,8 @@ Optional: `FILLOUT_API_KEY` also sends a copy of each application to the old Fil
 - Sign-ins last 12 hours. 8 wrong passwords for the same username lock it for 15 minutes.
 - Passwords are stored scrambled (PBKDF2). Setup links are stored only as a fingerprint, so a database leak doesn't leak working links.
 - Anything people typed is shown as plain text, so nothing they type can run in the portal.
-- **Deleting old applications isn't built yet.** The privacy notice promises to delete non-members' details within 3 years after recruitment closes, so that needs doing (in the Neon dashboard, or ask for a delete button).
+- Every change is in the activity log. Deleting a member removes their notes and their name from the log.
+- **Privacy** (Master Admins): delete applications from people who didn't join, submitted before a date (the privacy notice promises this within 3 years after recruitment closes), or a single application.
 
 ## Fonts
 

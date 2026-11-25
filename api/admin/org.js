@@ -9,6 +9,7 @@
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
 const { ROLES, OVERSEER_ROLES, KINDS, PARENT_KINDS, STATUSES, publicStatus } = require("../../lib/org");
+const { log } = require("../../lib/activity");
 
 const idOf = (v) => {
   const n = Number(v);
@@ -144,6 +145,9 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "POST" && b.action === "import") {
     const [status, out] = await importTeamMap(q, b);
+    if (status === 200) await log(q, me, "imported", "import", null, "the Team Map", [
+      { field: "People added", from: null, to: String(out.peopleAdded) }, { field: "People updated", from: null, to: String(out.peopleUpdated) },
+      { field: "Divisions, domains and teams added", from: null, to: String(out.unitsAdded) }]);
     return res.status(status).json(out);
   }
 
@@ -153,8 +157,10 @@ module.exports = async function handler(req, res) {
     const [{ kids }] = await q(`select count(*)::int as kids from org_units where parent_id = $1`, [id]);
     const [{ seated }] = await q(`select count(*)::int as seated from seats where unit_id = $1`, [id]);
     if (kids || seated) return res.status(409).json({ error: "unit_not_empty" });
-    const [row] = await q(`delete from org_units where id = $1 returning id`, [id]);
-    return row ? res.status(200).json({ ok: true }) : res.status(404).json({ error: "not_found" });
+    const [row] = await q(`delete from org_units where id = $1 returning id, name`, [id]);
+    if (!row) return res.status(404).json({ error: "not_found" });
+    await log(q, me, "deleted", "unit", id, row.name);
+    return res.status(200).json({ ok: true });
   }
 
   // POST and PATCH share the checks
@@ -206,6 +212,7 @@ module.exports = async function handler(req, res) {
       `insert into org_units (kind, sort, ${keys.join(", ")}) values ($1, $2, ${keys.map((k, i) => `$${i + 3}${cast(k)}`).join(", ")}) returning *`,
       [kind, next, ...keys.map((k) => v[k])]
     );
+    await log(q, me, "created", "unit", row.id, row.name, [{ field: "Kind", from: null, to: kind }]);
     return res.status(201).json({ unit: unitOut(row) });
   }
   if (!keys.length) return res.status(400).json({ error: "nothing_to_change" });
@@ -213,5 +220,9 @@ module.exports = async function handler(req, res) {
     `update org_units set ${keys.map((k, i) => `${k} = $${i + 2}${cast(k)}`).join(", ")}, updated_at = now() where id = $1 returning *`,
     [current.id, ...keys.map((k) => v[k])]
   );
+  const changes = ["name", "code", "parent_id", "note"].filter((k) => k in v && (v[k] ?? null) !== (k === "parent_id" ? (current[k] === null ? null : Number(current[k])) : current[k] ?? null))
+    .map((k) => ({ field: { name: "Name", code: "Code", parent_id: "Sits under", note: "Note" }[k], from: k === "parent_id" ? null : current[k], to: k === "parent_id" ? "moved" : v[k] }));
+  if ("overseers" in v && JSON.stringify(v.overseers) !== JSON.stringify((current.overseers || []).map(Number))) changes.push({ field: "Overseen by", from: null, to: "changed" });
+  if (changes.length) await log(q, me, "updated", "unit", current.id, row.name, changes);
   return res.status(200).json({ unit: unitOut(row) });
 };

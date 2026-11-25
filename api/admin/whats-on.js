@@ -7,6 +7,7 @@
 
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
+const { log } = require("../../lib/activity");
 
 const LINK_RE = /^(https?:\/\/[^\s]+|[\w./-]+\.html(#[\w-]*)?|\/[^\s]*)$/; // a full web address or a page on this site
 const IMAGE_RE = /^(https?:\/\/[^\s]+|assets\/[\w./-]+)$/;
@@ -49,7 +50,8 @@ function clean(spec, input, creating) {
 }
 
 module.exports = async function handler(req, res) {
-  if (!(await auth.guard(req, res, ["master", "admin"]))) return;
+  const me = await auth.guard(req, res, ["master", "admin"]);
+  if (!me) return;
   const q = await db();
   if (!q) return res.status(503).json({ error: "not_configured" });
 
@@ -75,6 +77,7 @@ module.exports = async function handler(req, res) {
       `insert into ${spec.table} (${keys.join(", ")}) values (${keys.map((_, i) => `$${i + 1}`).join(", ")}) returning id`,
       keys.map((k) => c.values[k])
     );
+    await log(q, me, "created", b.kind, row.id, c.values.name || c.values.title);
     return res.status(201).json({ id: Number(row.id) });
   }
 
@@ -97,15 +100,19 @@ module.exports = async function handler(req, res) {
     const keys = Object.keys(c.values);
     if (!keys.length) return res.status(400).json({ error: "nothing_to_change" });
     const [row] = await q(
-      `update ${spec.table} set ${keys.map((k, i) => `${k} = $${i + 2}`).join(", ")}, updated_at = now() where id = $1 returning id`,
+      `update ${spec.table} set ${keys.map((k, i) => `${k} = $${i + 2}`).join(", ")}, updated_at = now() where id = $1 returning *`,
       [id, ...keys.map((k) => c.values[k])]
     );
-    return row ? res.status(200).json({ ok: true }) : res.status(404).json({ error: "not_found" });
+    if (!row) return res.status(404).json({ error: "not_found" });
+    await log(q, me, "updated", b.kind, id, row.name || row.title, keys.map((k) => ({ field: k, from: null, to: c.values[k] === null ? null : String(c.values[k]) })));
+    return res.status(200).json({ ok: true });
   }
 
   if (req.method === "DELETE") {
-    const [row] = await q(`delete from ${spec.table} where id = $1 returning id`, [id]);
-    return row ? res.status(200).json({ ok: true }) : res.status(404).json({ error: "not_found" });
+    const [row] = await q(`delete from ${spec.table} where id = $1 returning *`, [id]);
+    if (!row) return res.status(404).json({ error: "not_found" });
+    await log(q, me, "deleted", b.kind, id, row.name || row.title);
+    return res.status(200).json({ ok: true });
   }
 
   res.setHeader("Allow", "GET, POST, PATCH, DELETE");

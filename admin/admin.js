@@ -60,10 +60,20 @@
     bad_parent: "Pick where this sits on the org chart.",
     bad_overseer: "Only Founders, Chiefs of Staff and Directors can oversee a domain.",
     unit_not_empty: "Move its people and teams out first.",
+    bad_field: (f) => `Check "${f}".`,
+    required: (f) => `"${f}" is needed.`,
+    bad_url: (f) => `"${f}" must be a full link starting with https://.`,
+    bad_person: "One of those people isn't in the directory any more.",
+    bad_record_link: "That event or project isn't there any more.",
+    keep_yourself: "Keep yourself on it, or ask an admin to hand it over.",
+    empty_note: "Write something first.",
     bad_seats: "A person can hold up to 10 seats.",
     bad_import: "That file couldn't be imported. Nothing was changed.",
   };
-  const errText = (r, fallback) => ERRORS[r && r.data && r.data.error] || fallback || "Couldn't save that. Try again.";
+  const errText = (r, fallback) => {
+    const e = r && r.data ? ERRORS[r.data.error] : null;
+    return (typeof e === "function" ? e(r.data.field || "that") : e) || fallback || "Couldn't save that. Try again.";
+  };
 
   async function api(path, opts = {}) {
     const init = { method: opts.method || "GET", credentials: "same-origin", headers: { "X-Requested-With": "normal-admin" } };
@@ -86,13 +96,15 @@
     $("#login-name").focus();
   }
 
-  function signedIn(user) {
+  async function signedIn(user) {
     me = user;
+    const s = await api("/api/admin/records?schema=1").catch(() => null);
+    schema = s && s.ok ? s.data.collections : {};
+    buildNav();
     $("#who-name").textContent = user.name;
     $("#who-name").href = user.memberId ? `#/m/${user.memberId}` : "#/";
     $("#who-role").textContent = ROLE_NAMES[user.role] || user.role;
     $("#who-initials").textContent = user.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-    $$("#tabs [data-roles]").forEach((a) => { a.hidden = !a.dataset.roles.split(" ").includes(user.role); });
     listKey = null;
     route();
   }
@@ -266,6 +278,16 @@
           input.append(lab);
         }
         if (!d.options.length) input.append(el("span", "db-note", "No one to pick yet."));
+        if (d.options.length > 12) {
+          const find = el("input", "db-input db-checks__find");
+          find.type = "search";
+          find.placeholder = "Find…";
+          find.setAttribute("aria-label", `Find in ${d.label}`);
+          const box = input;
+          find.addEventListener("input", () => $$(".db-check", box).forEach((l) => { l.hidden = !l.textContent.toLowerCase().includes(find.value.toLowerCase()) && !$("input", l).checked; }));
+          wrap.append(find);
+          input.classList.add("is-long");
+        }
         wrap.append(input);
         if (d.hint) wrap.append(el("p", "db-hint", d.hint));
       } else {
@@ -278,6 +300,7 @@
         else {
           input = el("input", "db-input");
           input.type = d.type || "text";
+          if (d.step) input.step = d.step;
           if (d.type === "text" || !d.type) input.autocomplete = "off";
         }
         if (d.list) input.setAttribute("list", d.list);
@@ -630,6 +653,7 @@
         if (d && d.ok) { toast("Deleted."); location.hash = "#/members"; } else fail(errText(d));
       }));
       aside.append(panel("record", [meta]), panel("actions", acts));
+      main.append(timelinePanel("member", m.id));
     } else {
       aside.append(panel("record", fields([["Record", rid("M", m.id)], ["Status", m.status]], true)));
     }
@@ -860,6 +884,7 @@
     const person = new Map(org.people.map((p) => [p.id, p]));
     const here = org.seats.filter((s) => s.unit_id === unit.id && person.has(s.member_id)).map((s) => [person.get(s.member_id), s]);
     aside.append(panel("seated here", here.length ? chips(here) : el("p", "db-note", "No one is seated here. Give someone a seat on their member record.")));
+    main.append(timelinePanel("unit", unit.id));
   }
 
   /* ───────────── importing the Team Map ───────────── */
@@ -1080,6 +1105,16 @@
       panel("review", review),
       panel("record", fields([["Record", rid("A", a.id)], ["Submitted", when(a.created_at)], ["Member record", a.member_id ? rid("M", a.member_id) : "", a.member_id ? `#/m/${a.member_id}` : null]], true)),
     );
+    if (me.role === "master") {
+      review.append(confirmButton("Delete application", "Deletes it and its notes for good (privacy requests).", async () => {
+        const s = await api(`/api/admin/applications?id=${a.id}`, { method: "DELETE" }).catch(() => null);
+        if (!s || !s.ok) return fail(errText(s));
+        listKey = null;
+        toast("Application deleted.");
+        location.hash = "#/applications";
+      }));
+    }
+    main.append(timelinePanel("application", a.id));
   }
 
   /* ───────────── what's on ───────────── */
@@ -1347,11 +1382,602 @@
     });
     acts.append(lab, role, link, toggle, del, el("p", "db-note", "Changing the role or disabling signs them out straight away."));
     aside.append(panel("access", acts));
+    main.append(timelinePanel("account", a.id));
+  }
+
+  /* ───────────── the suite: modules from lib/collections.js ───────────── */
+  let schema = {}; // the modules this person can open, with their fields and rules
+  const money = (n) => `S$${Number(n || 0).toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const todaySG = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const firstName = (n) => String(n || "").split(/\s+/)[0];
+
+  const ICONS = {
+    home: '<path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H9.5V10h-3v3.5H3a.5.5 0 0 1-.5-.5z"/>',
+    members: '<circle cx="6" cy="5.5" r="2.5"/><path d="M1.5 13.5c.6-2.4 2.3-3.5 4.5-3.5s3.9 1.1 4.5 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6M12.2 10.3c1.2.5 2 1.6 2.3 3.2"/>',
+    applications: '<rect x="2.5" y="1.5" width="11" height="13" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h3.5"/>',
+    check: '<rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="m5.5 8 2 2 3.5-4"/>',
+    flag: '<path d="M3.5 14V2.5M3.5 3h8l-1.5 3 1.5 3h-8"/>',
+    chat: '<path d="M2.5 4a1.5 1.5 0 0 1 1.5-1.5h8A1.5 1.5 0 0 1 13.5 4v5A1.5 1.5 0 0 1 12 10.5H7l-3 2.5v-2.5A1.5 1.5 0 0 1 2.5 9z"/>',
+    handshake: '<circle cx="5.5" cy="8" r="3"/><circle cx="10.5" cy="8" r="3"/>',
+    coin: '<circle cx="8" cy="8" r="5.5"/><path d="M9.8 6.2c-.3-.6-1-.9-1.8-.9-1 0-1.8.5-1.8 1.3 0 1.8 3.7.9 3.7 2.7 0 .8-.8 1.4-1.9 1.4-.9 0-1.6-.4-1.9-1M8 4v1.3M8 10.7V12"/>',
+    book: '<path d="M3 2.5h7.5a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h7.5"/>',
+    megaphone: '<path d="M2.5 6.5v3h2l5 3v-9l-5 3zM12 6a2.5 2.5 0 0 1 0 4M4.5 9.5l1 4"/>',
+    globe: '<circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.6 1.6 2.4 3.4 2.4 5.5S9.6 11.9 8 13.5C6.4 11.9 5.6 10.1 5.6 8S6.4 4.1 8 2.5z"/>',
+    key: '<circle cx="5" cy="10.5" r="3"/><path d="M7.2 8.4 13.5 2M11 4.5l2 2M9.5 6l1.5 1.5"/>',
+    history: '<path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.5H5M8 5v3l2 1.5"/>',
+    shield: '<path d="M8 1.8 13 3.5v4c0 3-2.1 5.3-5 6.7-2.9-1.4-5-3.7-5-6.7v-4z"/>',
+  };
+  // the icons are fixed strings above, never anything people typed
+  function icon(name) {
+    const t = document.createElement("template");
+    t.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.check}</svg>`;
+    return t.content.firstChild;
+  }
+
+  // the sidebar: home, then each group's sections the person can open
+  function buildNav() {
+    const nav = $("#tabs");
+    nav.replaceChildren();
+    const add = (tab, label, href, ic) => {
+      const a = el("a");
+      a.href = href;
+      a.dataset.tab = tab;
+      a.append(icon(ic), label);
+      nav.append(a);
+    };
+    add("home", "home", "#/", "home");
+    for (const g of ["People", "Work", "Outreach", "Money", "Library", "Website", "Admin"]) {
+      const items = [];
+      if (g === "People") {
+        items.push(["members", "members", "#/members", "members"]);
+        if (isAdmin()) items.push(["applications", "applications", "#/applications", "applications"]);
+      }
+      for (const c of Object.values(schema)) if (c.group === g) items.push([c.key, c.label, `#/r/${c.key}`, c.icon]);
+      if (g === "Website" && isAdmin()) items.push(["whats-on", "what's on", "#/whats-on", "globe"]);
+      if (g === "Admin") {
+        if (me.role === "master") items.push(["accounts", "accounts", "#/accounts", "key"]);
+        if (isAdmin()) items.push(["activity", "activity log", "#/activity", "history"]);
+        if (me.role === "master") items.push(["privacy", "privacy", "#/privacy", "shield"]);
+      }
+      if (!items.length) continue;
+      nav.append(el("p", "db-side__label", g));
+      items.forEach((i) => add(...i));
+    }
+  }
+
+  $("#search-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = $("#search-q").value.trim();
+    if (text) location.hash = `#/search/${encodeURIComponent(text)}`;
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "/" && me && !/^(input|textarea|select)$/i.test(document.activeElement.tagName)) {
+      e.preventDefault();
+      $("#search-q").focus();
+    }
+  });
+
+  // names for people, units and linked records, for menus
+  async function lookups(c) {
+    const cfg = schema[c];
+    const out = { people: [], units: [], links: {} };
+    if (cfg.fields.some((f) => ["member", "members", "unit"].includes(f.type))) {
+      const org = await getOrg();
+      if (org) { out.people = org.people; out.units = org.units; }
+    }
+    for (const f of cfg.fields.filter((x) => x.type === "link" && schema[x.to])) {
+      const r = await get(`/api/admin/records?c=${f.to}&lite=1`);
+      out.links[f.to] = r && r.ok ? r.data.records : [];
+    }
+    return out;
+  }
+  const peopleOptions = (look) => look.people.map((p) => [String(p.id), p.name]);
+  const linkOptions = (look, to) => (look.links[to] || []).map((r) => [String(r.id), `${r.code} ${r.title}`]);
+  const isDone = (cfg, data) => Boolean(cfg.done && cfg.done.values.includes(data[cfg.done.field]));
+
+  // a stored value as people read it; inTable keeps it short
+  function fmtValue(cfg, f, v, refs, data, inTable) {
+    if (v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length)) return "";
+    const link = (text, href, external) => {
+      const a = el("a", "", text);
+      a.href = href;
+      if (external) { a.target = "_blank"; a.rel = "noopener"; }
+      return a;
+    };
+    switch (f.type) {
+      case "select": return pill(v, v);
+      case "check": return v ? "✓ yes" : "";
+      case "date": {
+        const late = f.key === cfg.due && !isDone(cfg, data) && v < todaySG() && cfg.key === "tasks";
+        return el("span", late ? "is-overdue" : "", day(v) + (late ? " · overdue" : ""));
+      }
+      case "money": return money(v);
+      case "number": return String(v);
+      case "url": { let host = v; try { host = new URL(v).hostname.replace(/^www\./, ""); } catch { /* keep it */ } return link(inTable ? `${host} ↗` : v, v, true); }
+      case "email": return link(v, `mailto:${v}`);
+      case "member": return refs.members[v] ? link(refs.members[v], `#/m/${v}`) : "former member";
+      case "members": {
+        const names = v.map((x) => refs.members[x] || "former member");
+        if (inTable) return names.join(", ");
+        const box = el("span", "db-names");
+        v.forEach((x, i) => box.append(refs.members[x] ? link(names[i], `#/m/${x}`) : names[i], i < v.length - 1 ? ", " : ""));
+        return box;
+      }
+      case "unit": return refs.units[v] || "(removed)";
+      case "link": { const t = (refs.links[f.to] || {})[v]; return t ? link(t, `#/r/${f.to}/${v}`) : "(removed)"; }
+      case "long": return inTable ? String(v).slice(0, 80) + (String(v).length > 80 ? "…" : "") : el("p", "db-notes", v);
+      default: return String(v);
+    }
+  }
+
+  // a module field as a form question
+  function formDef(f, look) {
+    const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" };
+    switch (f.type) {
+      case "long": return { ...base, type: "textarea" };
+      case "select": return { ...base, type: "select", options: f.required ? f.options : [["", "—"], ...f.options] };
+      case "check": return { ...base, type: "checkbox" };
+      case "number": return { ...base, type: "number" };
+      case "money": return { ...base, type: "number", step: "0.01" };
+      case "phone": return { ...base, type: "tel" };
+      case "member": return { ...base, type: "select", options: [["", "—"], ...peopleOptions(look)] };
+      case "members": return { ...base, type: "checks", options: peopleOptions(look) };
+      case "unit": return { ...base, type: "select", options: [["", "—"], ...unitOptions(look.units)] };
+      case "link": return { ...base, type: "select", options: [["", "—"], ...linkOptions(look, f.to)] };
+      default: return { ...base, type: f.type };
+    }
+  }
+  function formValues(fieldsList, data) {
+    const out = {};
+    for (const f of fieldsList) {
+      const v = data[f.key];
+      if (f.type === "members") out[f.key] = (v || []).map(String);
+      else if (f.type === "check") out[f.key] = Boolean(v);
+      else if (v !== undefined && v !== null) out[f.key] = ["member", "unit", "link"].includes(f.type) ? String(v) : v;
+    }
+    return out;
+  }
+
+  /* lists */
+  function collectionList(c) {
+    const cfg = schema[c];
+    openList(`c:${c}`, () => {
+      $("#list-title").textContent = cfg.label;
+      const q = searchBox(`Search ${cfg.label}…`);
+      q.id = "f-q";
+      const scopeOpts = [["", "All records"], ["mine", "Mine"]];
+      if (cfg.done) scopeOpts.push(["open", "Not done"]);
+      if (cfg.admin) scopeOpts.push(["archived", "Archived"]);
+      const scope = select("Show", scopeOpts);
+      scope.id = "f-scope";
+      const filterFields = cfg.fields.filter((f) => f.filter);
+      const filterEls = filterFields.map((f) => {
+        const s = select(f.label, [["", `All ${f.label.toLowerCase()}`], ...(f.type === "select" ? f.options : [])]);
+        s.id = `f-${f.key}`;
+        return s;
+      });
+      filterInputs([q, scope, ...filterEls]);
+      lookups(c).then((look) => filterFields.forEach((f, i) => {
+        if (f.type === "select") return;
+        const opts = f.type === "unit" ? unitOptions(look.units) : f.type === "link" ? linkOptions(look, f.to) : peopleOptions(look);
+        const keep = filterEls[i].value;
+        filterEls[i].append(...opts.map(([v, t]) => new Option(t, v)));
+        filterEls[i].value = keep;
+      }));
+      if (cfg.admin) $("#list-actions").append(button("Export CSV", "", () => download(`/api/admin/records?${params({ c, format: "csv", q: q.value.trim() })}`)));
+      if (cfg.canCreate) $("#list-actions").append(linkButton(`+ new ${cfg.noun}`, `#/r/${c}/new`, "primary"));
+
+      const listed = cfg.fields.filter((f) => f.list);
+      let refs = { members: {}, units: {}, links: {} };
+      const columns = [
+        { label: "ID", cls: "is-id", cell: (r) => r.code },
+        ...listed.map((f) => ({
+          label: f.label,
+          cls: f.key === cfg.title ? "is-name" : f.type === "money" ? "is-right" : "",
+          link: f.key === cfg.title,
+          cell: (r) => (f.key === cfg.title ? r.data[f.key] || "(untitled)" : fmtValue(cfg, f, r.data[f.key], refs, r.data, true)),
+        })),
+      ];
+      loadRows = async () => {
+        fail("");
+        const query = { c, q: q.value.trim() };
+        if (scope.value === "mine") query.mine = "1";
+        if (scope.value === "open") query.open = "1";
+        if (scope.value === "archived") query.archived = "1";
+        filterFields.forEach((f, i) => { if (filterEls[i].value) query[`f.${f.key}`] = filterEls[i].value; });
+        const r = await get(`/api/admin/records?${params(query)}`);
+        if (!r) return;
+        if (!r.ok) return fail(errText(r, `Couldn't load ${cfg.label}.`));
+        refs = r.data.refs;
+        let note = "";
+        if (cfg.totals) {
+          const sums = {};
+          for (const rec of r.data.records) {
+            if (rec.data.status === "rejected") continue;
+            const k = rec.data[cfg.totals.by] || "other";
+            sums[k] = (sums[k] || 0) + Number(rec.data[cfg.totals.amount] || 0);
+          }
+          note = Object.entries(sums).map(([k, v]) => `${k} ${money(v)}`).join(" · ");
+        }
+        fillList(columns, r.data.records, (rec) => `#/r/${c}/${rec.id}`, r.data.total,
+          cfg.canCreate ? `No ${cfg.label} yet. Add the first with "+ new ${cfg.noun}".` : `No ${cfg.label} to show yet.`,
+          `No ${cfg.label} match those filters.`, note);
+      };
+    });
+  }
+
+  /* one record */
+  async function recordPage(c, id) {
+    const cfg = schema[c];
+    fail("");
+    const look = await lookups(c);
+    if (id === "new") {
+      const body = detail(`#/r/${c}`, cfg.label, "new", `new ${cfg.noun}`);
+      if (!cfg.canCreate) return fail(ERRORS.not_allowed);
+      const defs = cfg.fields.filter((f) => cfg.createFields.includes(f.key)).map((f) => formDef(f, look));
+      const { form: f } = buildForm(defs, formValues(cfg.fields, cfg.defaults), {
+        submit: `Save ${cfg.noun}`,
+        extra: [linkButton("Cancel", `#/r/${c}`)],
+        onSubmit: async (vals, status) => {
+          const s = await api("/api/admin/records", { method: "POST", json: { c, data: vals } }).catch(() => null);
+          if (!s || !s.ok) { status.textContent = errText(s); return; }
+          listKey = null;
+          toast(`${s.data.record.code} saved.`);
+          location.hash = `#/r/${c}/${s.data.record.id}`;
+        },
+      });
+      if (!cfg.admin && cfg.seeAll === false) f.prepend(el("p", "db-note db-field--wide", "You'll be added to it, so you can find it later."));
+      body.append(panel(`${cfg.noun} record`, f));
+      return;
+    }
+
+    const r = await get(`/api/admin/records?c=${c}&id=${encodeURIComponent(id)}`);
+    if (!r) return;
+    if (!r.ok) { detail(`#/r/${c}`, cfg.label, "", "not found"); return fail(r.status === 404 ? "That record isn't there, or you don't have access to it." : errText(r)); }
+    const { record: rec, refs, canEdit, canManage } = r.data;
+    const statusField = cfg.fields.find((f) => f.key === "status") || cfg.fields.find((f) => f.type === "select" && f.list);
+    const body = detail(`#/r/${c}`, cfg.label, rec.code, rec.data[cfg.title] || "(untitled)", [
+      statusField && rec.data[statusField.key] && pill(rec.data[statusField.key], rec.data[statusField.key]),
+      rec.archived && pill("archived", "disabled"),
+    ]);
+    const { main, aside } = recordLayout(body);
+    // people who can change every field just get the form; everyone else sees the record, then what they can change
+    const editsAll = cfg.fields.every((f) => canEdit.includes(f.key));
+    if (!editsAll) {
+      main.append(panel("details", fields(cfg.fields.filter((f) => f.key !== cfg.title).map((f) => {
+        const v = fmtValue(cfg, f, rec.data[f.key], refs, rec.data, false);
+        return [f.label, v === "" ? "" : v];
+      }))));
+    }
+    const related = el("div", "db-related");
+
+    // records in other modules that point at this one (an event's tasks, budget and meetings)
+    for (const other of Object.values(schema)) {
+      const via = other.fields.find((f) => f.type === "link" && f.to === c);
+      if (!via) continue;
+      const rr = await get(`/api/admin/records?${params({ c: other.key, [`f.${via.key}`]: String(rec.id) })}`);
+      if (!rr || !rr.ok || !rr.data.records.length) continue;
+      const ul = el("ul", "db-mini");
+      for (const x of rr.data.records.slice(0, 8)) {
+        const li = el("li");
+        const a = el("a", "", x.data[other.title] || "(untitled)");
+        a.href = `#/r/${other.key}/${x.id}`;
+        const st = other.fields.find((f) => f.type === "select" && f.list);
+        li.append(el("span", "mono muted", x.code), a, ...(st && x.data[st.key] ? [pill(x.data[st.key], x.data[st.key])] : []),
+          ...(other.totals ? [el("span", "muted", money(x.data[other.totals.amount]))] : []));
+        ul.append(li);
+      }
+      const more = linkButton(`All ${rr.data.records.length} →`, `#/r/${other.key}`);
+      more.classList.add("db-btn--sm");
+      related.append(panel(`${other.label} (${rr.data.records.length})`, ul, rr.data.records.length > 8 ? more : null));
+    }
+
+    if (canEdit.length) {
+      const editable = cfg.fields.filter((f) => canEdit.includes(f.key));
+      const { form: f } = buildForm(editable.map((x) => formDef(x, look)), formValues(editable, rec.data), {
+        submit: "Save changes",
+        onSubmit: async (vals, status) => {
+          const s = await api("/api/admin/records", { method: "PATCH", json: { c, id: rec.id, data: vals } }).catch(() => null);
+          if (!s || !s.ok) { status.textContent = errText(s); return; }
+          listKey = null;
+          toast("Saved.");
+          recordPage(c, String(rec.id));
+        },
+      });
+      main.append(panel(editsAll ? "details" : "update", f));
+    }
+    main.append(related, timelinePanel(`record:${c}`, rec.id));
+
+    aside.append(panel("record", fields([
+      ["Record", rec.code],
+      ["Created", `${when(rec.created_at)}${rec.created_by ? ` by ${rec.created_by}` : ""}`],
+      ["Last changed", `${when(rec.updated_at)}${rec.updated_by ? ` by ${rec.updated_by}` : ""}`],
+    ], true)));
+    if (canManage) {
+      const acts = el("div", "db-stack");
+      acts.append(button(rec.archived ? "Restore" : "Archive", "", async () => {
+        const s = await api("/api/admin/records", { method: "PATCH", json: { c, id: rec.id, archived: !rec.archived } }).catch(() => null);
+        if (!s || !s.ok) return fail(errText(s));
+        listKey = null;
+        toast(rec.archived ? "Restored." : "Archived. Find it under Show → Archived.");
+        recordPage(c, String(rec.id));
+      }, "archive-record"));
+      acts.append(confirmButton("Delete for good", "This can't be undone. Archive keeps it out of the way instead.", async () => {
+        const s = await api(`/api/admin/records?c=${c}&id=${rec.id}`, { method: "DELETE" }).catch(() => null);
+        if (!s || !s.ok) return fail(errText(s));
+        listKey = null;
+        toast("Deleted.");
+        location.hash = `#/r/${c}`;
+      }));
+      aside.append(panel("actions", acts));
+    }
+  }
+
+  /* history and notes, on any record */
+  const ACTION_TEXT = { created: "created this", updated: "changed", note: "left a note", archived: "archived this", restored: "restored this", deleted: "deleted", accepted: "accepted this application", imported: "imported", "made a setup link": "made a setup link", "signed in": "signed in" };
+  function timelinePanel(kind, ref) {
+    const p = el("section", "db-panel db-timeline");
+    const head = el("div", "db-panel__head");
+    head.append(el("h2", "", "history & notes"));
+    const bodyEl = el("div", "db-panel__body");
+    const text = el("textarea", "db-input");
+    text.id = "note-text";
+    text.rows = 2;
+    text.placeholder = "Add a note: a call, a decision, an update…";
+    text.setAttribute("aria-label", "Note");
+    const list = el("ol", "db-tl");
+    const add = button("Add note", "primary", async () => {
+      if (!text.value.trim()) return;
+      add.disabled = true;
+      const s = await api("/api/admin/home", { method: "POST", json: { action: "note", kind, ref, text: text.value } }).catch(() => null);
+      add.disabled = false;
+      if (!s || !s.ok) return fail(errText(s));
+      text.value = "";
+      load();
+    }, "note-add");
+    add.classList.add("db-btn--sm");
+    const composer = el("div", "db-composer");
+    composer.append(text, add);
+    bodyEl.append(composer, list);
+    p.append(head, bodyEl);
+    async function load() {
+      const r = await get(`/api/admin/home?${params({ view: "activity", kind, ref: String(ref) })}`);
+      if (!r || !r.ok) { list.replaceChildren(el("li", "db-note", "Couldn't load the history.")); return; }
+      list.replaceChildren(...r.data.entries.map((e) => entryNode(e, true, load)));
+      if (!r.data.entries.length) list.append(el("li", "db-note", "Nothing yet."));
+    }
+    load();
+    return p;
+  }
+  function entryNode(e, inTimeline, reload) {
+    const li = el("li", `db-tl__item${e.action === "note" ? " is-note" : ""}`);
+    const who = e.actor_name || e.actor || "someone";
+    const head = el("p", "db-tl__head");
+    head.append(el("span", "db-avatar db-avatar--sm", who.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()), el("strong", "", who), ` ${ACTION_TEXT[e.action] || e.action}`);
+    if (!inTimeline && e.label) {
+      head.append(" ");
+      if (e.href) { const a = el("a", "", e.label); a.href = e.href; head.append(a); } else head.append(el("span", "", e.label));
+    }
+    head.append(el("span", "db-tl__when", when(e.at)));
+    li.append(head);
+    if (e.changes && e.changes.length) {
+      const ul = el("ul", "db-tl__changes");
+      for (const ch of e.changes) {
+        const c = el("li");
+        c.append(el("span", "db-tl__field", ch.field), ch.from !== null && ch.from !== undefined ? `${ch.from} → ` : "", ch.to === null || ch.to === undefined ? "(cleared)" : ch.to);
+        ul.append(c);
+      }
+      li.append(ul);
+    }
+    if (e.note) li.append(el("p", "db-notes db-tl__note", e.note));
+    if (e.action === "note" && (e.mine || isAdmin()) && reload) {
+      const del = el("button", "db-link", "delete");
+      del.type = "button";
+      del.addEventListener("click", async () => {
+        const s = await api(`/api/admin/home?note=${e.id}`, { method: "DELETE" }).catch(() => null);
+        if (s && s.ok) reload(); else fail(errText(s));
+      });
+      li.append(del);
+    }
+    return li;
+  }
+
+  /* home */
+  function miniList(items, render, empty) {
+    const ul = el("ul", "db-mini");
+    for (const x of items) ul.append(render(x));
+    if (!items.length) ul.append(el("li", "db-note", empty));
+    return ul;
+  }
+  const recLi = (c, extra) => (x) => {
+    const li = el("li");
+    const a = el("a", "", x.title);
+    a.href = `#/r/${c}/${x.id}`;
+    li.append(a, ...nodes(extra ? extra(x) : []));
+    return li;
+  };
+  async function homePage() {
+    fail("");
+    show("home");
+    const hour = Number(new Date().toLocaleString("en-SG", { hour: "numeric", hour12: false, timeZone: "Asia/Singapore" }));
+    $("#home-title").textContent = `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName(me.name)}`;
+    $("#home-sub").textContent = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Singapore" });
+    const bodyEl = $("#home-body");
+    bodyEl.replaceChildren(el("p", "db-note", "Loading…"));
+    const r = await get("/api/admin/home?view=dashboard");
+    if (!r) return;
+    if (!r.ok) { bodyEl.replaceChildren(); return fail(errText(r, "Couldn't load home.")); }
+    const d = r.data;
+    const parts = [];
+
+    if (d.counts) {
+      const k = d.counts;
+      const stat = (n, label, href, sub, warn) => {
+        const a = el("a", `db-stat${warn ? " is-warn" : ""}`);
+        a.href = href;
+        a.append(el("span", "db-stat__n", String(n)), el("span", "db-stat__l", label));
+        if (sub) a.append(el("span", "db-stat__s", sub));
+        return a;
+      };
+      const grid = el("div", "db-stats");
+      grid.append(
+        stat(k.members, "active members", "#/members", k.joining ? `+${k.joining} recruits not confirmed` : ""),
+        stat(k.newApplications, "new applications", "#/applications", "", k.newApplications > 0),
+        stat(k.openTasks, "open tasks", "#/r/tasks", k.overdueTasks ? `${k.overdueTasks} overdue` : "", k.overdueTasks > 0),
+        stat(k.upcoming, "events & projects ahead", "#/r/projects"),
+        stat(k.claims.n, "claims to approve", "#/r/finance", k.claims.n ? money(k.claims.total) : "", k.claims.n > 0),
+        stat(k.activePartners, "active partners", "#/r/partners"),
+        ...(k.pendingLinks !== undefined ? [stat(k.pendingLinks, "setup links unused", "#/accounts")] : []),
+      );
+      parts.push(grid);
+    }
+
+    const left = el("div", "db-home__col");
+    const right = el("div", "db-home__col");
+    const due = (x) => (x.data.due ? [el("span", x.data.due < d.today ? "is-overdue" : "muted", day(x.data.due))] : []);
+    if (d.counts) {
+      left.append(
+        panel("new applications", miniList(d.applications, (a) => {
+          const li = el("li");
+          const link = el("a", "", a.name);
+          link.href = `#/a/${a.id}`;
+          li.append(link, el("span", "muted", [a.life_stage, when(a.created_at)].filter(Boolean).join(" · ")));
+          return li;
+        }, "None waiting."), linkButton("All →", "#/applications")),
+        panel("overdue tasks", miniList(d.overdue, recLi("tasks", (x) => [el("span", "muted", x.names.assignees || "unassigned"), ...due(x)]), "Nothing overdue.")),
+        panel("claims to approve", miniList(d.claimsToApprove, recLi("finance", (x) => [el("span", "muted", x.names.claimant || ""), el("span", "", money(x.data.amount))]), "None waiting.")),
+      );
+    }
+    left.append(
+      panel("my tasks", miniList(d.myTasks, recLi("tasks", (x) => [pill(x.data.status, x.data.status), ...due(x)]), "Nothing assigned to you."), schema.tasks && schema.tasks.canCreate ? linkButton("+ task", "#/r/tasks/new") : null),
+      panel("my meetings", miniList(d.myMeetings, recLi("meetings", (x) => [el("span", "muted", day(x.data.date))]), "No meetings coming up.")),
+    );
+    if (d.myClaims) {
+      left.append(panel("my claims", miniList(d.myClaims, recLi("finance", (x) => [pill(x.data.status, x.data.status), el("span", "", money(x.data.amount))]), "No claims."),
+        schema.finance && schema.finance.canCreate ? linkButton("+ submit a claim", "#/r/finance/new") : null));
+    }
+    right.append(
+      panel("coming up", miniList(d.upcoming, recLi("projects", (x) => [el("span", "muted", [day(x.data.start), x.names.team].filter(Boolean).join(" · ")), pill(x.data.status, x.data.status)]), "Nothing scheduled.")),
+      panel("announcements", miniList(d.announcements, (x) => {
+        const li = el("li", "db-mini__block");
+        const a = el("a", "", (x.data.pinned ? "📌 " : "") + x.title);
+        a.href = `#/r/announcements/${x.id}`;
+        li.append(a, el("span", "muted", day(x.data.date)), el("p", "db-notes", String(x.data.body || "").slice(0, 220)));
+        return li;
+      }, "No announcements.")),
+    );
+    if (d.mySeats) {
+      right.append(panel("where you sit", miniList(d.mySeats, (s) => {
+        const li = el("li");
+        li.append(roleTag(s.role), el("span", "", s.name ? [s.code, s.name].filter(Boolean).join(" ") : "Normal"));
+        return li;
+      }, "You're not on the org chart yet."), linkButton("Org chart →", "#/members/chart")));
+    }
+    if (d.recent) right.append(panel("recent activity", miniList(d.recent, (e) => entryNode(e, false, null), "Nothing yet."), linkButton("Full log →", "#/activity")));
+    const cols = el("div", "db-home");
+    cols.append(left, right);
+    parts.push(cols);
+    bodyEl.replaceChildren(...parts);
+  }
+
+  /* search */
+  async function searchPage(text) {
+    fail("");
+    $("#search-q").value = text;
+    const bodyEl = detail("#/", "home", "search", `“${text}”`);
+    const r = await get(`/api/admin/home?${params({ view: "search", q: text })}`);
+    if (!r || !r.ok) return fail(errText(r, "Couldn't search just now."));
+    if (!r.data.groups.length) { bodyEl.append(el("p", "db-empty", text.length < 2 ? "Type at least 2 letters." : "Nothing matches that.")); return; }
+    for (const g of r.data.groups) {
+      bodyEl.append(panel(`${g.label} (${g.items.length})`, miniList(g.items, (x) => {
+        const li = el("li");
+        const a = el("a", "", x.title);
+        a.href = x.href;
+        li.append(a, el("span", "muted", x.sub || ""));
+        return li;
+      }, "")));
+    }
+  }
+
+  /* the whole log (admins) */
+  function activityPage() {
+    fail("");
+    const bodyEl = detail("#/", "home", "", "activity log");
+    const areas = [["", "Everything"], ["member", "members"], ["application", "applications"], ["unit", "org chart"], ["import", "Team Map imports"],
+      ...Object.values(schema).map((c) => [`record:${c.key}`, c.label]), ["ip", "what's on: IPs"], ["event", "what's on: events"],
+      ...(me.role === "master" ? [["account", "accounts"], ["session", "sign-ins"]] : [])];
+    const area = select("Area", areas, "", "db-select");
+    area.id = "log-area";
+    const who = searchBox("Who…");
+    who.id = "log-who";
+    const bar = el("div", "db-toolbar");
+    bar.append(area, who);
+    const list = el("ol", "db-tl db-tl--log");
+    const more = button("Load more", "", () => load(true), "log-more");
+    const p = el("section", "db-panel");
+    const inner = el("div", "db-panel__body");
+    inner.append(list, more);
+    p.append(bar, inner);
+    bodyEl.append(el("p", "db-note", "Every change in the portal, newest first. Notes left on records show here too."), p);
+    let last = null;
+    async function load(append) {
+      const r = await get(`/api/admin/home?${params({ view: "activity", area: area.value, who: who.value.trim(), before: append && last ? String(last) : "" })}`);
+      if (!r || !r.ok) return fail(errText(r, "Couldn't load the log."));
+      const items = r.data.entries.map((e) => entryNode(e, false, null));
+      if (append) list.append(...items); else list.replaceChildren(...items);
+      if (!append && !items.length) list.append(el("li", "db-note", "Nothing logged yet."));
+      last = r.data.entries.length ? r.data.entries[r.data.entries.length - 1].id : last;
+      more.hidden = r.data.entries.length < 100;
+    }
+    let t;
+    [area, who].forEach((x) => x.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => load(false), 250); }));
+    load(false);
+  }
+
+  /* privacy (Master Admins) */
+  function privacyPage() {
+    fail("");
+    const bodyEl = detail("#/", "home", "", "privacy");
+    const threeYears = new Date(Date.now() - 3 * 365.25 * 864e5).toISOString().slice(0, 10);
+    const date = el("input", "db-input");
+    date.type = "date";
+    date.id = "purge-before";
+    date.value = threeYears;
+    const lab = el("label", "db-label", "Applied before");
+    lab.htmlFor = "purge-before";
+    const out = el("p", "db-note");
+    const del = confirmButton("Delete them", "This can't be undone.", async () => {
+      const s = await api(`/api/admin/applications?before=${date.value}`, { method: "DELETE" }).catch(() => null);
+      if (!s || !s.ok) return fail(errText(s));
+      toast(`Deleted ${s.data.count} applications.`);
+      out.textContent = "Done.";
+      del.hidden = true;
+    });
+    del.hidden = true;
+    const check = button("Check how many", "", async () => {
+      const s = await api(`/api/admin/applications?before=${date.value}&dry=1`, { method: "DELETE" }).catch(() => null);
+      if (!s || !s.ok) return fail(errText(s));
+      out.textContent = s.data.count ? `${s.data.count} applications from people who didn't join were submitted before ${day(date.value)}.` : "None to delete.";
+      del.hidden = !s.data.count;
+    }, "purge-check");
+    const row = el("div", "db-actions");
+    row.append(check, del);
+    const box = el("div", "db-stack");
+    box.append(
+      el("p", "db-note", "The join page's privacy notice promises to delete the details of people who don't join within 3 years after recruitment closes. Applications from people who became members are kept (they're linked to their member record)."),
+      lab, date, row, out,
+    );
+    bodyEl.append(
+      panel("old applications", box),
+      panel("removing someone", el("p", "db-note", "Delete their member record (members → open them → Delete record): their seats, notes about them and their name in the activity log go too. Delete their application from the application page, and their login from accounts.")),
+      panel("what's kept", el("p", "db-note", "The activity log keeps who changed what, and when, so mistakes can be traced. Notes on a person's record go when the record is deleted.")),
+    );
   }
 
   /* ───────────── which view ───────────── */
   const ROUTES = [
-    [/^#\/(members)?$/, () => membersList(), "members"],
+    [/^#\/$/, () => homePage(), "home"],
+    [/^#\/members$/, () => membersList(), "members"],
     [/^#\/m\/(new|\d+)$/, (m) => memberProfile(m[1]), "members"],
     [/^#\/members\/chart$/, () => orgChart(), "members"],
     [/^#\/org\/new\/(division|domain|team)(?:\/(\d+))?$/, (m) => unitForm("new", m[1], m[2]), "members", ["master", "admin"]],
@@ -1364,15 +1990,22 @@
     [/^#\/accounts$/, () => accountsList(), "accounts", ["master"]],
     [/^#\/accounts\/new(?:\/(\d+))?$/, (m) => accountForm(m[1]), "accounts", ["master"]],
     [/^#\/accounts\/(\d+)$/, (m) => accountDetail(m[1]), "accounts", ["master"]],
+    [/^#\/r\/([a-z_]+)$/, (m) => collectionList(m[1]), (m) => m[1], null, (m) => Boolean(schema[m[1]])],
+    [/^#\/r\/([a-z_]+)\/(new|\d+)$/, (m) => recordPage(m[1], m[2]), (m) => m[1], null, (m) => Boolean(schema[m[1]])],
+    [/^#\/search\/(.+)$/, (m) => searchPage(decodeURIComponent(m[1])), "search"],
+    [/^#\/activity$/, () => activityPage(), "activity", ["master", "admin"]],
+    [/^#\/privacy$/, () => privacyPage(), "privacy", ["master"]],
   ];
 
   function route() {
     if (!me) return;
     const hash = location.hash || "#/";
-    const hit = ROUTES.find(([re, , , roles]) => re.test(hash) && (!roles || roles.includes(me.role)));
-    if (!hit) { location.hash = "#/members"; return; }
-    $$("#tabs a").forEach((a) => (a.dataset.tab === hit[2] ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-    hit[1](hash.match(hit[0]));
+    const hit = ROUTES.find(([re, , , roles, ok]) => re.test(hash) && (!roles || roles.includes(me.role)) && (!ok || ok(hash.match(re))));
+    if (!hit) { location.hash = "#/"; return; }
+    const m = hash.match(hit[0]);
+    const tab = typeof hit[2] === "function" ? hit[2](m) : hit[2];
+    $$("#tabs a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    hit[1](m);
   }
   addEventListener("hashchange", route);
 

@@ -7,6 +7,7 @@
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
 const { rolesQuestion } = require("../../lib/form");
+const { log } = require("../../lib/activity");
 
 const STATUSES = ["new", "interviewing", "accepted", "declined"];
 const like = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -32,7 +33,8 @@ function filters(query) {
 }
 
 async function handler(req, res) {
-  if (!(await auth.guard(req, res, ["master", "admin"]))) return;
+  const me = await auth.guard(req, res, ["master", "admin"]);
+  if (!me) return;
   const q = await db();
   if (!q) return res.status(503).json({ error: "not_configured" });
 
@@ -61,14 +63,42 @@ async function handler(req, res) {
     return res.status(200).json({ applications: rows, total, statuses: STATUSES });
   }
 
+  // privacy: delete applications (Master Admins). ?before=YYYY-MM-DD removes everyone who didn't join and
+  // applied before that day (&dry=1 only counts them); ?id= removes one.
+  if (req.method === "DELETE") {
+    if (me.role !== "master") return res.status(403).json({ error: "not_allowed" });
+    if (req.query.before !== undefined) {
+      const before = String(req.query.before);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(before)) return res.status(400).json({ error: "bad_date" });
+      const where = `member_id is null and created_at < $1::date`;
+      if (req.query.dry === "1") {
+        const [{ n }] = await q(`select count(*)::int as n from applications where ${where}`, [before]);
+        return res.status(200).json({ count: n });
+      }
+      const gone = await q(`delete from applications where ${where} returning id`, [before]);
+      await q(`delete from activity where kind = 'application' and ref_id = any($1::bigint[])`, [gone.map((g) => g.id)]);
+      await log(q, me, "deleted", "application", null, `${gone.length} applications from before ${before}`);
+      return res.status(200).json({ count: gone.length });
+    }
+    const one = idOf(req.query.id);
+    const [gone] = one ? await q(`delete from applications where id = $1 returning id`, [one]) : [];
+    if (!gone) return res.status(404).json({ error: "not_found" });
+    await q(`delete from activity where kind = 'application' and ref_id = $1`, [one]);
+    await log(q, me, "deleted", "application", null, "an application");
+    return res.status(200).json({ ok: true });
+  }
+
   const b = auth.body(req);
   const id = idOf(b.id);
   if (!id) return res.status(400).json({ error: "bad_request" });
 
   if (req.method === "PATCH") {
     if (!STATUSES.includes(b.status)) return res.status(400).json({ error: "bad_status" });
+    const [before] = await q(`select name, status from applications where id = $1`, [id]);
+    if (!before) return res.status(404).json({ error: "not_found" });
     const [row] = await q(`update applications set status = $2 where id = $1 returning id, status`, [id, b.status]);
-    return row ? res.status(200).json({ application: row }) : res.status(404).json({ error: "not_found" });
+    if (before.status !== b.status) await log(q, me, "updated", "application", id, before.name, [{ field: "Status", from: before.status, to: b.status }]);
+    return res.status(200).json({ application: row });
   }
 
   if (req.method === "POST" && b.action === "accept") {
@@ -84,10 +114,12 @@ async function handler(req, res) {
       );
     }
     await q(`update applications set status = 'accepted', member_id = $2 where id = $1`, [id, memberId]);
+    await log(q, me, "accepted", "application", id, a.name);
+    await log(q, me, "created", "member", memberId, a.name, null, "Added from their application.");
     return res.status(200).json({ memberId: Number(memberId) });
   }
 
-  res.setHeader("Allow", "GET, PATCH, POST");
+  res.setHeader("Allow", "GET, PATCH, POST, DELETE");
   return res.status(405).json({ error: "method_not_allowed" });
 }
 

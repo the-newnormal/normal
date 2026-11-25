@@ -7,6 +7,7 @@
 
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
+const { log } = require("../../lib/activity");
 
 const MAX_FAILURES = 8; // per name, per 15 minutes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -102,6 +103,7 @@ module.exports = async function handler(req, res) {
 
   auth.startSession(res, who);
   if (who.source === "db") await q(`update accounts set last_login = now() where id = $1`, [who.account.id]);
+  if (q) await log(q, { username, name: who.account ? who.account.name : username }, "signed in", "session", who.account ? who.account.id : null, who.account ? who.account.name : username);
   const a = who.account;
   return res.status(200).json({
     user: a

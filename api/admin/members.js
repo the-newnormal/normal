@@ -14,6 +14,9 @@
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
 const { ROLES, STATUSES, LEANING, publicStatus, topRole } = require("../../lib/org");
+const { log, diff } = require("../../lib/activity");
+const LABELS = { name: "Name", title: "Title", round: "Round", telegram: "Telegram", phone: "Phone", email: "Email", dob: "Birthday",
+  school: "School", joined_on: "Joined", status: "Status", notes: "Notes" };
 
 const FIELDS = ["name", "title", "round", "telegram", "phone", "email", "dob", "school", "joined_on", "status", "notes"];
 const OWN_FIELDS = ["telegram", "phone", "email", "dob", "school"]; // what members can change on their own profile
@@ -158,13 +161,14 @@ module.exports = async function handler(req, res) {
       `insert into members (${keys.join(", ")}) values (${keys.map((_, i) => `$${i + 1}`).join(", ")}) returning id`,
       keys.map((k) => c.values[k])
     );
+    await log(q, me, "created", "member", m.id, c.values.name);
     return res.status(201).json({ id: Number(m.id) });
   }
 
   if (req.method === "PATCH" && "seats" in b) {
     if (!admin) return res.status(403).json({ error: "not_allowed" });
     const id = idOf(b.id);
-    const [m] = id ? await q(`select id from members where id = $1`, [id]) : [];
+    const [m] = id ? await q(`select id, name, ${seatsCol(false)} from members m where id = $1`, [id]) : [];
     if (!m) return res.status(404).json({ error: "not_found" });
     const c = await cleanSeats(q, b.seats);
     if (c.error) return res.status(400).json({ error: c.error });
@@ -177,6 +181,10 @@ module.exports = async function handler(req, res) {
       );
     }
     await q(`update members set updated_at = now() where id = $1`, [id]);
+    const [after] = await q(`select ${seatsCol(false)} from members m where id = $1`, [id]);
+    const seatText = (seats) => parseSeats(seats).map((s) => `${s.role} · ${s.unit_id ? [s.unit_code, s.unit_name].filter(Boolean).join(" ") : "Normal"}`).join("; ") || null;
+    const changes = diff({ seats: seatText(m.seats) }, { seats: seatText(after.seats) }, { seats: "Seats" });
+    if (changes.length) await log(q, me, "updated", "member", id, m.name, changes);
     return res.status(200).json({ ok: true });
   }
 
@@ -188,11 +196,15 @@ module.exports = async function handler(req, res) {
     if (c.error) return res.status(400).json({ error: c.error });
     const keys = Object.keys(c.values);
     if (!keys.length) return res.status(400).json({ error: "nothing_to_change" });
-    const [m] = await q(
-      `update members set ${keys.map((k, i) => `${k} = $${i + 2}`).join(", ")}, updated_at = now() where id = $1 returning id`,
+    const [before] = await q(`select name, title, round, telegram, phone, email, dob::text as dob, school, joined_on::text as joined_on, status, notes from members where id = $1`, [id]);
+    if (!before) return res.status(404).json({ error: "not_found" });
+    await q(
+      `update members set ${keys.map((k, i) => `${k} = $${i + 2}`).join(", ")}, updated_at = now() where id = $1`,
       [id, ...keys.map((k) => c.values[k])]
     );
-    return m ? res.status(200).json({ ok: true }) : res.status(404).json({ error: "not_found" });
+    const changes = diff(before, c.values, LABELS);
+    if (changes.length) await log(q, me, "updated", "member", id, c.values.name || before.name, changes);
+    return res.status(200).json({ ok: true });
   }
 
   if (req.method === "DELETE") {
@@ -203,8 +215,13 @@ module.exports = async function handler(req, res) {
     await q(`update applications set member_id = null where member_id = $1`, [id]);
     await q(`update org_units set overseers = array_remove(overseers, $1::bigint) where $1::bigint = any(overseers)`, [id]);
     await q(`delete from seats where member_id = $1`, [id]);
-    const [m] = await q(`delete from members where id = $1 returning id`, [id]);
-    return m ? res.status(200).json({ ok: true }) : res.status(404).json({ error: "not_found" });
+    const [m] = await q(`delete from members where id = $1 returning id, name`, [id]);
+    if (!m) return res.status(404).json({ error: "not_found" });
+    // their notes go with them, and the log stops naming them
+    await q(`delete from activity where kind = 'member' and ref_id = $1 and action = 'note'`, [id]);
+    await q(`update activity set label = '(deleted member)', changes = null where kind = 'member' and ref_id = $1`, [id]);
+    await log(q, me, "deleted", "member", null, "a member record");
+    return res.status(200).json({ ok: true });
   }
 
   res.setHeader("Allow", "GET, POST, PATCH, DELETE");

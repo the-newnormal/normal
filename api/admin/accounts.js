@@ -8,6 +8,7 @@
 
 const { db } = require("../../lib/db");
 const auth = require("../../lib/auth");
+const { log } = require("../../lib/activity");
 
 const clip = (v, n) => String(v ?? "").trim().slice(0, n);
 const idOf = (v) => {
@@ -49,6 +50,7 @@ module.exports = async function handler(req, res) {
       [id, t.hash, t.expires]
     ) : [];
     if (!a) return res.status(404).json({ error: "not_found" });
+    await log(q, me, "made a setup link", "account", id, a.name);
     return res.status(200).json({ link: auth.setupLink(req, t.token), expires: t.expires });
   }
 
@@ -78,12 +80,13 @@ module.exports = async function handler(req, res) {
        values ($1, $2, $3, $4, $5, $6, $7) returning id, username, name, role, member_id`,
       [username, name, role, memberId, t.hash, t.expires, me.username]
     );
+    await log(q, me, "created", "account", a.id, a.name, [{ field: "Role", from: null, to: role }, { field: "Username", from: null, to: username }]);
     return res.status(201).json({ account: a, link: auth.setupLink(req, t.token), expires: t.expires });
   }
 
   if (req.method === "PATCH") {
     const id = idOf(b.id);
-    const [a] = id ? await q(`select id, username from accounts where id = $1`, [id]) : [];
+    const [a] = id ? await q(`select id, username, name, role, disabled from accounts where id = $1`, [id]) : [];
     if (!a) return res.status(404).json({ error: "not_found" });
     if (a.username === me.username) return res.status(409).json({ error: "cant_change_self" });
     if (b.role !== undefined && !auth.ROLES.includes(b.role)) return res.status(400).json({ error: "bad_request" });
@@ -91,15 +94,20 @@ module.exports = async function handler(req, res) {
       `update accounts set role = coalesce($2, role), disabled = coalesce($3, disabled) where id = $1 returning id, role, disabled`,
       [id, b.role ?? null, typeof b.disabled === "boolean" ? b.disabled : null]
     );
+    const changes = [];
+    if (updated.role !== a.role) changes.push({ field: "Role", from: a.role, to: updated.role });
+    if (updated.disabled !== a.disabled) changes.push({ field: "Access", from: a.disabled ? "disabled" : "active", to: updated.disabled ? "disabled" : "active" });
+    if (changes.length) await log(q, me, "updated", "account", id, a.name, changes);
     return res.status(200).json({ account: updated });
   }
 
   if (req.method === "DELETE") {
     const id = idOf(req.query.id);
-    const [a] = id ? await q(`select id, username from accounts where id = $1`, [id]) : [];
+    const [a] = id ? await q(`select id, username, name from accounts where id = $1`, [id]) : [];
     if (!a) return res.status(404).json({ error: "not_found" });
     if (a.username === me.username) return res.status(409).json({ error: "cant_change_self" });
     await q(`delete from accounts where id = $1`, [id]);
+    await log(q, me, "deleted", "account", id, a.name);
     return res.status(200).json({ ok: true });
   }
 
