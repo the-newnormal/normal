@@ -1983,6 +1983,46 @@
   }
 
   /* privacy (Master Admins) */
+  // New Normal's Data Protection Notice (admin/privacy-notice.html), with what's still [to be confirmed] marked
+  const NOTICE_URL = "/admin/privacy-notice.html";
+  function noticePanel() {
+    const box = el("div", "dpn-wrap");
+    box.append(el("p", "db-note", "Loading the notice…"));
+    const toggle = button("Open all", "", () => {
+      const open = toggle.textContent === "Open all";
+      $$(".dpn-sec", box).forEach((d) => { d.open = open; });
+      toggle.textContent = open ? "Close all" : "Open all";
+    }, "dpn-toggle");
+    (async () => {
+      const r = await fetch(NOTICE_URL, { cache: "no-cache" }).catch(() => null);
+      if (!r || !r.ok) { box.replaceChildren(el("p", "db-alert", "Couldn't load the notice.")); return; }
+      const t = document.createElement("template");
+      t.innerHTML = await r.text(); // the portal's own file, never anything people typed
+      const walker = document.createTreeWalker(t.content, NodeFilter.SHOW_TEXT);
+      const texts = [];
+      while (walker.nextNode()) texts.push(walker.currentNode);
+      let tbc = 0;
+      for (const n of texts) {
+        if (!/\[[^\]]+\]/.test(n.nodeValue)) continue;
+        const parts = document.createDocumentFragment();
+        for (const part of n.nodeValue.split(/(\[[^\]]+\])/)) {
+          if (/^\[[^\]]+\]$/.test(part)) {
+            const m = el("mark", "dpn-tbc", part);
+            m.title = "To be confirmed";
+            parts.append(m);
+            tbc += 1;
+          } else if (part) parts.append(part);
+        }
+        n.replaceWith(parts);
+      }
+      box.replaceChildren(
+        ...(tbc ? [el("p", "db-alert db-alert--warn", `Draft: ${tbc} ${tbc === 1 ? "part" : "parts"} in [brackets] still to be confirmed, highlighted below.`)] : []),
+        t.content,
+      );
+    })();
+    return panel("data protection notice", box, toggle);
+  }
+
   function privacyPage() {
     fail("");
     const bodyEl = detail("#/", "home", "", "privacy");
@@ -2016,6 +2056,7 @@
       lab, date, row, out,
     );
     bodyEl.append(
+      noticePanel(),
       panel("old applications", box),
       panel("removing someone", el("p", "db-note", "Delete their member record (members → open them → Delete record): their seats, notes about them and their name in the activity log go too. Delete their application from the application page, and their login from accounts.")),
       panel("what's kept", el("p", "db-note", "The activity log keeps who changed what, and when, so mistakes can be traced. Notes on a person's record go when the record is deleted.")),

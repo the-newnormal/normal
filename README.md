@@ -51,7 +51,7 @@ Normal's admin suite: people, meetings, partners and finance in one place. The s
 | budgets, disbursements, bank, finance setup | Budgets with spend guidelines, funding and the reserve; paying approved claims; the bank ledger; categories and claim-form notices | Budgets: division leads (theirs) and Finance; the rest: Finance |
 | accounts | Who can sign in, and as what | Master Admins |
 | activity log | Every change: who, what, when, old → new. Sign-ins and account changes for Master Admins only. | Admins |
-| privacy | Delete old applications (the privacy notice's 3-year promise) | Master Admins |
+| privacy | New Normal's Data Protection Notice (from `admin/privacy-notice.html`: edit it there; anything in [brackets] shows as still to be confirmed), and deleting old applications (the join page's 3-year promise) | Master Admins |
 
 **Every record works the same way.** A record number (MT-0012, PT-0003…), a table with search, filters and CSV export, a page with its details and a **history & notes** timeline: every change is logged there automatically, and anyone who can see the record can leave a note (a call, a decision, an update). Admins can archive a record (hidden, not deleted) or delete it.
 
