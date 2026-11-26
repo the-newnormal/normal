@@ -210,6 +210,8 @@ module.exports = async function handler(req, res) {
       data[k] = f.type === "members" ? [...(data[k] || []), me.memberId] : me.memberId;
     }
     for (const f of cfg.fields) if (f.today && !data[f.key]) data[f.key] = R.todaySG();
+    const due = R.requiredNow(c, data);
+    if (due) return res.status(400).json(due);
     let row;
     for (let attempt = 0; attempt < 3 && !row; attempt++) {
       try {
@@ -256,6 +258,8 @@ module.exports = async function handler(req, res) {
       if (named) return res.status(400).json(named);
       cl.data[cfg.title] = next[cfg.title];
     }
+    const due = R.requiredNow(c, next);
+    if (due) return res.status(400).json(due);
     await q(`update records set data = $2::jsonb, updated_by = $3, updated_at = now() where id = $1`, [id, JSON.stringify(next), me.username]);
     const refs = await R.refsFor(q, c, [{ data: { ...row.data } }, { data: next }]);
     const changes = diff(row.data, cl.data, labels, (k, v) => R.display(c, k, v, refs));

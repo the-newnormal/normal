@@ -1982,6 +1982,23 @@
     }
   }
 
+  // a field marked requiredOnce (a meeting's notes) is needed while its date (as typed, or as saved) is today or past
+  function neededOnce(cfg, defs, inputs, saved = {}) {
+    for (const f of cfg.fields.filter((x) => x.requiredOnce)) {
+      const d = defs.find((x) => x.key === f.key);
+      if (!d || !inputs[f.key]) continue;
+      const dateIn = inputs[f.requiredOnce];
+      const tag = $("label small", inputs[f.key].closest(".db-field"));
+      const sync = () => {
+        const when = dateIn ? dateIn.value : saved[f.requiredOnce] || "";
+        d.required = Boolean(when) && when <= todaySG();
+        if (tag) tag.textContent = d.required ? "" : "optional";
+      };
+      if (dateIn) { dateIn.addEventListener("input", sync); dateIn.addEventListener("change", sync); }
+      sync();
+    }
+  }
+
   // a module's fields in its form's order
   const formFields = (cfg) => (cfg.formOrder ? [...cfg.formOrder.map((k) => cfg.fields.find((f) => f.key === k)).filter(Boolean), ...cfg.fields.filter((f) => !cfg.formOrder.includes(f.key))] : cfg.fields);
 
@@ -2013,6 +2030,7 @@
       if (!cfg.admin && cfg.seeAll === false) f.prepend(el("p", "db-note db-field--wide", "You'll be added to it, so you can find it later."));
       addQuickAdds(cfg, newInputs, look);
       narrowPickers(cfg, newInputs, look);
+      neededOnce(cfg, defs, newInputs);
       body.append(panel(`${cfg.noun} record`, f));
       return;
     }
@@ -2064,7 +2082,8 @@
     if (cfg.chart) main.append(related); // a partner's people and meetings come before the long form
     if (canEdit.length) {
       const editable = formFields(cfg).filter((f) => canEdit.includes(f.key));
-      const { form: f, inputs: editInputs } = buildForm(editable.map((x) => formDef(x, look)), formValues(editable, rec.data), {
+      const editDefs = editable.map((x) => formDef(x, look));
+      const { form: f, inputs: editInputs } = buildForm(editDefs, formValues(editable, rec.data), {
         submit: "Save changes",
         onSubmit: async (vals, status) => {
           const s = await api("/api/admin/records", { method: "PATCH", json: { c, id: rec.id, data: vals } }).catch(() => null);
@@ -2076,6 +2095,7 @@
       });
       addQuickAdds(cfg, editInputs, look);
       narrowPickers(cfg, editInputs, look);
+      neededOnce(cfg, editDefs, editInputs, rec.data);
       main.append(panel(editsAll ? "details" : "update", f));
     }
     main.append(...(cfg.chart ? [] : [related]), timelinePanel(`record:${c}`, rec.id));
