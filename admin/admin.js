@@ -285,43 +285,12 @@
         }
         if (!d.options.length) input.append(el("span", "db-note", "No one to pick yet."));
         if (d.chips) {
-          // chips: what's picked is solid (tap to remove); a short list shows the rest as "+ name"; a long one, what you search for
-          input.classList.add("db-checks--chips");
-          const find = el("input", "db-input db-chips__find");
-          find.type = "search";
-          find.placeholder = "Search to add…";
-          find.setAttribute("aria-label", `Search ${d.label}`);
-          find.id = `find-${d.key}`;
-          const box = input;
-          const refresh = () => {
-            const q = find.value.trim().toLowerCase();
-            const labs = $$(".db-check", box).filter((l) => !l.classList.contains("is-out"));
-            const open = labs.filter((l) => !$("input", l).checked && !l.dataset.gone);
-            const few = open.length <= 12;
-            find.hidden = few && !q;
-            let shown = 0;
-            for (const l of labs) {
-              const on = $("input", l).checked;
-              if (l.dataset.gone && !on) { l.classList.add("is-hidden"); continue; }
-              const match = q ? l.textContent.toLowerCase().includes(q) && shown < 24 : few;
-              if (!on && match) shown += 1;
-              l.classList.toggle("is-hidden", !on && !match);
-            }
-          };
-          find.addEventListener("input", refresh);
-          find.addEventListener("keydown", (e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            const first = $$(".db-check:not(.is-hidden):not(.is-out)", box).find((l) => !$("input", l).checked);
-            if (!first) return;
-            $("input", first).checked = true;
-            find.value = "";
-            box.dispatchEvent(new Event("change", { bubbles: true }));
-          });
-          box.addEventListener("change", () => { if (find.value) { find.value = ""; } refresh(); });
-          box.refreshChips = refresh;
-          wrap.append(input, find);
-          refresh();
+          // a textbox that opens a dropdown; the checkboxes stay underneath, hidden, as the form's state
+          input.classList.add("db-combo__state");
+          const combo = comboBox(d.key, d.label, input, true);
+          input.combo = combo;
+          input.refreshChips = () => combo.redraw();
+          wrap.append(combo, input);
           if (d.hint) wrap.append(el("p", "db-hint", d.hint));
         } else if (d.options.length > 12) {
           const find = el("input", "db-input db-checks__find");
@@ -354,11 +323,35 @@
         const v = values ? values[d.key] : undefined;
         if (v !== undefined && v !== null) input.value = d.type === "date" ? String(v).slice(0, 10) : v;
         wrap.append(input);
+        if (d.combo && d.type === "select") {
+          input.classList.add("db-combo__state");
+          input.combo = comboBox(d.key, d.label, input, false);
+          wrap.insertBefore(input.combo, input);
+        }
         if (d.hint) wrap.append(el("p", "db-hint", d.hint));
       }
       input.id = id;
       input.name = d.key;
       inputs[d.key] = input;
+      input.fieldWrap = wrap;
+      // an optional field left empty shows as a link ("+ add our team") until it's wanted
+      const empty = !values || values[d.key] === undefined || values[d.key] === null || values[d.key] === "" || (Array.isArray(values[d.key]) && !values[d.key].length);
+      if (d.reveal && empty) {
+        const show = el("div", `db-field db-reveal${d.wide ? " db-field--wide" : ""}`);
+        const link = el("button", "db-link", d.reveal);
+        link.type = "button";
+        link.id = `reveal-${d.key}`;
+        link.addEventListener("click", () => {
+          show.remove();
+          wrap.hidden = false;
+          const first = $(".db-combo__input:not([hidden]), textarea, input:not([type=checkbox])", wrap);
+          if (first) first.focus();
+        });
+        show.append(link);
+        wrap.hidden = true;
+        wrap.revealWrap = show;
+        f.append(show);
+      }
       if (d.more) {
         if (!more) {
           more = el("details", "db-more db-field--wide");
@@ -1587,7 +1580,7 @@
     const out = { people: [], units: [], links: {} };
     if (cfg.fields.some((f) => ["member", "members", "unit"].includes(f.type))) {
       const org = await getOrg();
-      if (org) { out.people = org.people; out.units = org.units; }
+      if (org) { out.people = org.people; out.units = org.units; out.seats = org.seats; }
     }
     out.eligible = {};
     for (const f of cfg.fields.filter((x) => x.fromManagers)) {
@@ -1650,7 +1643,7 @@
   // a module field as a form question
   function formDef(f, look) {
     const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" || f.type === "links",
-      section: f.section, more: f.more };
+      section: f.section, more: f.more, reveal: f.reveal };
     switch (f.type) {
       case "long": return { ...base, type: "textarea" };
       case "select": return { ...base, type: "select", options: f.required ? f.options : [["", "—"], ...f.options] };
@@ -1660,13 +1653,19 @@
       case "phone": return { ...base, type: "tel" };
       case "member": {
         const el2 = f.fromManagers && look.eligible && look.eligible[f.key];
-        if (!el2) return { ...base, type: "select", options: [["", "—"], ...peopleOptions(look)] };
-        return { ...base, type: "select", hint: el2.team ? base.hint : `${base.hint || ""} No team is marked as looking after partners yet: tick that on the Relationships team's org chart page to list only them here.`.trim(),
+        if (!el2) return { ...base, type: "select", combo: true, options: [["", "—"], ...peopleOptions(look)] };
+        return { ...base, type: "select", combo: true, hint: el2.team ? base.hint : `${base.hint || ""} No team is marked as looking after partners yet: tick that on the Relationships team's org chart page to list only them here.`.trim(),
           options: [["", "—"], ...el2.people.map((x) => [String(x.id), x.on ? `${x.name} · leads ${x.on.title}` : `${x.name} · free`])] };
       }
       case "members": return { ...base, type: "checks", chips: true, options: peopleOptions(look) };
-      case "unit": return { ...base, type: "select", options: [["", "—"], ...unitOptions(look.units)] };
-      case "link": return { ...base, type: "select", options: [["", "—"], ...linkOptions(look, f.to)] };
+      case "unit": {
+        // your own teams first, then the rest, each with where it sits
+        const mine = new Set((look.seats || []).filter((x) => x.member_id === me.memberId && x.unit_id).map((x) => String(x.unit_id)));
+        const all = unitTree(look.units).map((u) => [String(u.id), `${unitLabel(u)}${u.parent_id ? ` · ${unitPath(look.units, u.parent_id)}` : ""}`]);
+        const yours = all.filter(([v]) => mine.has(v)).map(([v, t]) => [v, `${t.split(" · ")[0]} · your team`]);
+        return { ...base, type: "select", combo: true, options: [["", "—"], ...yours, ...all.filter(([v]) => !mine.has(v))] };
+      }
+      case "link": return { ...base, type: "select", combo: true, options: [["", "—"], ...linkOptions(look, f.to)] };
       case "links": return { ...base, type: "checks", chips: true, options: linkOptions(look, f.to) };
       default: return { ...base, type: f.type };
     }
@@ -1942,6 +1941,14 @@
       row.append(...nodes(name, role, org, level, add));
       det.append(row, msg);
       box.after(det);
+      if (box.combo) {
+        box.combo.onCreate = (typed) => {
+          det.open = true;
+          name.value = typed;
+          det.dispatchEvent(new Event("toggle"));
+          (role || org || name).focus();
+        };
+      }
     }
   }
 
@@ -1999,6 +2006,210 @@
     }
   }
 
+  // a textbox that opens a dropdown, for picking one record or person (a <select>) or several (a box of checkboxes).
+  // What's picked shows as chips with ×. The select or checkboxes stay underneath, hidden, as the form's state, so
+  // everything else (narrowing, quick-add, saving) reads and sets them as before; change events redraw the chips.
+  function comboBox(key, label, state, multi) {
+    const wrap = el("div", `db-combo${multi ? " is-multi" : ""}`);
+    const chips = el("div", "db-combo__chips");
+    const input = el("input", "db-input db-combo__input");
+    input.type = "text";
+    input.id = `combo-${key}`;
+    input.autocomplete = "off";
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-label", label);
+    input.setAttribute("aria-expanded", "false");
+    const list = el("ul", "db-combo__list");
+    list.id = `combo-${key}-list`;
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    input.setAttribute("aria-controls", list.id);
+    wrap.append(chips, input, list);
+    let active = 0;
+    const all = () => (multi
+      ? $$(".db-check", state).filter((l) => !l.classList.contains("is-out")).map((l) => {
+        const tick = $("input", l);
+        return { value: tick.value, text: l.textContent.trim(), picked: tick.checked, gone: Boolean(l.dataset.gone), node: tick };
+      })
+      : [...state.options].filter((o) => o.value !== "").map((o) => ({ value: o.value, text: o.textContent.trim(), picked: state.value === o.value, gone: false, node: o })));
+    const parts = (t) => { const i = t.indexOf(" · "); return i < 0 ? [t, ""] : [t.slice(0, i), t.slice(i + 3)]; };
+    const changed = () => state.dispatchEvent(new Event("change", { bubbles: true }));
+    // what's left to pick that matches what's typed: names starting with it first, then names containing it,
+    // then matches on the rest ("· Example Board" for its departments)
+    const choices = () => {
+      const q = input.value.trim().toLowerCase();
+      const rank = (o) => { const main = parts(o.text)[0].toLowerCase(); return main.startsWith(q) ? 0 : main.includes(q) ? 1 : 2; };
+      const left = all().filter((o) => !o.picked && !o.gone && (!q || o.text.toLowerCase().includes(q)));
+      return (q ? left.map((o, i) => [rank(o), i, o]).sort((x, y) => x[0] - y[0] || x[1] - y[1]).map((x) => x[2]) : left).slice(0, 60);
+    };
+    function draw() {
+      const picked = all().filter((o) => o.picked);
+      chips.replaceChildren(...picked.map((o) => {
+        const [main, sub] = parts(o.text);
+        const chip = el("span", "db-combo__chip");
+        chip.dataset.value = o.value;
+        const x = el("button", "db-combo__x", "×");
+        x.type = "button";
+        x.setAttribute("aria-label", `Remove ${main}`);
+        x.addEventListener("click", () => {
+          if (multi) o.node.checked = false; else state.value = "";
+          changed();
+          if (!multi) input.focus();
+        });
+        chip.append(...nodes(el("span", "", main), sub ? el("span", "db-combo__sub", sub) : null, x));
+        return chip;
+      }));
+      chips.hidden = !picked.length;
+      input.hidden = !multi && picked.length > 0;
+      input.placeholder = multi && picked.length ? "Add another…" : "Type to search, or pick from the list";
+    }
+    function render() {
+      const opts = choices();
+      active = Math.max(0, Math.min(active, opts.length - 1));
+      list.replaceChildren();
+      opts.forEach((o, i) => {
+        const [main, sub] = parts(o.text);
+        const li = el("li", `db-combo__opt${i === active ? " is-active" : ""}`);
+        li.setAttribute("role", "option");
+        li.dataset.value = o.value;
+        li.append(...nodes(el("span", "", main), sub ? el("span", "db-combo__sub", sub) : null));
+        li.addEventListener("mousedown", (e) => { e.preventDefault(); choose(o); });
+        list.append(li);
+      });
+      const typed = input.value.trim();
+      if (wrap.onCreate && typed) {
+        const li = el("li", "db-combo__create", `+ Add "${typed}" as someone new`);
+        li.addEventListener("mousedown", (e) => { e.preventDefault(); create(); });
+        list.append(li);
+      }
+      if (!list.children.length) list.append(el("li", "db-combo__empty", typed ? "No matches." : multi ? "Everyone's picked." : "Nothing to pick."));
+    }
+    function open() { render(); list.hidden = false; input.setAttribute("aria-expanded", "true"); }
+    function close() { list.hidden = true; input.setAttribute("aria-expanded", "false"); }
+    function choose(o) {
+      if (multi) o.node.checked = true; else state.value = o.value;
+      input.value = "";
+      active = 0;
+      changed();
+      close(); // typing again (or a click) opens it for the next one
+      if (multi) input.focus();
+    }
+    function create() {
+      const typed = input.value.trim();
+      input.value = "";
+      close();
+      wrap.onCreate(typed);
+    }
+    input.addEventListener("focus", open);
+    input.addEventListener("click", open);
+    input.addEventListener("input", () => { active = 0; open(); });
+    input.addEventListener("blur", () => setTimeout(close, 150));
+    input.addEventListener("keydown", (e) => {
+      const opts = choices();
+      if (e.key === "ArrowDown") { e.preventDefault(); if (list.hidden) open(); else { active = Math.min(active + 1, opts.length - 1); render(); } }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        if (opts[active]) choose(opts[active]);
+        else if (wrap.onCreate && input.value.trim()) create();
+      } else if (e.key === "Escape") close();
+      else if (e.key === "Backspace" && !input.value) {
+        const picked = all().filter((o) => o.picked);
+        if (picked.length) { const last = picked[picked.length - 1]; if (multi) last.node.checked = false; else state.value = ""; changed(); }
+      }
+    });
+    state.addEventListener("change", () => { draw(); if (!list.hidden) render(); });
+    wrap.redraw = () => { draw(); if (!list.hidden) render(); };
+    draw();
+    return wrap;
+  }
+
+  // a new record a page at a time (cfg.steps): a numbered bar, Back and Next, and Save on the last page
+  function stepForm(cfg, form, defs, inputs, look) {
+    const steps = cfg.steps.map((st) => ({ ...st, box: el("div", "db-form db-step") }));
+    const placed = new Set(steps.flatMap((st) => st.fields));
+    steps[steps.length - 1].fields = [...steps[steps.length - 1].fields, ...cfg.fields.map((x) => x.key).filter((k) => !placed.has(k) && inputs[k])];
+    const bar = el("ol", "db-steps");
+    const status = $(":scope > .db-error", form);
+    form.prepend(bar);
+    for (const st of steps) {
+      for (const k of st.fields) {
+        const w = inputs[k] && inputs[k].fieldWrap;
+        if (!w) continue;
+        if (w.revealWrap) st.box.append(w.revealWrap);
+        st.box.append(w);
+      }
+      status.before(st.box);
+    }
+    $$(":scope > .db-form__section, :scope > .db-more", form).forEach((x) => { if (!x.children.length || x.classList.contains("db-form__section")) x.remove(); });
+    const formbar = $(":scope > .db-formbar", form);
+    const save = $(".db-btn--primary", formbar);
+    const back = el("button", "db-btn", "Back");
+    back.type = "button";
+    back.id = "step-back";
+    const next = el("button", "db-btn db-btn--primary", "Next");
+    next.type = "button";
+    next.id = "step-next";
+    formbar.prepend(back);
+    save.before(next);
+    const summary = el("p", "db-note db-step__summary db-field--wide");
+    steps[steps.length - 1].box.prepend(summary);
+    let at = 0;
+    const filled = (d) => {
+      const i = inputs[d.key];
+      return i.dataset.checks ? Boolean($("input:checked", i)) : i.type === "checkbox" ? true : Boolean(String(i.value || "").trim());
+    };
+    const ready = (n) => {
+      const missing = defs.find((d) => steps[n].fields.includes(d.key) && d.required && !filled(d));
+      if (!missing) return true;
+      status.textContent = `${missing.label} is needed.`;
+      const w = inputs[missing.key].fieldWrap;
+      if (w && w.hidden && w.revealWrap) $("button", w.revealWrap).click();
+      (inputs[missing.key].combo ? $(".db-combo__input", inputs[missing.key].combo) : inputs[missing.key]).focus();
+      return false;
+    };
+    const picked = (k) => (inputs[k] && inputs[k].dataset.checks ? $$("input:checked", inputs[k]).map((x) => x.closest("label").textContent.trim().split(" · ")[0]) : []);
+    function show(n) {
+      at = n;
+      status.textContent = "";
+      steps.forEach((st, i) => { st.box.hidden = i !== n; });
+      bar.replaceChildren(...steps.map((st, i) => {
+        const li = el("li", i === n ? "is-on" : i < n ? "is-done" : "");
+        const b = el("button", "", `${i + 1} ${st.title}`);
+        b.type = "button";
+        b.disabled = i > n;
+        b.addEventListener("click", () => { if (i < n) show(i); });
+        li.append(b);
+        return li;
+      }));
+      back.hidden = n === 0;
+      next.hidden = n === steps.length - 1;
+      save.hidden = n !== steps.length - 1;
+      // what it will be called, and a last look before saving
+      const orgs = picked(cfg.autoTitle ? cfg.autoTitle.from : "");
+      if (inputs[cfg.title] && cfg.autoTitle) inputs[cfg.title].placeholder = orgs.length ? `${cfg.autoTitle.prefix}${orgs.join(", ")}` : "";
+      if (n === steps.length - 1) {
+        const name = (inputs[cfg.title] && inputs[cfg.title].value.trim()) || (orgs.length ? `${cfg.autoTitle.prefix}${orgs.join(", ")}` : "");
+        const dateIn = inputs[cfg.fields.find((x) => x.type === "date") ? cfg.fields.find((x) => x.type === "date").key : ""];
+        const bits = [name, dateIn && dateIn.value ? day(dateIn.value) : ""];
+        for (const fl of cfg.fields.filter((x) => x.type === "links" || x.type === "members")) {
+          const who = picked(fl.key);
+          if (who.length && fl.key !== (cfg.autoTitle || {}).from) bits.push(`${fl.label.toLowerCase()}: ${who.join(", ")}`);
+        }
+        summary.textContent = bits.filter(Boolean).join(" · ");
+      }
+      const first = $(".db-combo__input:not([hidden]), textarea, input:not([type=checkbox]):not([type=hidden])", steps[n].box);
+      if (first && n > 0) first.focus();
+    }
+    back.addEventListener("click", () => show(Math.max(0, at - 1)));
+    next.addEventListener("click", () => { if (ready(at)) show(at + 1); });
+    // Enter on an early page moves on instead of saving
+    form.addEventListener("submit", (e) => {
+      if (at < steps.length - 1) { e.preventDefault(); e.stopImmediatePropagation(); if (ready(at)) show(at + 1); }
+    }, true);
+    show(0);
+  }
+
   // a module's fields in its form's order
   const formFields = (cfg) => (cfg.formOrder ? [...cfg.formOrder.map((k) => cfg.fields.find((f) => f.key === k)).filter(Boolean), ...cfg.fields.filter((f) => !cfg.formOrder.includes(f.key))] : cfg.fields);
 
@@ -2031,6 +2242,7 @@
       addQuickAdds(cfg, newInputs, look);
       narrowPickers(cfg, newInputs, look);
       neededOnce(cfg, defs, newInputs);
+      if (cfg.steps) stepForm(cfg, f, defs, newInputs, look);
       body.append(panel(`${cfg.noun} record`, f));
       return;
     }

@@ -194,6 +194,32 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .db-checks--chips .db-check input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; }
 .db-checks--chips .db-check.is-hidden { display: none; }
 .db-chips__find { max-width: 320px; margin-top: 8px; }
+
+/* a textbox that opens a dropdown; what's picked as chips */
+.db-combo { position: relative; display: grid; gap: 6px; }
+.db-combo__state { display: none !important; }
+.db-combo__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.db-combo__chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 11px; font-size: 13px; font-weight: 500; color: var(--brand); background: var(--brand-soft); border-radius: 999px; }
+.db-combo__sub { font-weight: 400; color: var(--muted); }
+.db-combo__x { display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; font-size: 16px; line-height: 1; color: inherit; background: none; border: 0; border-radius: 50%; cursor: pointer; }
+.db-combo__x:hover { background: rgba(0, 0, 0, .07); }
+.db-combo__list { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; max-height: 280px; margin: 4px 0 0; padding: 4px; overflow-y: auto; list-style: none; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(29, 27, 26, .12); }
+.db-combo__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.db-combo__opt.is-active, .db-combo__opt:hover { background: var(--brand-soft); }
+.db-combo__create { color: var(--brand); font-weight: 500; }
+.db-combo__create:hover { background: var(--brand-soft); }
+.db-combo__empty { color: var(--muted); cursor: default !important; }
+.db-reveal { margin: -4px 0; }
+.db-reveal .db-link { justify-self: start; text-align: left; color: var(--brand); }
+
+/* adding a record a page at a time */
+.db-form .db-steps { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 1 / -1; margin: 0 0 4px; padding: 0; list-style: none; }
+.db-steps button { padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 500; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.db-steps button:disabled { cursor: default; opacity: .7; }
+.db-steps .is-on button { color: #fff; background: var(--brand); border-color: var(--brand); }
+.db-steps .is-done button { color: var(--brand); background: var(--brand-soft); border-color: transparent; }
+.db-step { grid-column: 1 / -1; }
+.db-step__summary { margin: 0; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius); }
 .db-narrow:empty { display: none; }
 .crm-quick > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--brand); }
 .crm-quick__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px; }
