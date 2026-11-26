@@ -2124,11 +2124,14 @@
     return wrap;
   }
 
-  // a new record a page at a time (cfg.steps): a numbered bar, Back and Next, and Save on the last page
-  function stepForm(cfg, form, defs, inputs, look) {
-    const steps = cfg.steps.map((st) => ({ ...st, box: el("div", "db-form db-step") }));
-    const placed = new Set(steps.flatMap((st) => st.fields));
-    steps[steps.length - 1].fields = [...steps[steps.length - 1].fields, ...cfg.fields.map((x) => x.key).filter((k) => !placed.has(k) && inputs[k])];
+  // a record a page at a time (cfg.steps): a numbered bar, Back and Next. Adding one saves on the last page; editing
+  // one ({ edit: true }) jumps to any page and saves from every page (a missing answer takes you to its page).
+  function stepForm(cfg, form, defs, inputs, look, { edit = false } = {}) {
+    const placed = new Set(cfg.steps.flatMap((st) => st.fields));
+    const extra = cfg.fields.map((x) => x.key).filter((k) => !placed.has(k) && inputs[k]);
+    const steps = cfg.steps.map((st, i) => ({ ...st, fields: [...st.fields, ...(i === cfg.steps.length - 1 ? extra : [])].filter((k) => inputs[k]), box: el("div", "db-form db-step") }))
+      .filter((st) => st.fields.length);
+    if (!steps.length) return;
     const bar = el("ol", "db-steps");
     const status = $(":scope > .db-error", form);
     form.prepend(bar);
@@ -2147,7 +2150,7 @@
     const back = el("button", "db-btn", "Back");
     back.type = "button";
     back.id = "step-back";
-    const next = el("button", "db-btn db-btn--primary", "Next");
+    const next = el("button", edit ? "db-btn" : "db-btn db-btn--primary", "Next"); // editing: Save is the main button
     next.type = "button";
     next.id = "step-next";
     formbar.prepend(back);
@@ -2162,6 +2165,7 @@
     const ready = (n) => {
       const missing = defs.find((d) => steps[n].fields.includes(d.key) && d.required && !filled(d));
       if (!missing) return true;
+      if (at !== n) show(n);
       status.textContent = `${missing.label} is needed.`;
       const w = inputs[missing.key].fieldWrap;
       if (w && w.hidden && w.revealWrap) $("button", w.revealWrap).click();
@@ -2177,14 +2181,14 @@
         const li = el("li", i === n ? "is-on" : i < n ? "is-done" : "");
         const b = el("button", "", `${i + 1} ${st.title}`);
         b.type = "button";
-        b.disabled = i > n;
-        b.addEventListener("click", () => { if (i < n) show(i); });
+        b.disabled = !edit && i > n;
+        b.addEventListener("click", () => { if (edit || i < n) show(i); });
         li.append(b);
         return li;
       }));
       back.hidden = n === 0;
       next.hidden = n === steps.length - 1;
-      save.hidden = n !== steps.length - 1;
+      save.hidden = !edit && n !== steps.length - 1;
       // what it will be called, and a last look before saving
       const orgs = picked(cfg.autoTitle ? cfg.autoTitle.from : "");
       if (inputs[cfg.title] && cfg.autoTitle) inputs[cfg.title].placeholder = orgs.length ? `${cfg.autoTitle.prefix}${orgs.join(", ")}` : "";
@@ -2203,8 +2207,14 @@
     }
     back.addEventListener("click", () => show(Math.max(0, at - 1)));
     next.addEventListener("click", () => { if (ready(at)) show(at + 1); });
-    // Enter on an early page moves on instead of saving
     form.addEventListener("submit", (e) => {
+      if (edit) {
+        // saving from any page: anything needed and missing, on whichever page, is asked for there
+        const bad = steps.findIndex((st, i) => !ready(i));
+        if (bad >= 0) { e.preventDefault(); e.stopImmediatePropagation(); }
+        return;
+      }
+      // adding: Enter on an early page moves on instead of saving
       if (at < steps.length - 1) { e.preventDefault(); e.stopImmediatePropagation(); if (ready(at)) show(at + 1); }
     }, true);
     show(0);
@@ -2308,6 +2318,7 @@
       addQuickAdds(cfg, editInputs, look);
       narrowPickers(cfg, editInputs, look);
       neededOnce(cfg, editDefs, editInputs, rec.data);
+      if (cfg.steps) stepForm(cfg, f, editDefs, editInputs, look, { edit: true });
       main.append(panel(editsAll ? "details" : "update", f));
     }
     main.append(...(cfg.chart ? [] : [related]), timelinePanel(`record:${c}`, rec.id));
