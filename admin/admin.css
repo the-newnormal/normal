@@ -177,6 +177,24 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .crm-met { margin-left: auto; font-size: 12px; }
 .crm-person.is-gone > .crm-person__row { opacity: .6; }
 .crm-quick { margin-top: 6px; }
+.db-check.is-out { display: none !important; }
+
+/* forms: sections, folded details, chips for picking people and records */
+.db-form__section { margin: 8px 0 -4px; padding-top: 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); }
+.db-form__section:first-child { padding-top: 0; border-top: 0; }
+.db-more > summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.db-more[open] > summary { margin-bottom: 12px; }
+.db-checks.db-checks--chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: none; padding: 0; overflow: visible; background: none; border: 0; }
+.db-checks--chips .db-check { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line-2); border-radius: 999px; cursor: pointer; }
+.db-checks--chips .db-check::before { content: "+"; font-weight: 600; }
+.db-checks--chips .db-check:hover { color: var(--text); border-color: var(--muted); }
+.db-checks--chips .db-check:has(input:checked) { color: var(--brand); background: var(--brand-soft); border: 1px solid transparent; }
+.db-checks--chips .db-check:has(input:checked)::before { content: none; }
+.db-checks--chips .db-check:has(input:checked)::after { content: "×"; margin-left: 2px; font-size: 15px; line-height: 1; opacity: .7; }
+.db-checks--chips .db-check input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.db-checks--chips .db-check.is-hidden { display: none; }
+.db-chips__find { max-width: 320px; margin-top: 8px; }
+.db-narrow:empty { display: none; }
 .crm-quick > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--brand); }
 .crm-quick__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px; }
 

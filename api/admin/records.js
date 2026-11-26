@@ -18,6 +18,19 @@ const { log, diff } = require("../../lib/activity");
 const R = require("../../lib/records");
 
 const like = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+
+// a record left unnamed (cfg.autoTitle) is named after what it links to: "Meeting with Example Board"
+async function autoTitle(q, c, data) {
+  const cfg = R.COLLECTIONS[c];
+  const at = cfg.autoTitle;
+  if (!at || String(data[cfg.title] || "").trim()) return null;
+  const f = R.fieldOf(c, at.from);
+  const ids = f && Array.isArray(data[at.from]) ? data[at.from] : [];
+  const names = ids.length ? (await q(`select id, data from records where collection = $1 and id = any($2::bigint[])`, [f.to, ids])).map((r) => R.titleOf(f.to, r.data)) : [];
+  if (!names.length) return { error: "required", field: R.fieldOf(c, cfg.title).label };
+  data[cfg.title] = `${at.prefix}${names.join(", ")}`.slice(0, 300);
+  return null;
+}
 const cell = (v) => {
   const s = String(v ?? "");
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -131,7 +144,8 @@ module.exports = async function handler(req, res) {
       const rows = await q(`select id, seq, data from records where ${where.join(" and ")} order by lower(data->>'${cfg.title}')`, params);
       const subRefs = cfg.pickerSub ? await R.refsFor(q, c, rows) : null;
       return res.status(200).json({ records: rows.map((r) => ({ id: Number(r.id), code: R.code(c, r.seq), title: R.titleOf(c, r.data),
-        ...(cfg.pickerSub && r.data[cfg.pickerSub] ? { sub: R.display(c, cfg.pickerSub, r.data[cfg.pickerSub], subRefs), of: r.data[cfg.pickerSub] } : {}) })) });
+        ...(cfg.pickerSub && r.data[cfg.pickerSub] ? { sub: R.display(c, cfg.pickerSub, r.data[cfg.pickerSub], subRefs), of: r.data[cfg.pickerSub] } : {}),
+        ...(cfg.pickerHide && cfg.pickerHide.values.includes(r.data[cfg.pickerHide.field]) ? { gone: true } : {}) })) });
     }
 
     const sortKey = cfg.fields.some((f) => f.key === b.sort) ? b.sort : cfg.sort[0];
@@ -186,6 +200,8 @@ module.exports = async function handler(req, res) {
     for (const f of cfg.fields) if (f.mine && f.type === "unit" && unset(f.key) && me.seatUnits && me.seatUnits.length) data[f.key] = me.seatUnits[0];
     const rule = await R.checkPeople(q, c, data, null);
     if (rule) return res.status(400).json(rule);
+    const named = await autoTitle(q, c, data);
+    if (named) return res.status(400).json(named);
     // a member who adds a record owns it
     if (!admin && (cfg.members.own || []).length && !R.isOwn(me, c, data)) {
       if (!me.memberId) return res.status(403).json({ error: "not_allowed" });
@@ -235,6 +251,11 @@ module.exports = async function handler(req, res) {
     if (!admin && !R.isOwn(me, c, next)) return res.status(400).json({ error: "keep_yourself" });
     const rule = await R.checkPeople(q, c, cl.data, id);
     if (rule) return res.status(400).json(rule);
+    if (cfg.title in cl.data) {
+      const named = await autoTitle(q, c, next);
+      if (named) return res.status(400).json(named);
+      cl.data[cfg.title] = next[cfg.title];
+    }
     await q(`update records set data = $2::jsonb, updated_by = $3, updated_at = now() where id = $1`, [id, JSON.stringify(next), me.username]);
     const refs = await R.refsFor(q, c, [{ data: { ...row.data } }, { data: next }]);
     const changes = diff(row.data, cl.data, labels, (k, v) => R.display(c, k, v, refs));

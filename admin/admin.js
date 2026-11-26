@@ -255,8 +255,10 @@
     const f = el("form", "db-form");
     f.noValidate = true;
     const inputs = {};
+    let more = null; // "More details": the fields marked more, folded at the end
     for (const d of defs) {
       const wrap = el("div", `db-field${d.wide ? " db-field--wide" : ""}`);
+      if (d.section && !d.more) f.append(el("h3", "db-form__section db-field--wide", d.section));
       const id = `fld-${d.key}`;
       let input;
       if (d.type === "checkbox") {
@@ -271,8 +273,9 @@
         input = el("div", "db-checks");
         input.dataset.checks = "1";
         const picked = (values && values[d.key]) || [];
-        for (const [v, t] of d.options) {
+        for (const [v, t, flags] of d.options) {
           const lab = el("label", "db-check");
+          if (flags && flags.gone) lab.dataset.gone = "1"; // offered only if already picked (a contact who moved on)
           const box = el("input");
           box.type = "checkbox";
           box.value = v;
@@ -281,7 +284,46 @@
           input.append(lab);
         }
         if (!d.options.length) input.append(el("span", "db-note", "No one to pick yet."));
-        if (d.options.length > 12) {
+        if (d.chips) {
+          // chips: what's picked is solid (tap to remove); a short list shows the rest as "+ name"; a long one, what you search for
+          input.classList.add("db-checks--chips");
+          const find = el("input", "db-input db-chips__find");
+          find.type = "search";
+          find.placeholder = "Search to add…";
+          find.setAttribute("aria-label", `Search ${d.label}`);
+          find.id = `find-${d.key}`;
+          const box = input;
+          const refresh = () => {
+            const q = find.value.trim().toLowerCase();
+            const labs = $$(".db-check", box).filter((l) => !l.classList.contains("is-out"));
+            const open = labs.filter((l) => !$("input", l).checked && !l.dataset.gone);
+            const few = open.length <= 12;
+            find.hidden = few && !q;
+            let shown = 0;
+            for (const l of labs) {
+              const on = $("input", l).checked;
+              if (l.dataset.gone && !on) { l.classList.add("is-hidden"); continue; }
+              const match = q ? l.textContent.toLowerCase().includes(q) && shown < 24 : few;
+              if (!on && match) shown += 1;
+              l.classList.toggle("is-hidden", !on && !match);
+            }
+          };
+          find.addEventListener("input", refresh);
+          find.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const first = $$(".db-check:not(.is-hidden):not(.is-out)", box).find((l) => !$("input", l).checked);
+            if (!first) return;
+            $("input", first).checked = true;
+            find.value = "";
+            box.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+          box.addEventListener("change", () => { if (find.value) { find.value = ""; } refresh(); });
+          box.refreshChips = refresh;
+          wrap.append(input, find);
+          refresh();
+          if (d.hint) wrap.append(el("p", "db-hint", d.hint));
+        } else if (d.options.length > 12) {
           const find = el("input", "db-input db-checks__find");
           find.type = "search";
           find.placeholder = "Find…";
@@ -291,8 +333,10 @@
           wrap.append(find);
           input.classList.add("is-long");
         }
-        wrap.append(input);
-        if (d.hint) wrap.append(el("p", "db-hint", d.hint));
+        if (!d.chips) {
+          wrap.append(input);
+          if (d.hint) wrap.append(el("p", "db-hint", d.hint));
+        }
       } else {
         const lab = el("label", "db-label", d.label);
         lab.htmlFor = id;
@@ -315,8 +359,17 @@
       input.id = id;
       input.name = d.key;
       inputs[d.key] = input;
-      f.append(wrap);
+      if (d.more) {
+        if (!more) {
+          more = el("details", "db-more db-field--wide");
+          more.append(el("summary", "", "More details"));
+          more.grid = el("div", "db-form");
+          more.append(more.grid);
+        }
+        more.grid.append(wrap);
+      } else f.append(wrap);
     }
+    if (more) f.append(more);
     const status = el("p", "db-error");
     status.setAttribute("role", "alert");
     const bar = el("div", "db-formbar");
@@ -1549,7 +1602,7 @@
   }
   const peopleOptions = (look) => look.people.map((p) => [String(p.id), p.name]);
   const linkLabel = (to, r) => (schema[to] && schema[to].pickerSub ? (r.sub ? `${r.title} · ${r.sub}` : r.title) : `${r.code} ${r.title}`);
-  const linkOptions = (look, to) => (look.links[to] || []).map((r) => [String(r.id), linkLabel(to, r)]);
+  const linkOptions = (look, to) => (look.links[to] || []).map((r) => [String(r.id), linkLabel(to, r), r.gone ? { gone: true } : undefined]);
   const isDone = (cfg, data) => Boolean(cfg.done && cfg.done.values.includes(data[cfg.done.field]));
 
   // a stored value as people read it; inTable keeps it short
@@ -1596,7 +1649,8 @@
 
   // a module field as a form question
   function formDef(f, look) {
-    const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" || f.type === "links" };
+    const base = { key: f.key, label: f.label + (f.type === "money" ? " (S$)" : ""), required: f.required, hint: f.hint, wide: f.wide || f.type === "members" || f.type === "links",
+      section: f.section, more: f.more };
     switch (f.type) {
       case "long": return { ...base, type: "textarea" };
       case "select": return { ...base, type: "select", options: f.required ? f.options : [["", "—"], ...f.options] };
@@ -1610,10 +1664,10 @@
         return { ...base, type: "select", hint: el2.team ? base.hint : `${base.hint || ""} No team is marked as looking after partners yet: tick that on the Relationships team's org chart page to list only them here.`.trim(),
           options: [["", "—"], ...el2.people.map((x) => [String(x.id), x.on ? `${x.name} · leads ${x.on.title}` : `${x.name} · free`])] };
       }
-      case "members": return { ...base, type: "checks", options: peopleOptions(look) };
+      case "members": return { ...base, type: "checks", chips: true, options: peopleOptions(look) };
       case "unit": return { ...base, type: "select", options: [["", "—"], ...unitOptions(look.units)] };
       case "link": return { ...base, type: "select", options: [["", "—"], ...linkOptions(look, f.to)] };
-      case "links": return { ...base, type: "checks", options: linkOptions(look, f.to) };
+      case "links": return { ...base, type: "checks", chips: true, options: linkOptions(look, f.to) };
       default: return { ...base, type: f.type };
     }
   }
@@ -1656,7 +1710,7 @@
         filterEls[i].value = keep;
       }));
       if (cfg.admin) $("#list-actions").append(button("Export CSV", "", () => download(`/api/admin/records?${params({ c, format: "csv", q: q.value.trim() })}`)));
-      if (cfg.canCreate) $("#list-actions").append(linkButton(`+ new ${cfg.noun}`, `#/r/${c}/new`, "primary"));
+      if (cfg.canCreate) $("#list-actions").append(linkButton(`+ ${cfg.newLabel || `new ${cfg.noun}`}`, `#/r/${c}/new`, "primary"));
 
       const listed = cfg.fields.filter((f) => f.list);
       let refs = { members: {}, units: {}, links: {} };
@@ -1870,10 +1924,15 @@
         tick.checked = true;
         const orgName = org ? org.options[org.selectedIndex].text : "";
         lab.append(tick, orgName ? `${data[to.title]} · ${orgName}` : data[to.title]);
+        if (org) lab.dataset.of = org.value;
         $$(".db-note", box).forEach((n) => n.remove());
         box.append(lab);
-        if (orgsHere && org) { const t = $(`input[value="${org.value}"]`, inputs[orgsHere.key]); if (t) t.checked = true; }
-        (look.links[f.to] = look.links[f.to] || []).push({ id: s2.data.record.id, code: s2.data.record.code, title: data[to.title], sub: orgName });
+        if (box.refreshChips) box.refreshChips();
+        if (orgsHere && org) {
+          const t = $(`input[value="${org.value}"]`, inputs[orgsHere.key]);
+          if (t && !t.checked) { t.checked = true; t.dispatchEvent(new Event("change", { bubbles: true })); }
+        }
+        (look.links[f.to] = look.links[f.to] || []).push({ id: s2.data.record.id, code: s2.data.record.code, title: data[to.title], sub: orgName, ...(org ? { of: Number(org.value) } : {}) });
         toast(`${data[to.title]} added to ${to.label}.`);
         name.value = "";
         if (role) role.value = "";
@@ -1886,15 +1945,59 @@
     }
   }
 
+  // a links field marked narrowBy (a meeting's "their side") lists only the records at what's ticked in that field
+  // (its organisations, and their departments and branches); ticked ones always stay; nothing ticked lists everyone
+  function narrowPickers(cfg, inputs, look) {
+    for (const f of cfg.fields.filter((x) => x.narrowBy && x.type === "links" && inputs && inputs[x.key] && inputs[x.narrowBy])) {
+      const by = cfg.fields.find((x) => x.key === f.narrowBy);
+      const box = inputs[f.key], byBox = inputs[f.narrowBy];
+      const str = (v) => (v === null || v === undefined ? null : String(v));
+      const at = new Map((look.links[f.to] || []).map((r) => [String(r.id), str(r.of)]));
+      // the organisations' own tree (a branch is part of a department, part of a partner)
+      const tree = schema[by.to] && schema[by.to].chart && schema[by.to].chart.parent === schema[by.to].pickerSub;
+      const up = new Map((look.links[by.to] || []).map((r) => [String(r.id), tree ? str(r.of) : null]));
+      const note = el("p", "db-hint db-narrow");
+      box.before(note);
+      const refresh = () => {
+        const picked = $$("input:checked", byBox).map((i) => i.value);
+        const open = new Set(picked);
+        for (let grew = true; grew;) {
+          grew = false;
+          for (const [id, parent] of up) if (parent && open.has(parent) && !open.has(id)) { open.add(id); grew = true; }
+        }
+        let shown = 0;
+        for (const lab of $$(".db-check", box)) {
+          const tick = $("input", lab);
+          const where = at.has(tick.value) ? at.get(tick.value) : lab.dataset.of || null;
+          const out = picked.length > 0 && !tick.checked && !open.has(where);
+          lab.classList.toggle("is-out", out);
+          if (!out) shown += 1;
+        }
+        if (box.refreshChips) box.refreshChips();
+        note.textContent = !picked.length ? "" : shown ? "Showing the people at the organisations ticked above (and their departments and branches)."
+          : "No one from there yet: add them with + someone new.";
+      };
+      byBox.addEventListener("change", refresh);
+      refresh();
+    }
+  }
+
+  // a module's fields in its form's order
+  const formFields = (cfg) => (cfg.formOrder ? [...cfg.formOrder.map((k) => cfg.fields.find((f) => f.key === k)).filter(Boolean), ...cfg.fields.filter((f) => !cfg.formOrder.includes(f.key))] : cfg.fields);
+
   /* one record */
   async function recordPage(c, id, prefill = {}) {
     const cfg = schema[c];
     fail("");
     const look = await lookups(c);
     if (id === "new") {
-      const body = detail(`#/r/${c}`, cfg.label, "new", `new ${cfg.noun}`);
+      const body = detail(`#/r/${c}`, cfg.label, "new", cfg.newLabel || `new ${cfg.noun}`);
       if (!cfg.canCreate) return fail(ERRORS.not_allowed);
-      const defs = cfg.fields.filter((f) => cfg.createFields.includes(f.key)).map((f) => formDef(f, look));
+      const defs = formFields(cfg).filter((f) => cfg.createFields.includes(f.key)).map((f) => formDef(f, look));
+      for (const f of cfg.fields) {
+        if (f.today && !prefill[f.key]) prefill[f.key] = todaySG();
+        if (f.meDefault && me.memberId && !prefill[f.key]) prefill[f.key] = String(me.memberId);
+      }
       const given = Object.fromEntries(cfg.fields.filter((f) => prefill[f.key]).map((f) => [f.key, f.type === "links" || f.type === "members" ? [prefill[f.key]] : prefill[f.key]]));
       const { form: f, inputs: newInputs } = buildForm(defs, formValues(cfg.fields, { ...cfg.defaults, ...given }), {
         submit: `Save ${cfg.noun}`,
@@ -1909,6 +2012,7 @@
       });
       if (!cfg.admin && cfg.seeAll === false) f.prepend(el("p", "db-note db-field--wide", "You'll be added to it, so you can find it later."));
       addQuickAdds(cfg, newInputs, look);
+      narrowPickers(cfg, newInputs, look);
       body.append(panel(`${cfg.noun} record`, f));
       return;
     }
@@ -1959,7 +2063,7 @@
 
     if (cfg.chart) main.append(related); // a partner's people and meetings come before the long form
     if (canEdit.length) {
-      const editable = cfg.fields.filter((f) => canEdit.includes(f.key));
+      const editable = formFields(cfg).filter((f) => canEdit.includes(f.key));
       const { form: f, inputs: editInputs } = buildForm(editable.map((x) => formDef(x, look)), formValues(editable, rec.data), {
         submit: "Save changes",
         onSubmit: async (vals, status) => {
@@ -1971,6 +2075,7 @@
         },
       });
       addQuickAdds(cfg, editInputs, look);
+      narrowPickers(cfg, editInputs, look);
       main.append(panel(editsAll ? "details" : "update", f));
     }
     main.append(...(cfg.chart ? [] : [related]), timelinePanel(`record:${c}`, rec.id));
