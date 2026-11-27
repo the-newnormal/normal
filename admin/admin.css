@@ -1,29 +1,57 @@
 /* Normal admin portal: a plain, dense, database-style interface.
    Separate from styles.css on purpose: the public site is a hand-drawn notebook, this is the records office. */
 
+/* Sky Blue (#0099FF), Cloudy White (#FDFDFE) and Amber Red: a sky that fades into white, white sheets on it,
+   amber red for the one thing to press. Text in a near-black navy; deeper shades of the blue and the red wherever
+   they carry small text, so it stays readable (4.5:1 or better).
+   Bookmania (the site's own files, assets/fonts/) is for display: titles, headings, big numbers, names on charts.
+   What's read in bulk (tables, forms, buttons) stays in the system font. */
+@font-face {
+  font-family: "bookmania";
+  src: url("/assets/fonts/bookmania-regular.woff2") format("woff2"), url("/assets/fonts/bookmania-regular.woff") format("woff");
+  font-weight: 100 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "bookmania";
+  src: url("/assets/fonts/bookmania-bold.woff2") format("woff2");
+  font-weight: 600 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg: #f4f3f1;
-  --surface: #ffffff;
-  --surface-2: #faf9f7;
-  --line: #e3e0db;
-  --line-2: #d3cfc8;
-  --text: #1d1b1a;
-  --muted: #6c6560;
-  --faint: #8f8882;
-  --brand: #532213;
-  --brand-2: #6e3420;
-  --brand-soft: #f6ede8;
-  --focus: rgba(83, 34, 19, .22);
+  --sky: #0099ff;         /* Sky Blue */
+  --cloud: #fdfdfe;       /* Cloudy White */
+  --amber: #ff2e00;       /* Amber Red */
+  --amber-ink: #db2c00;   /* Amber Red, deep enough for white text on it */
+  --bg: #f3f8fd;          /* the sky, faded */
+  --surface: var(--cloud);
+  --surface-2: #eef5fc;
+  --line: rgba(0, 61, 122, .11);
+  --line-2: rgba(0, 61, 122, .2);
+  --text: #0b1b2b;
+  --muted: #4e5d6e;
+  --faint: #6b7886;
+  --brand: #0072bf;       /* Sky Blue, deep enough for text */
+  --brand-2: #3f6385;
+  --brand-soft: rgba(0, 153, 255, .13);   /* what's current, picked or selected */
+  --hl: var(--sky);
+  --focus: rgba(0, 153, 255, .32);
+  --shadow: 0 1px 2px rgba(0, 40, 80, .05), 0 6px 20px rgba(0, 61, 122, .06);
   --danger: #b3261e;
   --ok: #1f6b3a;
   --ok-soft: #e7f3ea;
-  --info: #24527a;
-  --info-soft: #e7eff7;
+  --info: #0072bf;
+  --info-soft: #e3f2ff;
   --warn: #8a5a00;
   --warn-soft: #fbf1dc;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display: "bookmania", "Bookman Old Style", "URW Bookman", "Bookman", Georgia, serif;
+  --lvl-0: #db2c00; --lvl-1: #0b3c66; --lvl-2: #0072bf; --lvl-3: #0e7c86; --lvl-4: #6b7886;  /* top leadership … ground */
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 6px;
+  --radius: 8px;
   --side: 232px;
   color-scheme: light;
 }
@@ -157,25 +185,71 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .db-stack { display: grid; gap: 10px; }
 .db-subhead { margin: 10px 0 0; font-size: 14px; font-weight: 600; }
 
-/* partners: their people as an org chart, and quick-add on meetings */
-.crm-chart { display: grid; gap: 12px; }
+/* partners: their people as an org chart (cards joined by reporting lines), and quick-add on meetings */
+.crm-chart { display: grid; gap: 14px; }
 .crm-up { margin: 0; font-size: 13px; color: var(--muted); }
 .crm-levels { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.crm-levels__label { margin-right: 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.crm-level { padding: 2px 9px; font-size: 12px; background: var(--brand-soft); color: var(--brand); border-radius: 999px; }
-.crm-level.is-none { color: var(--muted); background: var(--surface-2); }
-.crm-unit { display: grid; gap: 6px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
-.crm-unit.is-root { padding: 0; border: 0; }
-.crm-units { display: grid; gap: 8px; margin-top: 4px; padding-left: 14px; border-left: 2px solid var(--line); }
-.crm-unit__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.crm-unit__name { font-weight: 600; }
-.crm-unit__tools { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
-.crm-people { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
-.crm-people .crm-people { margin: 2px 0 2px 8px; padding-left: 12px; border-left: 1px dashed var(--line-2); }
-.crm-person__row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 0; }
-.crm-person__name { font-weight: 500; }
-.crm-met { margin-left: auto; font-size: 12px; }
-.crm-person.is-gone > .crm-person__row { opacity: .6; }
+.crm-levels__label { margin-right: 2px; font-size: 12.5px; font-weight: 500; color: var(--brand-2); }
+.crm-level { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 8px; font-size: 12.5px; color: var(--text); background: var(--surface-2); border-radius: 999px; }
+.crm-level::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lvl, var(--lvl-4)); }
+.crm-level.is-none { color: var(--faint); background: transparent; }
+.crm-level.is-none::before { opacity: .35; }
+.lvl-0 { --lvl: var(--lvl-0); } .lvl-1 { --lvl: var(--lvl-1); } .lvl-2 { --lvl: var(--lvl-2); } .lvl-3 { --lvl: var(--lvl-3); } .lvl-4, .lvl-none { --lvl: var(--lvl-4); }
+.crm-chart__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+.crm-parts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.crm-parts__label { margin-right: 2px; font-size: 12.5px; font-weight: 500; color: var(--brand-2); }
+.crm-part { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 13px; color: var(--text); text-decoration: none; background: var(--surface); border: 1px solid var(--line-2); border-radius: 999px; }
+.crm-part:hover { border-color: var(--brand-2); background: var(--surface-2); }
+.crm-part__n { min-width: 18px; padding: 0 5px; font-size: 11.5px; text-align: center; color: var(--brand); background: var(--brand-soft); border-radius: 999px; }
+
+/* a person: initials in their level's colour, then name, role, where they sit, when we last met */
+.crm-card { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; width: 196px; padding: 10px 12px;
+  color: var(--text); text-decoration: none; text-align: left; background: var(--surface); border: 1px solid var(--line-2); border-top: 3px solid var(--lvl, var(--lvl-4));
+  border-radius: 10px; box-shadow: var(--shadow); }
+.crm-card:hover { border-color: var(--sky); border-top-color: var(--lvl, var(--lvl-4)); box-shadow: 0 0 0 3px var(--focus); }
+.crm-card__av { grid-row: span 4; align-self: start; display: grid; place-items: center; width: 34px; height: 34px; font: 700 13px/1 var(--display); color: #fff; background: var(--lvl, var(--lvl-4)); border-radius: 50%; }
+.crm-card__name { overflow: hidden; font: 700 15px/1.2 var(--display); letter-spacing: -0.03em; white-space: nowrap; text-overflow: ellipsis; }
+.crm-card__role, .crm-card__at, .crm-card__met { overflow: hidden; font-size: 12px; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
+.crm-card__role { color: var(--text); }
+.crm-card__at { color: var(--brand-2); }
+.crm-card__met { color: var(--faint); }
+
+/* the tree: each person above the people who report to them, joined by lines (scrolls sideways when wide) */
+.crm-tree__scroll { overflow-x: auto; margin: 0 -16px; padding: 4px 16px 8px; }
+.crm-tree { width: max-content; min-width: 100%; }
+.crm-tree ul { position: relative; display: flex; justify-content: center; margin: 0; padding: 22px 0 0; list-style: none; }
+.crm-tree > ul { padding-top: 0; gap: 28px; }
+.crm-tree li { position: relative; display: flex; flex-direction: column; align-items: center; padding: 22px 8px 0; }
+.crm-tree > ul > li { padding-top: 0; }
+.crm-tree li::before, .crm-tree li::after { content: ""; position: absolute; top: 0; width: 50%; height: 22px; border-top: 1.5px solid var(--line-2); }
+.crm-tree li::before { right: 50%; }
+.crm-tree li::after { left: 50%; border-left: 1.5px solid var(--line-2); }
+.crm-tree li:first-child::before, .crm-tree li:last-child::after { border-top: 0; }
+.crm-tree li:last-child::before { border-right: 1.5px solid var(--line-2); border-top-right-radius: 8px; }
+.crm-tree li:first-child::after { border-top-left-radius: 8px; }
+.crm-tree li:only-child::before { display: none; }
+.crm-tree li:only-child::after { border-top: 0; border-radius: 0; }
+.crm-tree > ul > li::before, .crm-tree > ul > li::after { display: none; }
+.crm-tree ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 22px; border-left: 1.5px solid var(--line-2); }
+.crm-sub { margin: 4px 0 -4px; font-size: 12.5px; color: var(--muted); }
+.crm-loose { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 10px; }
+.crm-loose .crm-card { width: auto; }
+.crm-gone { margin: 0; padding-top: 10px; font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line-2); }
+.crm-gone a { color: var(--muted); }
+/* on a phone the chart folds into an indented tree: each person above the people who report to them, a line down from their initials */
+@media (max-width: 640px) {
+  .crm-tree__scroll { overflow: visible; margin: 0; padding: 0; }
+  .crm-tree { width: auto; min-width: 0; }
+  .crm-tree ul { display: block; padding: 0 0 0 40px; }
+  .crm-tree > ul { display: grid; gap: 10px; padding: 0; }
+  .crm-tree li { display: block; padding: 10px 0 0; }
+  .crm-tree > ul > li { padding: 0; }
+  .crm-tree li:nth-child(n)::before { display: block; left: -11px; right: auto; top: 0; bottom: 0; width: 0; height: auto; border: 0; border-left: 1.5px solid var(--line-2); border-radius: 0; }
+  .crm-tree li:last-child::before { bottom: auto; height: 37px; }
+  .crm-tree li:nth-child(n)::after { display: block; left: -11px; top: 37px; width: 11px; height: 0; border: 0; border-top: 1.5px solid var(--line-2); border-radius: 0; }
+  .crm-tree > ul > li:nth-child(n)::before, .crm-tree > ul > li:nth-child(n)::after, .crm-tree ul ul::before { display: none; }
+  .crm-card { width: 100%; }
+}
 .crm-quick { margin-top: 6px; }
 .db-check.is-out { display: none !important; }
 
@@ -319,13 +393,13 @@ textarea.db-input { height: auto; min-height: 96px; padding: 8px 10px; resize: v
 
 /* ───────────── org chart ───────────── */
 :root {
-  --role-founder: #532213;
-  --role-cos: #8a4a2b;
-  --role-director: #24527a;
-  --role-lead: #1f6b3a;
-  --role-member: #6c6560;
-  --role-fellow: #8a5a00;
-  --role-volunteer: #a29a93;
+  --role-founder: #0b3c66;
+  --role-cos: #db2c00;
+  --role-director: #0072bf;
+  --role-lead: #0099ff;
+  --role-member: #6b7886;
+  --role-fellow: #e08a00;
+  --role-volunteer: #a3aeb9;
 }
 .org-role { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .org-role::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--role, var(--role-member)); }
@@ -358,7 +432,7 @@ textarea.db-input { height: auto; min-height: 96px; padding: 8px 10px; resize: v
 .org-unit { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; transition: box-shadow .15s ease, border-color .15s ease; }
 .org-unit--division { border-top: 3px solid var(--role-director); }
 .org-unit--domain { background: var(--surface-2); }
-.org-unit.is-lit { border-color: var(--role-director); box-shadow: 0 0 0 3px rgba(36, 82, 122, .18); }
+.org-unit.is-lit { border-color: var(--role-director); box-shadow: 0 0 0 3px var(--focus); }
 .org-unit__head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
 .org-unit--team > .org-unit__head, .org-unit--domain > .org-unit__head { padding: 7px 10px; }
 .org-name { min-width: 0; font-weight: 600; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
@@ -542,3 +616,68 @@ a.org-person:hover, a.org-person:focus-visible { outline: none; border-color: va
   .db-toolbar select { flex: 1 1 calc(50% - 4px); }
   .db-head .db-actions { width: 100%; }
 }
+
+
+/* ───────────── the theme: a sky fading into white, sheets on it, amber red to press ───────────── */
+html { font-synthesis: none; }
+body {
+  font-size: 14px; line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg) linear-gradient(180deg, rgba(0, 153, 255, .2) 0, rgba(0, 153, 255, .07) 220px, rgba(0, 153, 255, 0) 520px) no-repeat;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: -0.04em; }
+::selection { background: var(--sky); color: #fff; }
+
+/* captions: small, in a quiet blue */
+.db-crumb, .db-crumb a { font-size: 13px; color: var(--brand-2); }
+.db-table th, .db-fields dt, .db-side__label {
+  font: 500 12.5px/1.2 var(--sans); letter-spacing: 0; text-transform: none; color: var(--brand-2);
+}
+.db-form__section { font: 700 17px/1.2 var(--display); letter-spacing: -0.04em; text-transform: none; color: var(--text); }
+
+/* titles in Bookmania Bold */
+.db-title { font-size: 34px; line-height: 1.05; letter-spacing: -0.06em; }
+.db-panel__head h2 { font-size: 17px; letter-spacing: -0.04em; }
+.db-card h1 { font-size: 30px; line-height: 1.05; letter-spacing: -0.06em; }
+.db-stat__n { font: 700 30px/1.1 var(--display); letter-spacing: -0.04em; color: var(--text); }
+
+/* the sidebar: a white sheet; "admin" on a sky blue tag; where you are, in sky blue */
+.db-side { background: var(--cloud); border-right-color: var(--line); }
+.db-brand img { filter: brightness(0); opacity: .92; }  /* the wordmark in ink, to sit with the blue */
+.db-brand span { padding: 3px 7px; font: 700 13px/1 var(--sans); letter-spacing: 0; text-transform: none; color: var(--text); border: 0; border-radius: 999px; background: var(--sky); }
+.db-nav a { position: relative; white-space: nowrap; border-radius: 8px; }
+.db-nav a:hover { background: var(--surface-2); }
+.db-nav a[aria-current] { color: var(--brand); font-weight: 600; background: var(--brand-soft); }
+.db-nav a[aria-current]::before { content: ""; position: absolute; left: -6px; top: 7px; bottom: 7px; width: 3px; border-radius: 3px; background: var(--sky); }
+
+/* white sheets on the sky */
+.db-panel { border-color: var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.db-panel + .db-panel { margin-top: 18px; }
+.db-stat { border-color: var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.db-table tbody tr[data-href]:hover td { background: rgba(0, 153, 255, .06); }
+.db-table td.is-id { font-size: 12px; }
+
+/* amber red to press; white buttons with a blue hairline otherwise; links in deep sky blue */
+.db-btn { border-color: var(--line-2); border-radius: 8px; }
+.db-btn:hover { background: var(--surface-2); border-color: var(--sky); }
+.db-btn--primary { color: #fff; font-weight: 600; background: var(--amber-ink); border-color: var(--amber-ink); }
+.db-btn--primary:hover { color: #fff; background: #c42600; border-color: #c42600; }
+.db-btn--danger { color: var(--danger); }
+.db-link { color: var(--brand); text-decoration-color: rgba(0, 153, 255, .45); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.db-link:hover { color: var(--text); text-decoration-color: var(--sky); }
+.db-reveal .db-link { color: var(--brand); }
+
+/* fields */
+.db-input, .db-toolbar input, .db-toolbar select, .db-select { background: #fff; border-color: var(--line-2); border-radius: 8px; }
+.db-input:focus, .db-toolbar input:focus, .db-toolbar select:focus, .db-select:focus { border-color: var(--sky); box-shadow: 0 0 0 3px var(--focus); }
+.db-combo__list { border-color: var(--line-2); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 61, 122, .14); }
+.db-combo__chip, .db-pill--member, .db-pill--you { color: var(--text); }
+
+/* steps: sky blue for where you are */
+.db-steps button { color: var(--faint); background: #fff; border: 1.5px solid var(--line-2); }
+.db-steps .is-on button { color: var(--text); background: var(--sky); border-color: var(--sky); }
+.db-steps .is-done button { color: var(--brand); background: var(--brand-soft); border-color: transparent; }
+
+/* signing in: a white card on the sky */
+.db-card { border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 2px 4px rgba(0, 40, 80, .05), 0 18px 48px rgba(0, 61, 122, .14); }

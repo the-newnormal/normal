@@ -1785,80 +1785,99 @@
     if (current.length) {
       const strip = el("div", "crm-levels");
       strip.append(el("span", "crm-levels__label", "Who we know:"));
-      for (const name of levels) {
+      levels.forEach((name, i) => {
         const n = current.filter((x) => lv(x) === name).length;
-        strip.append(el("span", `crm-level${n ? "" : " is-none"}`, `${n} ${name}`));
-      }
+        strip.append(el("span", `crm-level lvl-${i}${n ? "" : " is-none"}`, `${n} ${name}`));
+      });
       const unknown = current.filter((x) => !levels.includes(lv(x))).length;
       if (unknown) strip.append(el("span", "crm-level is-none", `${unknown} level not set`));
       box.append(strip);
     }
-    const byUnit = new Map(units.map((u) => [u.id, []]));
-    for (const x of people) { const u = Number(x.data[ch.people.at]); if (byUnit.has(u)) byUnit.get(u).push(x); }
-    const kids = new Map(units.map((u) => [u.id, []]));
-    for (const u of units) { const up = Number(u.data[ch.parent]); if (u.id !== rec.id && kids.has(up)) kids.get(up).push(u); }
-    const seenUnits = new Set();
-    const unitNode = (u, depth) => {
-      seenUnits.add(u.id);
-      const wrap = el("div", `crm-unit${depth ? "" : " is-root"}`);
-      const head = el("div", "crm-unit__head");
-      if (depth) {
-        const a = el("a", "crm-unit__name", u.data[cfg.title] || "(untitled)");
-        a.href = `#/r/${c}/${u.id}`;
-        head.append(a);
-      } else head.append(el("strong", "crm-unit__name", "Org chart"));
-      const tools = el("span", "crm-unit__tools");
-      if (canAdd[ch.people.c]) tools.append(linkButton("+ person", `#/r/${ch.people.c}/new?${params({ [ch.people.at]: String(u.id) })}`, "sm"));
-      if (canAdd[c]) tools.append(linkButton("+ department or branch", `#/r/${c}/new?${params({ [ch.parent]: String(u.id) })}`, "sm"));
-      head.append(tools);
-      wrap.append(head);
-      // people here, under whoever they report to (when that person is here too)
-      const here = byUnit.get(u.id) || [];
-      const ids = new Set(here.map((x) => x.id));
-      const below = new Map();
-      const tops = [];
-      for (const x of here) {
-        const boss = Number(x.data[ch.people.reportsTo]);
-        if (boss && boss !== x.id && ids.has(boss)) { if (!below.has(boss)) below.set(boss, []); below.get(boss).push(x); } else tops.push(x);
-      }
-      const seen = new Set();
-      const personNode = (x) => {
-        seen.add(x.id);
-        const li = el("li", `crm-person${x.data.status === "moved on" ? " is-gone" : ""}`);
-        const row = el("div", "crm-person__row");
-        const a = el("a", "crm-person__name", x.data[pc.title] || "(no name)");
-        a.href = `#/r/${ch.people.c}/${x.id}`;
-        row.append(a);
-        if (x.data.title) row.append(el("span", "muted", x.data.title));
-        if (lv(x)) row.append(pill(lv(x), "level"));
-        if (x.data.status === "moved on") row.append(pill("moved on", "disabled"));
-        const m = met[String(x.id)];
-        row.append(el("span", "crm-met muted", m ? `met ${m.n}× · last ${day(m.last)}` : "not met yet"));
-        li.append(row);
-        const subs = (below.get(x.id) || []).filter((y) => !seen.has(y.id)).sort(order);
-        if (subs.length) {
-          const ul = el("ul", "crm-people");
-          subs.forEach((y) => ul.append(personNode(y)));
-          li.append(ul);
-        }
-        return li;
-      };
-      if (here.length) {
-        const ul = el("ul", "crm-people");
-        tops.sort(order).forEach((x) => ul.append(personNode(x)));
-        here.filter((x) => !seen.has(x.id)).sort(order).forEach((x) => ul.append(personNode(x))); // a loop in "reports to"
-        wrap.append(ul);
-      } else wrap.append(el("p", "db-note", depth ? "No one here yet." : "No one at this level yet."));
-      const sub = (kids.get(u.id) || []).filter((k) => !seenUnits.has(k.id)).sort((a, b) => String(a.data[cfg.title]).localeCompare(String(b.data[cfg.title])));
-      if (sub.length && depth < 12) {
-        const k = el("div", "crm-units");
-        sub.forEach((s2) => k.append(unitNode(s2, depth + 1)));
-        wrap.append(k);
-      }
-      return wrap;
+    // the people still in their roles, as a chart: who reports to whom (across departments and branches)
+    const unitName = new Map(units.map((u) => [u.id, u.data[cfg.title] || ""]));
+    const ids = new Set(current.map((x) => x.id));
+    const kids = new Map();
+    const roots = [];
+    for (const x of current) {
+      const boss = Number(x.data[ch.people.reportsTo]);
+      if (boss && boss !== x.id && ids.has(boss)) { if (!kids.has(boss)) kids.set(boss, []); kids.get(boss).push(x); } else roots.push(x);
+    }
+    const initials = (n) => String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+    const card = (x) => {
+      const c = el("a", `crm-card lvl-${Math.max(0, levels.indexOf(lv(x)))}${levels.includes(lv(x)) ? "" : " lvl-none"}`);
+      c.href = `#/r/${ch.people.c}/${x.id}`;
+      const m = met[String(x.id)];
+      const at = Number(x.data[ch.people.at]) !== rec.id ? unitName.get(Number(x.data[ch.people.at])) : "";
+      c.append(...nodes(
+        el("span", "crm-card__av", initials(x.data[pc.title])),
+        el("span", "crm-card__name", x.data[pc.title] || "(no name)"),
+        x.data.title ? el("span", "crm-card__role", x.data.title) : null,
+        at ? el("span", "crm-card__at", at) : null,
+        el("span", "crm-card__met", m ? `met ${m.n}× · ${day(m.last)}` : "not met yet"),
+      ));
+      return c;
     };
-    const root = units.find((u) => u.id === rec.id);
-    if (root) box.append(unitNode(root, 0));
+    const seen = new Set();
+    const branch = (x) => {
+      seen.add(x.id);
+      const li = el("li");
+      li.append(card(x));
+      const below = (kids.get(x.id) || []).filter((y) => !seen.has(y.id)).sort(order);
+      if (below.length) {
+        const ul = el("ul");
+        below.forEach((y) => ul.append(branch(y)));
+        li.append(ul);
+      }
+      return li;
+    };
+    // a chart for everyone in a reporting line; people with no line yet sit in a row below it
+    const lined = roots.filter((x) => (kids.get(x.id) || []).length).sort(order);
+    const loose = roots.filter((x) => !(kids.get(x.id) || []).length).sort(order);
+    const head = el("div", "crm-chart__head");
+    const tools = el("div", "db-actions");
+    if (canAdd[ch.people.c]) tools.append(linkButton("+ person", `#/r/${ch.people.c}/new?${params({ [ch.people.at]: String(rec.id) })}`, "sm"));
+    if (canAdd[c]) tools.append(linkButton("+ department or branch", `#/r/${c}/new?${params({ [ch.parent]: String(rec.id) })}`, "sm"));
+    // its departments and branches, each a link to its own chart
+    const parts = units.filter((u) => u.id !== rec.id);
+    if (parts.length) {
+      const row = el("p", "crm-parts");
+      row.append(el("span", "crm-parts__label", "Departments and branches"));
+      for (const u of parts.sort((x, y) => String(x.data[cfg.title]).localeCompare(String(y.data[cfg.title])))) {
+        const l = el("a", "crm-part", u.data[cfg.title] || "(untitled)");
+        l.href = `#/r/${c}/${u.id}`;
+        const n = people.filter((x) => Number(x.data[ch.people.at]) === u.id && x.data.status !== "moved on").length;
+        if (n) l.append(el("span", "crm-part__n", String(n)));
+        row.append(l);
+      }
+      head.append(row);
+    }
+    head.append(tools);
+    box.append(head);
+    if (lined.length) {
+      const tree = el("div", "crm-tree");
+      const ul = el("ul");
+      lined.forEach((x) => ul.append(branch(x)));
+      // anyone left over (a loop in "reports to") joins the row below
+      current.filter((x) => !seen.has(x.id) && !loose.includes(x)).forEach((x) => loose.push(x));
+      tree.append(ul);
+      const scroll = el("div", "crm-tree__scroll");
+      scroll.append(tree);
+      box.append(scroll);
+    }
+    if (loose.length) {
+      if (lined.length) box.append(el("p", "crm-sub", "No reporting line yet: open someone and set who they report to, to place them in the chart."));
+      const grid = el("div", "crm-loose");
+      loose.forEach((x) => grid.append(card(x)));
+      box.append(grid);
+    }
+    if (!current.length) box.append(el("p", "db-note", "No one here yet. Add the people we deal with, and who they report to: the chart draws itself."));
+    const gone = people.filter((x) => x.data.status === "moved on");
+    if (gone.length) {
+      const g = el("p", "crm-gone");
+      g.append("Moved on: ");
+      gone.forEach((x, i) => { const l = el("a", "", x.data[pc.title] || "(no name)"); l.href = `#/r/${ch.people.c}/${x.id}`; g.append(l, x.data.title ? ` (${x.data.title})` : "", i < gone.length - 1 ? ", " : ""); });
+      box.append(g);
+    }
     into.append(panel(`people (${current.length}${people.length > current.length ? ` + ${people.length - current.length} moved on` : ""})`, box));
 
     // every meeting with them, newest first
@@ -2496,7 +2515,8 @@
         li.append(who, what);
         return li;
       }, "No one is seated in the team that looks after partners yet.");
-      const note = el("p", "db-note", [free ? `${free} without a partnership.` : "Everyone has a partnership.", d.partnerships.unled ? ` ${d.partnerships.unled} partners have no lead.` : ""].join(""));
+      const note = el("p", "db-note", [free ? `${free} without a partnership.` : "Everyone has a partnership.",
+        d.partnerships.unled ? ` ${d.partnerships.unled} ${d.partnerships.unled === 1 ? "partner has" : "partners have"} no lead.` : ""].join(""));
       const wrap = el("div");
       wrap.append(note, board);
       right.append(panel("partnerships", wrap, linkButton("Partners →", "#/r/partners")));
